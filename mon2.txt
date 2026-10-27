@@ -1,0 +1,106 @@
+Executing action: monitor
+Running idf_monitor in directory C:\DreamState
+Executing "C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:\Espressif\frameworks\esp-idf-v5.4.3\tools/idf_monitor.py -p COM3 -b 115200 --toolchain-prefix xtensa-esp32s3-elf- --target esp32s3 --revision 0 C:\DreamState\build\pdm_mic_volume.elf --force-color -m 'C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe' 'C:\Espressif\frameworks\esp-idf-v5.4.3\tools\idf.py' '-p' 'COM3'"...
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x2a (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40379bd2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2810,len:0x1564
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xd24
+load:0x403cb700,len:0x2ed4
+entry 0x403c8928
+I (26) boot: ESP-IDF v5.4.3-dirty 2nd stage bootloader
+I (27) boot: compile time Oct 27 2026 17:28:08
+I (27) boot: Multicore bootloader
+I (27) boot: chip revision: v0.2
+I (30) boot: efuse block revision: v1.3
+I (34) boot.esp32s3: Boot SPI Speed : 80MHz
+I (38) boot.esp32s3: SPI Mode       : DIO
+I (41) boot.esp32s3: SPI Flash Size : 2MB
+I (45) boot: Enabling RNG early entropy source...
+I (50) boot: Partition Table:
+I (52) boot: ## Label            Usage          Type ST Offset   Length
+I (59) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (65) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (72) boot:  2 factory          factory app      00 00 00010000 00100000
+I (78) boot: End of partition table
+I (81) esp_image: segment 0: paddr=00010020 vaddr=3c020020 size=0c18ch ( 49548) map
+I (98) esp_image: segment 1: paddr=0001c1b4 vaddr=3fc95f00 size=02e28h ( 11816) load
+I (101) esp_image: segment 2: paddr=0001efe4 vaddr=40374000 size=01034h (  4148) load
+I (105) esp_image: segment 3: paddr=00020020 vaddr=42000020 size=18cf4h (101620) map
+I (129) esp_image: segment 4: paddr=00038d1c vaddr=40375034 size=10e78h ( 69240) load
+I (145) esp_image: segment 5: paddr=00049b9c vaddr=50000000 size=0001ch (    28) load
+I (152) boot: Loaded app from partition at offset 0x10000
+I (152) boot: Disabling RNG early entropy source...
+I (162) octal_psram: vendor id    : 0x0d (AP)
+I (163) octal_psram: dev id       : 0x02 (generation 3)
+I (163) octal_psram: density      : 0x03 (64 Mbit)
+I (165) octal_psram: good-die     : 0x01 (Pass)
+I (169) octal_psram: Latency      : 0x01 (Fixed)
+I (173) octal_psram: VCC          : 0x01 (3V)
+I (177) octal_psram: SRF          : 0x01 (Fast Refresh)
+I (182) octal_psram: BurstType    : 0x01 (Hybrid Wrap)
+I (187) octal_psram: BurstLen     : 0x01 (32 Byte)
+I (192) octal_psram: Readlatency  : 0x02 (10 cycles@Fixed)
+I (197) octal_psram: DriveStrength: 0x00 (1/1)
+I (202) MSPI Timing: PSRAM timing tuning index: 5
+I (206) esp_psram: Found 8MB PSRAM device
+I (209) esp_psram: Speed: 80MHz
+I (212) cpu_start: Multicore app
+I (648) esp_psram: SPI SRAM memory test OK
+I (657) cpu_start: Pro cpu start user code
+I (657) cpu_start: cpu freq: 160000000 Hz
+I (657) app_init: Application information:
+I (657) app_init: Project name:     pdm_mic_volume
+I (661) app_init: App version:      1
+I (665) app_init: Compile time:     Oct 27 2026 17:43:10
+I (670) app_init: ELF file SHA256:  9fdca0a53...
+I (674) app_init: ESP-IDF:          v5.4.3-dirty
+I (678) efuse_init: Min chip rev:     v0.0
+I (682) efuse_init: Max chip rev:     v0.99 
+I (686) efuse_init: Chip rev:         v0.2
+I (690) heap_init: Initializing. RAM available for dynamic allocation:
+I (696) heap_init: At 3FC99630 len 000500E0 (320 KiB): RAM
+I (702) heap_init: At 3FCE9710 len 00005724 (21 KiB): RAM
+I (707) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM
+I (712) heap_init: At 600FE000 len 00001FE8 (7 KiB): RTCRAM
+I (717) esp_psram: Adding pool of 8192K of PSRAM memory to heap allocator
+I (724) spi_flash: detected chip: generic
+I (727) spi_flash: flash io: dio
+W (730) spi_flash: Detected size(8192k) larger than the size in the binary image header(2048k). Using the size in the binary image header.
+I (743) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (749) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (756) main_task: Started on CPU0
+I (766) main_task: Calling app_main()
+
+========================================
+  DreamState - PDM Mic + LCD Monitor
+========================================
+
+LCD: Backlight on...
+I (776) gpio: GPIO[15]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+LCD: Init SPI bus...
+LCD: spi_bus_init = ESP_OK
+LCD: Create panel IO...
+LCD: panel_io = ESP_OK
+LCD: Create ST7789 panel...
+I (796) gpio: GPIO[9]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+LCD: st7789 = ESP_OK
+LCD: Reset panel...
+LCD: reset = ESP_OK
+LCD: Init panel...
+LCD: panel_init = ESP_OK
+LCD: Mirror...
+LCD: Display on...
+LCD: disp_on = ESP_OK
+LCD: Draw initial screen...
+LCD: Ready!
+I (1066) dreamstate: Init PDM mic (CLK=GPIO45)...
+I (1066) gpio: GPIO[48]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (1066) dreamstate: Mic power ON (GPIO48)
+I (1076) dreamstate: PDM mic ready (SR=16000 Hz, clk_inv=true)
+I (1076) dreamstate: Audio loop running (threshold=500)...
+[Noise!] RMS=30874.65  -> Lower volume, stop aroma

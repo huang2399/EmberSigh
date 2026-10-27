@@ -1,0 +1,5 @@
+--- Warning: GDB cannot open serial ports accessed as COMx
+--- Using \\.\COM3 instead...
+--- esp-idf-monitor 1.8.0 on \\.\COM3 115200
+--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H
+xtensa-esp32s3-elf-addr2line -fiaC -e C:\DreamState\build\pdm_mic_volume.elf 0x40379bd2: [WinError 2] 系统找不到指定的文件。
