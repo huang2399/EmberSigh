@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "bsp/esp32_s3_eye.h"
 #include "esp_codec_dev.h"
+#include "hal_hardware.h"
 
 static const char *TAG = "dreamstate";
 
@@ -17,6 +18,7 @@ static const char *TAG = "dreamstate";
 #define RMS_QUIET       20000
 #define RMS_NOISE       25000
 #define REFRESH_MS      200
+#define QUIET_HOLD_MS   5000   /* 安静持续 5 秒后才恢复环境 */
 
 /* 只计算左声道 RMS（立体声交错: L,R,L,R,...） */
 static float calc_rms_left(const int16_t *buf, int total_samples)
@@ -90,8 +92,9 @@ void app_main(void)
     int16_t *buf = malloc(BUFFER_SAMPLES * sizeof(int16_t));
     assert(buf);
 
-    bool   last_noise  = false;
-    TickType_t last_update = 0;
+    bool       last_noise   = false;
+    TickType_t quiet_since  = 0;          /* 进入安静状态的时刻，0=未进入 */
+    TickType_t last_update  = 0;
     ESP_LOGI(TAG, "Loop running (quiet <%d, noise >%d)...", RMS_QUIET, RMS_NOISE);
 
     while (1) {
@@ -111,13 +114,43 @@ void app_main(void)
                 bsp_display_lock(0);
 
                 if (is_noise) {
-                    /* 噪音状态：深红背景 */
+                    /* ============================================
+                     * 噪音：立刻红屏 + 降低音量 + 停止香氛
+                     * ============================================ */
                     lv_obj_set_style_bg_color(scr, lv_color_hex(0x400000), LV_PART_MAIN);
                     lv_label_set_text(label_status, "Noise!");
+                    quiet_since = 0;                /* 重置安静计时 */
+
+                    if (!last_noise) {
+                        /* 刚进入噪音 → 触发硬件动作 */
+                        ESP_LOGI(TAG, ">>> NOISE! RMS=%.0f", rms);
+                        hal_lower_volume();
+                        hal_stop_fragrance();
+                    }
                 } else {
-                    /* 安静状态：深蓝背景 */
-                    lv_obj_set_style_bg_color(scr, lv_color_hex(0x000040), LV_PART_MAIN);
-                    lv_label_set_text(label_status, "Listening...");
+                    /* ============================================
+                     * 安静：启动 5 秒延时后才恢复
+                     * ============================================ */
+                    if (quiet_since == 0) {
+                        quiet_since = now;          /* 开始计时 */
+                    }
+
+                    TickType_t elapsed = now - quiet_since;
+                    if (elapsed >= pdMS_TO_TICKS(QUIET_HOLD_MS)) {
+                        /* 连续安静 ≥ 5 秒 → 蓝屏 + 恢复环境 */
+                        lv_obj_set_style_bg_color(scr, lv_color_hex(0x000040), LV_PART_MAIN);
+                        lv_label_set_text(label_status, "Listening...");
+
+                        if (last_noise) {
+                            ESP_LOGI(TAG, "<<< Quiet (held %dms), restoring",
+                                     (int)(elapsed * portTICK_PERIOD_MS));
+                            hal_restore_environment();
+                        }
+                    } else {
+                        /* 安静但未满 5 秒 → 保持红屏，等待 */
+                        lv_obj_set_style_bg_color(scr, lv_color_hex(0x400000), LV_PART_MAIN);
+                        lv_label_set_text(label_status, "Shh...");
+                    }
                 }
 
                 char rms_buf[32];
@@ -126,15 +159,11 @@ void app_main(void)
 
                 bsp_display_unlock();
 
-                /* 状态切换时打印日志 */
-                if (is_noise != last_noise) {
-                    if (is_noise) {
-                        ESP_LOGI(TAG, ">>> NOISE! RMS=%.0f", rms);
-                        printf("[模拟] 降低音量，停止香氛\n");
-                        fflush(stdout);
-                    } else {
-                        ESP_LOGI(TAG, "<<< Quiet  RMS=%.0f", rms);
-                    }
+                /* 安静→噪音切换时打印日志 */
+                if (is_noise && !last_noise) {
+                    /* 已在上面处理 */
+                } else if (!is_noise && last_noise) {
+                    ESP_LOGI(TAG, "<<< Went quiet RMS=%.0f, holding %dms...", rms, QUIET_HOLD_MS);
                 }
                 last_noise = is_noise;
             }
