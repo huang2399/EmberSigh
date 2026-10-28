@@ -1,4 +1,31 @@
+# ---- ESP-IDF 构建产物 ----
 build/
+*.elf
+*.bin
+*.map
+*.lst
+
+# 本地配置（每位开发者按自己的板子生成）
 sdkconfig
-.vscode/
+sdkconfig.old
+
+# 由 idf.py 自动恢复的组件
 managed_components/
+
+# ---- IDE / 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---- 调试与串口日志 ----
+*.log
+mon*.txt
+monitor_*.txt
+build_log.txt
+flash_log.txt
+
+# ---- 系统文件 ----
+Thumbs.db
+.DS_Store
+desktop.ini
