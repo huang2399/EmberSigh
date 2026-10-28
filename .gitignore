@@ -2,3 +2,7 @@ build/
 sdkconfig
 .vscode/
 managed_components/
+*log.txt
+mon*.txt
+read_serial.py
+*.log
