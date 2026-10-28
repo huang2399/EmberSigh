@@ -1,0 +1,11 @@
+# ESP32-S3-EYE 默认配置
+# 由 idf.py set-target esp32s3 生成，修改后删除 sdkconfig 重新构建即可生效。
+CONFIG_IDF_TARGET="esp32s3"
+
+# 8 MB Flash
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+
+# 8 MB Octal PSRAM @ 80 MHz
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
