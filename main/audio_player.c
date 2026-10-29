@@ -1,7 +1,7 @@
 /*
  * 白噪音播放器 — 实时 LFSR 噪声生成，无限循环无毛刺
  *
- * I2S_NUM_1: BCLK=18, LRC=19, DIN=14  → MAX98357
+ * I2S_NUM_1: BCLK=27, LRC=26, DIN=14  → MAX98357
  * 16-bit 立体声 (mono 复制到双声道), 48kHz
  * 音量通过 hal_audio_volume 实时控制 (0.0 ~ 1.0)
  */

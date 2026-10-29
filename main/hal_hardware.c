@@ -1,8 +1,8 @@
 /*
  * DreamState HAL — 真实硬件驱动
- *  MAX98357 I2S 功放 (BCLK=18, LRC=19, DIN=14, I2S_NUM_1)
+ *  MAX98357 I2S 功放 (BCLK=27, LRC=26, DIN=14, I2S_NUM_1)
  *  MOS 管加湿器 (GPIO1)
- *  WS2812 灯带 (GPIO47, 8 LEDs, RMT)
+ *  WS2812 灯带 (GPIO17, 8 LEDs, RMT)
  */
 #include "hal_hardware.h"
 #include <stdio.h>
@@ -17,10 +17,10 @@ static const char *TAG = "hal";
 
 /* ========== 引脚定义 ========== */
 #define GPIO_MOS_FRAGRANCE  1       /* MOS管信号线（加湿器电源） */
-#define GPIO_LED_STRIP      47      /* WS2812 数据线 */
+#define GPIO_LED_STRIP      17      /* WS2812 数据线 (不冲突) */
 #define I2S_NUM_OUT         I2S_NUM_1
-#define I2S_BCLK            18
-#define I2S_LRC             19
+#define I2S_BCLK            27      /* I2S位时钟 (不冲突) */
+#define I2S_LRC             26      /* I2S左右时钟 (原19=USB_D- 冲突!) */
 #define I2S_DIN             14
 #define LED_NUM             8       /* 灯珠数量 */
 
