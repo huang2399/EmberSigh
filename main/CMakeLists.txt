@@ -1,3 +1,3 @@
 idf_component_register(SRCS "pdm_mic_volume.c" "hal_hardware.c"
-                     PRIV_REQUIRES esp32_s3_eye
+                     PRIV_REQUIRES esp32_s3_eye led_strip
                      INCLUDE_DIRS .)

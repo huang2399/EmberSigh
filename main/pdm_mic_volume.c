@@ -14,6 +14,7 @@
 #include "es8311_codec.h"
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
+#include "hal_hardware.h"
 
 static const char *TAG = "dreamstate";
 
@@ -64,6 +65,9 @@ void app_main(void)
     assert(disp);
     bsp_display_backlight_on();
     ESP_LOGI(TAG, "Display ready");
+
+    /* 初始化所有外部硬件（MAX98357 / MOS管 / WS2812） */
+    ESP_ERROR_CHECK(hal_hardware_init());
 
     /* 1a. 先初始化 I2C + 手动创建 I2S（不启用）*/
     ESP_LOGI(TAG, "Init I2C...");
@@ -252,8 +256,8 @@ void app_main(void)
             if (smooth_val > RMS_NOISE) {
                 /* 平滑 RMS > 150：任何状态 → 立即噪音 */
                 if (st != STATE_NOISE) {
-                    printf("[HAL] 降低音量/停止香氛  (smooth=%.1f)\n", smooth_val);
-                    fflush(stdout);
+                    hal_lower_volume();
+                    hal_stop_fragrance();
                 }
                 st = STATE_NOISE;
                 cooldown_start = 0;
@@ -266,8 +270,7 @@ void app_main(void)
                     if ((now - cooldown_start) >= pdMS_TO_TICKS(COOLDOWN_MS)) {
                         st = STATE_QUIET;
                         cooldown_start = 0;
-                        printf("[HAL] 恢复环境  (smooth=%.1f)\n", smooth_val);
-                        fflush(stdout);
+                        hal_restore_environment();
                     }
                 }
                 /* STATE_QUIET 下 < 50：保持安静 */
