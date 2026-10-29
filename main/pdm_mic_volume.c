@@ -15,6 +15,7 @@
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
 #include "hal_hardware.h"
+#include "audio_player.h"
 
 static const char *TAG = "dreamstate";
 
@@ -68,6 +69,9 @@ void app_main(void)
 
     /* 初始化所有外部硬件（MAX98357 / MOS管 / WS2812） */
     ESP_ERROR_CHECK(hal_hardware_init());
+
+    /* 启动白噪音播放任务 */
+    audio_player_start();
 
     /* 1a. 先初始化 I2C + 手动创建 I2S（不启用）*/
     ESP_LOGI(TAG, "Init I2C...");

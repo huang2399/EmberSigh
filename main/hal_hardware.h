@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "esp_err.h"
+#include "driver/i2s_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +12,10 @@ extern "C" {
 
 /** 初始化所有硬件外设（I2S、GPIO、LED灯带），app_main 早期调用一次 */
 esp_err_t hal_hardware_init(void);
+
+/** 音频音量控制（0.0 = 静音, 1.0 = 满音量），供 audio_player 任务实时读取 */
+extern volatile float hal_audio_volume;
+extern i2s_chan_handle_t hal_i2s_tx;
 
 /** 降低喇叭音量（MAX98357 I2S 静音） */
 void hal_lower_volume(void);

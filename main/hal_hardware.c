@@ -24,9 +24,10 @@ static const char *TAG = "hal";
 #define I2S_DIN             14
 #define LED_NUM             8       /* 灯珠数量 */
 
-/* ========== 静态句柄 ========== */
-static i2s_chan_handle_t  i2s_tx = NULL;
-static led_strip_handle_t led    = NULL;
+/* ========== 公开句柄 & 音量 ========== */
+i2s_chan_handle_t  hal_i2s_tx = NULL;
+static led_strip_handle_t led = NULL;
+volatile float hal_audio_volume = 1.0f;
 
 /* ============================================================
  * 初始化
@@ -50,7 +51,7 @@ esp_err_t hal_hardware_init(void)
     /* ---- 2. MAX98357 I2S TX 初始化 ---- */
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_OUT, I2S_ROLE_MASTER);
     chan_cfg.auto_clear = true;
-    ret = i2s_new_channel(&chan_cfg, &i2s_tx, NULL);
+    ret = i2s_new_channel(&chan_cfg, &hal_i2s_tx, NULL);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2S TX new channel failed: %d", ret);
         return ret;
@@ -68,12 +69,12 @@ esp_err_t hal_hardware_init(void)
             .invert_flags = { .mclk_inv = false, .bclk_inv = false, .ws_inv = false },
         },
     };
-    ret = i2s_channel_init_std_mode(i2s_tx, &std_cfg);
+    ret = i2s_channel_init_std_mode(hal_i2s_tx, &std_cfg);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2S TX std init failed: %d", ret);
         return ret;
     }
-    ret = i2s_channel_enable(i2s_tx);
+    ret = i2s_channel_enable(hal_i2s_tx);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2S TX enable failed: %d", ret);
         return ret;
@@ -116,10 +117,8 @@ esp_err_t hal_hardware_init(void)
  * ============================================================ */
 void hal_lower_volume(void)
 {
-    if (i2s_tx) {
-        i2s_channel_disable(i2s_tx);
-    }
-    printf("[HAL] 硬件真实降低音量 (I2S mute)\n");
+    hal_audio_volume = 0.0f;
+    printf("[HAL] 硬件真实降低音量 (volume=0)\n");
     fflush(stdout);
 }
 
@@ -144,11 +143,9 @@ void hal_stop_fragrance(void)
  * ============================================================ */
 void hal_restore_environment(void)
 {
-    /* 恢复 I2S 输出 */
-    if (i2s_tx) {
-        i2s_channel_enable(i2s_tx);
-    }
-    printf("[HAL] 硬件真实恢复音量 (I2S unmute)\n");
+    /* 恢复音量 */
+    hal_audio_volume = 1.0f;
+    printf("[HAL] 硬件真实恢复音量 (volume=1.0)\n");
     fflush(stdout);
 
     /* 开启加湿器 */
