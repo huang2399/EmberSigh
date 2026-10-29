@@ -19,9 +19,10 @@ static const char *TAG = "dreamstate";
 
 #define BUFFER_SAMPLES  512
 #define RMS_QUIET        50      /* 低于此 = 安静 */
-#define RMS_NOISE       100     /* 高于此 = 拍手噪音 */
+#define RMS_NOISE       150     /* 高于此 = 拍手噪音 */
 #define REFRESH_MS       200
-#define COOLDOWN_MS     5000    /* 噪音结束后需安静 5 秒才恢复 */
+#define COOLDOWN_MS     3000    /* 噪音结束后需安静 3 秒才恢复 */
+#define SMOOTH_WINDOW    5       /* 滑动平均窗口大小 */
 
 /* 只计算左声道 RMS（立体声交错: L,R,L,R,...） */
 static float calc_rms_left(const int16_t *buf, int total_samples)
@@ -34,6 +35,20 @@ static float calc_rms_left(const int16_t *buf, int total_samples)
         cnt++;
     }
     return cnt > 0 ? sqrtf(sum / cnt) : 0;
+}
+
+/* 滑动平均平滑 RMS：用长度为 SMOOTH_WINDOW 的历史值求平均 */
+static float smooth_rms(float *window, int *idx, int *count, float new_rms)
+{
+    window[*idx] = new_rms;
+    *idx = (*idx + 1) % SMOOTH_WINDOW;
+    if (*count < SMOOTH_WINDOW) (*count)++;
+
+    float sum = 0;
+    for (int i = 0; i < *count; i++) {
+        sum += window[i];
+    }
+    return sum / (float)(*count);
 }
 
 void app_main(void)
@@ -204,6 +219,12 @@ void app_main(void)
     TickType_t cooldown_start = 0;
     TickType_t last_update = 0;
     TickType_t last_rms_print = 0;
+
+    /* 滑动平均窗口 */
+    float  rms_window[SMOOTH_WINDOW] = {0};
+    int    rms_win_idx   = 0;
+    int    rms_win_count = 0;
+
     ESP_LOGI(TAG, "Loop running (quiet <%d, noise >%d, cooldown %d ms)...",
              RMS_QUIET, RMS_NOISE, COOLDOWN_MS);
 
@@ -216,41 +237,46 @@ void app_main(void)
         if (bytes > 0) {
             int total = bytes / 2;
             float rms = calc_rms_left(buf, total);
+            float smooth_val = smooth_rms(rms_window, &rms_win_idx, &rms_win_count, rms);
 
-            /* 每秒打印一次 RMS */
+            /* 每秒打印一次 */
             TickType_t now = xTaskGetTickCount();
             if ((now - last_rms_print) >= pdMS_TO_TICKS(1000)) {
                 last_rms_print = now;
-                printf("RMS: %.2f | bytes=%d | buf[0]=%d buf[1]=%d buf[2]=%d  [state=%d]\n",
-                       rms, bytes, buf[0], buf[1], buf[2], st);
+                printf("RMS: %.1f | smooth: %.1f | bytes=%d | buf[0]=%d  [state=%d]\n",
+                       rms, smooth_val, bytes, buf[0], st);
                 fflush(stdout);
             }
 
-            /* --- 状态机 --- */
-            bool is_noise_now = (rms > RMS_NOISE);
-
-            if (is_noise_now) {
-                /* 任何噪音立刻切入 noise，重置退让计时 */
+            /* --- 迟滞状态机 --- */
+            if (smooth_val > RMS_NOISE) {
+                /* 平滑 RMS > 150：任何状态 → 立即噪音 */
                 if (st != STATE_NOISE) {
-                    printf("[HAL] 降低音量/停止香氛\n");
+                    printf("[HAL] 降低音量/停止香氛  (smooth=%.1f)\n", smooth_val);
                     fflush(stdout);
                 }
                 st = STATE_NOISE;
                 cooldown_start = 0;
-            } else if (st == STATE_NOISE && rms < RMS_QUIET) {
-                /* 刚从噪音回落 → 开始退让计时 */
-                if (cooldown_start == 0) {
-                    cooldown_start = now;
+            } else if (smooth_val < RMS_QUIET) {
+                /* 平滑 RMS < 50：安静条件满足 */
+                if (st == STATE_NOISE || st == STATE_COOLDOWN) {
+                    if (cooldown_start == 0) {
+                        cooldown_start = now;
+                    }
+                    if ((now - cooldown_start) >= pdMS_TO_TICKS(COOLDOWN_MS)) {
+                        st = STATE_QUIET;
+                        cooldown_start = 0;
+                        printf("[HAL] 恢复环境  (smooth=%.1f)\n", smooth_val);
+                        fflush(stdout);
+                    }
                 }
-                if ((now - cooldown_start) >= pdMS_TO_TICKS(COOLDOWN_MS)) {
-                    /* 安静满 5 秒 → 恢复 */
-                    st = STATE_QUIET;
+                /* STATE_QUIET 下 < 50：保持安静 */
+            } else {
+                /* 50 ~ 150 灰色地带：保持当前状态不变 */
+                /* 如果在退让中但数值回升到灰色区，重置退让计时 */
+                if (st == STATE_COOLDOWN) {
                     cooldown_start = 0;
-                    printf("[HAL] 恢复环境\n");
-                    fflush(stdout);
                 }
-            } else if (st == STATE_QUIET) {
-                /* 保持安静，无需改动 */
             }
 
             /* 200ms 刷新一次 UI */
@@ -275,14 +301,15 @@ void app_main(void)
                 bsp_display_unlock();
 
                 /* 状态切换时打印简要日志 */
-                if (is_noise_now != last_noise) {
-                    if (is_noise_now) {
-                        ESP_LOGI(TAG, ">>> NOISE! RMS=%.0f", rms);
+                bool noise_active = (st == STATE_NOISE);
+                if (noise_active != last_noise) {
+                    if (noise_active) {
+                        ESP_LOGI(TAG, ">>> NOISE!  smooth=%.1f", smooth_val);
                     } else {
-                        ESP_LOGI(TAG, "<<< Quiet  RMS=%.0f (cooldown started)", rms);
+                        ESP_LOGI(TAG, "<<< Quiet  smooth=%.1f", smooth_val);
                     }
                 }
-                last_noise = is_noise_now;
+                last_noise = noise_active;
             }
         } else {
             ESP_LOGW(TAG, "Audio read: %d bytes", bytes);
