@@ -1,8 +1,27 @@
+# ESP-IDF 构建产物
 build/
 sdkconfig
-.vscode/
+sdkconfig.old
 managed_components/
-*log.txt
-mon*.txt
-read_serial.py
+*.elf
+*.bin
+*.map
+
+# IDE / 编辑器
+.vscode/
+.idea/
+*.swp
+*~
+
+# 日志 & 临时文件
 *.log
+mon*.txt
+monitor_*.txt
+*log.txt
+read_serial.py
+check_port.py
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
