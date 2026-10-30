@@ -70,8 +70,8 @@ void app_main(void)
     /* 初始化所有外部硬件（MAX98357 / MOS管 / WS2812） */
     ESP_ERROR_CHECK(hal_hardware_init());
 
-    /* TODO: 启动白噪音播放任务 — 暂时注释排查黑屏 */
-    /* audio_player_start(); */
+    /* 启动白噪音播放任务 */
+    audio_player_start();
 
     /* 1a. 先初始化 I2C + 手动创建 I2S（不启用）*/
     ESP_LOGI(TAG, "Init I2C...");
@@ -197,23 +197,58 @@ void app_main(void)
      * ======================================================== */
     lv_obj_t *scr = lv_disp_get_scr_act(disp);
 
-    /* 大字状态（居中偏上） */
-    lv_obj_t *label_status = lv_label_create(scr);
-    lv_label_set_text(label_status, "Listening...");
-    lv_obj_set_style_text_color(label_status, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_status, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_status, LV_ALIGN_CENTER, 0, -20);
-
-    /* 小字 RMS 数值（居中偏下） */
-    lv_obj_t *label_rms = lv_label_create(scr);
-    lv_label_set_text(label_rms, "RMS: 0");
-    lv_obj_set_style_text_color(label_rms, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_rms, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_rms, LV_ALIGN_CENTER, 0, 20);
-
     /* 初始背景：深蓝 */
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x000040), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0A0A2E), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, LV_PART_MAIN);
+
+    /* ---- 标题 ---- */
+    lv_obj_t *label_title = lv_label_create(scr);
+    lv_label_set_text(label_title, "EmberSigh");
+    lv_obj_set_style_text_color(label_title, lv_color_hex(0x8888CC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label_title, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_align(label_title, LV_ALIGN_TOP_MID, 0, 12);
+
+    /* ---- 脉动圆环（背景光圈） ---- */
+    lv_obj_t *pulse_ring = lv_obj_create(scr);
+    lv_obj_set_size(pulse_ring, 80, 80);
+    lv_obj_set_style_radius(pulse_ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(pulse_ring, lv_color_hex(0x1A1A50), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(pulse_ring, LV_OPA_60, LV_PART_MAIN);
+    lv_obj_set_style_border_width(pulse_ring, 0, LV_PART_MAIN);
+    lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -25);
+
+    /* ---- RMS 大字数值 ---- */
+    lv_obj_t *label_rms = lv_label_create(scr);
+    lv_label_set_text(label_rms, "0");
+    lv_obj_set_style_text_color(label_rms, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label_rms, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_align(label_rms, LV_ALIGN_CENTER, 0, -25);
+
+    /* ---- RMS 电平条 ---- */
+    lv_obj_t *bar_rms = lv_bar_create(scr);
+    lv_obj_set_size(bar_rms, 180, 10);
+    lv_obj_set_style_radius(bar_rms, 5, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x1A1A40), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x3366FF), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_bar_set_range(bar_rms, 0, 500);
+    lv_bar_set_value(bar_rms, 0, LV_ANIM_OFF);
+    lv_obj_align(bar_rms, LV_ALIGN_CENTER, 0, 45);
+
+    /* ---- 状态文字 ---- */
+    lv_obj_t *label_status = lv_label_create(scr);
+    lv_label_set_text(label_status, "Calm");
+    lv_obj_set_style_text_color(label_status, lv_color_hex(0x6688CC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label_status, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_align(label_status, LV_ALIGN_BOTTOM_MID, 0, -24);
+
+    /* ---- 副标题 ---- */
+    lv_obj_t *label_sub = lv_label_create(scr);
+    lv_label_set_text(label_sub, "DreamState");
+    lv_obj_set_style_text_color(label_sub, lv_color_hex(0x444466), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label_sub, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_align(label_sub, LV_ALIGN_BOTTOM_MID, 0, -8);
 
     /* ========================================================
      * 4. 音频循环：读 I2S → 算 RMS → 每 200ms 刷新 UI
@@ -226,18 +261,21 @@ void app_main(void)
     bool      last_noise   = false;
     TickType_t cooldown_start = 0;
     TickType_t last_update = 0;
-    TickType_t last_rms_print = 0;
 
     /* 滑动平均窗口 */
     float  rms_window[SMOOTH_WINDOW] = {0};
     int    rms_win_idx   = 0;
     int    rms_win_count = 0;
 
+    /* UI 阻尼平滑变量 */
+    float  ui_rms = 0.0f;
+    /* 背景色平滑插值变量 */
+    int    bg_r_cur = 0x0A, bg_g_cur = 0x0A, bg_b_cur = 0x2E;
+
     ESP_LOGI(TAG, "Loop running (quiet <%d, noise >%d, cooldown %d ms)...",
              RMS_QUIET, RMS_NOISE, COOLDOWN_MS);
 
     while (1) {
-        /* 用原始 I2S 读（esp_codec_dev_read 与已 enable 的 I2S data_if 冲突）*/
         size_t raw_bytes = 0;
         i2s_channel_read(i2s_rx, buf, BUFFER_SAMPLES * sizeof(int16_t), &raw_bytes, pdMS_TO_TICKS(50));
         int bytes = (int)raw_bytes;
@@ -247,44 +285,43 @@ void app_main(void)
             float rms = calc_rms_left(buf, total);
             float smooth_val = smooth_rms(rms_window, &rms_win_idx, &rms_win_count, rms);
 
-            /* 每秒打印一次 */
-            TickType_t now = xTaskGetTickCount();
-            if ((now - last_rms_print) >= pdMS_TO_TICKS(1000)) {
-                last_rms_print = now;
-                printf("RMS: %.1f | smooth: %.1f | bytes=%d | buf[0]=%d  [state=%d]\n",
-                       rms, smooth_val, bytes, buf[0], st);
-                fflush(stdout);
-            }
+            /* UI 阻尼平滑：像呼吸一样缓慢变化 */
+            ui_rms = ui_rms * 0.8f + smooth_val * 0.2f;
 
-            /* --- 迟滞状态机 --- */
+            TickType_t now = xTaskGetTickCount();
+
+            /* --- 迟滞状态机：smooth_val 用于快速检测，UI 用 ui_rms 显示 --- */
             if (smooth_val > RMS_NOISE) {
-                /* 平滑 RMS > 150：任何状态 → 立即噪音 */
+                /* 超过 150：立刻触发噪音状态，重置冷却 */
                 if (st != STATE_NOISE) {
                     hal_lower_volume();
                     hal_stop_fragrance();
                 }
                 st = STATE_NOISE;
                 cooldown_start = 0;
-            } else if (smooth_val < RMS_QUIET) {
-                /* 平滑 RMS < 50：安静条件满足 */
-                if (st == STATE_NOISE || st == STATE_COOLDOWN) {
+            } else if (st == STATE_NOISE || st == STATE_COOLDOWN) {
+                /* 当前处于噪音/冷却中 */
+                if (smooth_val < RMS_QUIET) {
+                    /* 安静中（<50）：计时冷却 */
                     if (cooldown_start == 0) {
                         cooldown_start = now;
                     }
                     if ((now - cooldown_start) >= pdMS_TO_TICKS(COOLDOWN_MS)) {
+                        /* 安静持续 3 秒 → 恢复 */
                         st = STATE_QUIET;
                         cooldown_start = 0;
                         hal_restore_environment();
+                    } else {
+                        /* 冷却中但未到时 */
+                        st = STATE_COOLDOWN;
                     }
-                }
-                /* STATE_QUIET 下 < 50：保持安静 */
-            } else {
-                /* 50 ~ 150 灰色地带：保持当前状态不变 */
-                /* 如果在退让中但数值回升到灰色区，重置退让计时 */
-                if (st == STATE_COOLDOWN) {
+                } else {
+                    /* 50~150 灰色地带：保持噪音态，重置冷却 */
+                    st = STATE_NOISE;
                     cooldown_start = 0;
                 }
             }
+            /* STATE_QUIET + noise_val < 150: 保持安静，什么也不做 */
 
             /* 200ms 刷新一次 UI */
             if ((now - last_update) >= pdMS_TO_TICKS(REFRESH_MS)) {
@@ -292,23 +329,61 @@ void app_main(void)
 
                 bsp_display_lock(0);
 
+                /* ---- RMS 数值（用 UI 阻尼值 ---- */
+                char rms_buf[16];
+                snprintf(rms_buf, sizeof(rms_buf), "%.0f", ui_rms);
+                lv_label_set_text(label_rms, rms_buf);
+
+                /* ---- 电平条（用 UI 阻尼值） ---- */
+                int bar_val = (int)ui_rms;
+                if (bar_val > 500) bar_val = 500;
+                lv_bar_set_value(bar_rms, bar_val, LV_ANIM_ON);
+
+                /* ---- 脉动圆环（用 UI 阻尼值） ---- */
+                int ring_size = 60 + (int)(ui_rms * 0.15f);
+                if (ring_size > 140) ring_size = 140;
+                if (ring_size < 60)  ring_size = 60;
+                lv_obj_set_size(pulse_ring, ring_size, ring_size);
+                lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -25);
+
+                /* ---- 背景色平滑渐变（300ms 过渡效果） ---- */
+                int tr, tg, tb;
                 if (st == STATE_QUIET) {
-                    lv_obj_set_style_bg_color(scr, lv_color_hex(0x000040), LV_PART_MAIN);
-                    lv_label_set_text(label_status, "Listening...");
+                    /* 目标：深蓝 0x0A0A2E */
+                    tr = 0x0A; tg = 0x0A; tb = 0x2E;
+                    lv_label_set_text(label_status, "Calm");
+                    lv_obj_set_style_text_color(label_status, lv_color_hex(0x6688CC), LV_PART_MAIN);
+                    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x3366FF), LV_PART_INDICATOR);
+                } else if (st == STATE_COOLDOWN) {
+                    /* 冷却中 → 暖橙色过渡 */
+                    tr = 0x30; tg = 0x0A; tb = 0x10;
+                    lv_label_set_text(label_status, "Calming...");
+                    lv_obj_set_style_text_color(label_status, lv_color_hex(0xFF8844), LV_PART_MAIN);
+                    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0xFF6600), LV_PART_INDICATOR);
                 } else {
-                    /* NOISE 或 COOLDOWN 期间保持红色 */
-                    lv_obj_set_style_bg_color(scr, lv_color_hex(0x400000), LV_PART_MAIN);
+                    /* 噪音：暗红 0x3C0A0A */
+                    tr = 0x3C; tg = 0x0A; tb = 0x0A;
                     lv_label_set_text(label_status, "Noise!");
+                    lv_obj_set_style_text_color(label_status, lv_color_hex(0xFF4444), LV_PART_MAIN);
+                    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0xFF3333), LV_PART_INDICATOR);
                 }
 
-                char rms_buf[32];
-                snprintf(rms_buf, sizeof(rms_buf), "RMS: %.0f", rms);
-                lv_label_set_text(label_rms, rms_buf);
+                /* 每帧向目标色移动 25%（约 200ms*4=800ms 过渡到稳态，配合 200ms 刷新 = 4 帧） */
+                bg_r_cur = bg_r_cur + (tr - bg_r_cur) / 4;
+                bg_g_cur = bg_g_cur + (tg - bg_g_cur) / 4;
+                bg_b_cur = bg_b_cur + (tb - bg_b_cur) / 4;
+                if (bg_r_cur == tr && bg_g_cur == tg && bg_b_cur == tb) {
+                    /* 到位了，确保精确 */
+                    bg_r_cur = tr; bg_g_cur = tg; bg_b_cur = tb;
+                }
+                lv_obj_set_style_bg_color(scr,
+                    lv_color_hex((bg_r_cur << 16) | (bg_g_cur << 8) | bg_b_cur),
+                    LV_PART_MAIN);
 
                 bsp_display_unlock();
 
-                /* 状态切换时打印简要日志 */
-                bool noise_active = (st == STATE_NOISE);
+                /* 状态切换日志 */
+                bool noise_active = (st != STATE_QUIET);
                 if (noise_active != last_noise) {
                     if (noise_active) {
                         ESP_LOGI(TAG, ">>> NOISE!  smooth=%.1f", smooth_val);

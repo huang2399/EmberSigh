@@ -17,10 +17,10 @@ static const char *TAG = "hal";
 
 /* ========== 引脚定义 ========== */
 #define GPIO_MOS_FRAGRANCE  1       /* MOS管信号线（加湿器电源） */
-#define GPIO_LED_STRIP      17      /* WS2812 数据线 */
+#define GPIO_LED_STRIP      17      /* WS2812 数据线 (不冲突) */
 #define I2S_NUM_OUT         I2S_NUM_1
-#define I2S_BCLK            27
-#define I2S_LRC             26
+#define I2S_BCLK            27      /* I2S位时钟 (不冲突) */
+#define I2S_LRC             26      /* I2S左右时钟 (原19=USB_D- 冲突!) */
 #define I2S_DIN             14
 #define LED_NUM             8       /* 灯珠数量 */
 
