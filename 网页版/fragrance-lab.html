@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EmberSigh · 森林调香实验室</title>
+<style>
+:root {
+  --pine: #1a5632; --pine-light: #2d8a4e;
+  --citrus: #e8681a; --citrus-light: #f5954a;
+  --lavender: #7c5cbf; --lavender-light: #b49ce0;
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --text: #c8d6cf; --text-dim: #6b7c72;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+body {
+  font-family: 'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  height: 100vh; overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 50% 30%, #1e3028 0%, #121c16 40%, #0b1210 100%);
+  color: var(--text); letter-spacing: 0.02em;
+}
+/* ═══ 萤火虫光斑 ═══ */
+#glowLayer{position:fixed;inset:0;pointer-events:none;z-index:0}
+.glow-orb{position:absolute;border-radius:50%;
+  animation:float var(--dur) ease-in-out infinite;animation-delay:var(--delay);
+  filter:blur(18px);opacity:0}
+@keyframes float{
+  0%{transform:translate(0,0) scale(1);opacity:0}
+  20%{opacity:var(--peak)}
+  50%{transform:translate(var(--dx),var(--dy)) scale(1.6);opacity:var(--peak)}
+  80%{opacity:0}
+  100%{transform:translate(calc(var(--dx)*1.8),calc(var(--dy)*1.8)) scale(0.8);opacity:0}
+}
+.glow-orb.pine{background:radial-gradient(circle,rgba(45,138,78,.35),transparent);width:120px;height:120px}
+.glow-orb.citrus{background:radial-gradient(circle,rgba(245,149,74,.25),transparent);width:100px;height:100px}
+.glow-orb.lavender{background:radial-gradient(circle,rgba(180,156,224,.25),transparent);width:110px;height:110px}
+
+/* 红色警告闪烁层 */
+#alertFlash{position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse at center,rgba(255,40,40,.12) 0%,transparent 70%);
+  opacity:0;transition:opacity .3s}
+#alertFlash.on{opacity:1;animation:flashPulse .6s infinite}
+@keyframes flashPulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ═══ 主布局 ═══ */
+#main{position:relative;z-index:2;display:flex;height:100vh;padding:20px 28px;gap:20px;align-items:stretch}
+
+/* ═══ 左：精油瓶 ═══ */
+#leftCol{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:20px;padding-top:20px}
+#leftCol .section-title{font-size:.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.15em;margin-bottom:-8px}
+.bottle-wrap{cursor:pointer;position:relative;transition:transform .2s;filter:drop-shadow(0 8px 20px rgba(0,0,0,.4))}
+.bottle-wrap:hover{transform:translateY(-5px) scale(1.07)}
+.bottle-wrap:active{transform:scale(.93)}
+.bottle-wrap .lbl{text-align:center;font-size:.7rem;font-weight:500;margin-top:4px;letter-spacing:.04em}
+.bottle-wrap .tap-hint{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:.55rem;color:var(--text-dim);opacity:0;transition:opacity .3s}
+.bottle-wrap:hover .tap-hint{opacity:1}
+
+/* ═══ 中：大香水瓶 ═══ */
+#centerCol{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-width:0}
+#bottleWrap{position:relative;width:340px;height:540px;filter:drop-shadow(0 12px 40px rgba(0,0,0,.5))}
+#bottleWrap.shake{animation:bottleShake .5s ease-in-out}
+@keyframes bottleShake{
+  0%,100%{transform:translateX(0)}
+  8%{transform:translateX(-8px) rotate(-1deg)}
+  25%{transform:translateX(7px) rotate(.8deg)}
+  42%{transform:translateX(-5px)}
+  58%{transform:translateX(4px)}
+  75%{transform:translateX(-2px)}
+}
+#bottleSvg{width:100%;height:100%}
+#liquidBody{transition:fill .8s cubic-bezier(.4,0,.2,1), y .8s cubic-bezier(.4,0,.2,1)}
+#statusOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+#statusOverlay.on{opacity:1}
+#statusOverlay .txt{font-size:.9rem;font-weight:600;color:#fca5a5;text-shadow:0 0 30px rgba(248,81,73,.6);letter-spacing:.1em;text-align:center}
+#statusOverlay .txt .nums{font-size:.65rem;color:#fbbf24;font-weight:400;margin-top:4px;letter-spacing:.05em}
+
+/* ═══ 水滴飞行动画层 ═══ */
+#dropLayer{position:absolute;inset:0;pointer-events:none;z-index:10}
+.droplet{position:absolute;width:8px;height:8px;border-radius:50%;transition:all .5s cubic-bezier(.25,.8,.25,1.2)}
+
+/* ═══ 右：控制面板 ═══ */
+#rightCol{width:290px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.glass-panel{
+  background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-border);border-radius:18px;padding:16px 18px
+}
+.glass-panel h3{font-size:.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.12em;margin:0 0 10px;font-weight:500}
+
+/* 当前比例 */
+#ratioBox .ratios{display:flex;justify-content:space-between;font-size:.72rem;font-weight:500}
+#ratioBox .ratios span{display:flex;align-items:center;gap:6px}
+#ratioBox .ratios .swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+#ratioBox .ratios .val{font-variant-numeric:tabular-nums;min-width:34px;text-align:right;transition:color .6s}
+
+/* 预设按钮 */
+#presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#presets button{
+  padding:10px 8px;border:1px solid rgba(255,255,255,.06);border-radius:12px;
+  background:rgba(255,255,255,.02);color:var(--text);
+  cursor:pointer;font-size:.68rem;text-align:left;transition:all .25s;
+  display:flex;align-items:center;gap:7px;letter-spacing:.03em
+}
+#presets button:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.3)}
+#presets button .rswatch{width:14px;height:14px;border-radius:50%;flex-shrink:0;box-shadow:inset 0 1px 2px rgba(255,255,255,.2)}
+#presets button .rtime{color:var(--text-dim);font-size:.58rem;display:block}
+
+/* 时间轴 */
+#timeSlider{-webkit-appearance:none;width:100%;height:5px;border-radius:3px;
+  background:linear-gradient(90deg,#b49ce0 0%,#f5954a 20%,#e8681a 35%,#1a5632 60%,#7c5cbf 100%);
+  outline:none;margin:8px 0 4px}
+#timeSlider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#fff;border:2px solid rgba(255,255,255,.3);cursor:pointer;
+  box-shadow:0 0 14px rgba(255,255,255,.2)}
+#timeDisplay{text-align:center;font-size:.75rem;font-weight:600;color:var(--text);letter-spacing:.06em}
+
+/* 日志 */
+#logBox{flex:1;overflow-y:auto;min-height:0}
+#logBox .log-entry{padding:3px 0;font-size:.62rem;font-family:'SF Mono',Consolas,monospace;line-height:1.5;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text-dim);letter-spacing:.01em}
+#logBox .log-entry.em{color:#4ade80}
+#logBox .log-entry.warn{color:#fbbf24}
+#logBox .log-entry.err{color:#f87171}
+
+/* 噪音按钮 */
+#btnNoise{width:100%;padding:11px;border:1px solid rgba(248,81,73,.25);border-radius:14px;
+  background:rgba(248,81,73,.06);color:#f87171;font-size:.72rem;font-weight:600;
+  cursor:pointer;letter-spacing:.06em;transition:all .2s;backdrop-filter:blur(8px)}
+#btnNoise:hover{background:rgba(248,81,73,.14);border-color:rgba(248,81,73,.4);box-shadow:0 0 24px rgba(248,81,73,.12)}
+#btnNoise:active{transform:scale(.96)}
+#btnNoise.off{opacity:.35;pointer-events:none;color:var(--text-dim);border-color:rgba(255,255,255,.04)}
+</style>
+</head>
+<body>
+
+<!-- 萤火虫光斑 -->
+<div id="glowLayer">
+  <div class="glow-orb pine" style="left:10%;top:20%;--dur:6s;--delay:0s;--dx:60px;--dy:-40px;--peak:.6"></div>
+  <div class="glow-orb pine" style="left:20%;top:60%;--dur:7s;--delay:2s;--dx:-50px;--dy:30px;--peak:.5"></div>
+  <div class="glow-orb citrus" style="left:50%;top:15%;--dur:5s;--delay:1s;--dx:80px;--dy:-20px;--peak:.45"></div>
+  <div class="glow-orb citrus" style="left:65%;top:70%;--dur:8s;--delay:3s;--dx:-60px;--dy:-50px;--peak:.4"></div>
+  <div class="glow-orb lavender" style="left:75%;top:30%;--dur:7s;--delay:1.5s;--dx:-40px;--dy:40px;--peak:.5"></div>
+  <div class="glow-orb lavender" style="left:85%;top:55%;--dur:6s;--delay:.5s;--dx:50px;--dy:-30px;--peak:.55"></div>
+  <div class="glow-orb pine" style="left:40%;top:80%;--dur:9s;--delay:4s;--dx:30px;--dy:-60px;--peak:.35"></div>
+  <div class="glow-orb citrus" style="left:55%;top:40%;--dur:6.5s;--delay:2.5s;--dx:-70px;--dy:20px;--peak:.4"></div>
+</div>
+<div id="alertFlash"></div>
+
+<!-- ═══ 主布局 ═══ -->
+<div id="main">
+
+  <!-- 左：精油瓶 -->
+  <div id="leftCol">
+    <div class="section-title">香精原料</div>
+    <div class="bottle-wrap" onclick="addDrop('pine')">
+      <div class="tap-hint">▼ 轻触滴入</div>
+      <svg width="54" height="110" viewBox="0 0 54 110">
+        <defs>
+          <linearGradient id="dp" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0f301a"/><stop offset="50%" stop-color="#1a5632"/><stop offset="100%" stop-color="#0f301a"/></linearGradient>
+          <linearGradient id="dpg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,.18)"/><stop offset="50%" stop-color="rgba(255,255,255,.03)"/><stop offset="100%" stop-color="rgba(255,255,255,.08)"/></linearGradient>
+        </defs>
+        <!-- 胶头滴管 -->
+        <ellipse cx="27" cy="12" rx="12" ry="8" fill="#1a1f1c" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+        <rect x="23" y="16" width="8" height="20" rx="2" fill="#1a1f1c"/>
+        <rect x="24" y="34" width="6" height="14" rx="1" fill="rgba(255,255,255,.06)"/>
+        <!-- 瓶身 -->
+        <rect x="10" y="48" width="34" height="52" rx="10" fill="url(#dpg)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+        <rect x="14" y="54" width="26" height="36" rx="6" fill="url(#dp)"/>
+        <ellipse cx="27" cy="58" rx="8" ry="3" fill="rgba(255,255,255,.06)"/>
+      </svg>
+      <div class="lbl" style="color:#4ade80">松 木</div>
+    </div>
+
+    <div class="bottle-wrap" onclick="addDrop('citrus')">
+      <div class="tap-hint">▼ 轻触滴入</div>
+      <svg width="54" height="110" viewBox="0 0 54 110">
+        <defs>
+          <linearGradient id="dc" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a3a0c"/><stop offset="50%" stop-color="#e8681a"/><stop offset="100%" stop-color="#8a3a0c"/></linearGradient>
+        </defs>
+        <ellipse cx="27" cy="12" rx="12" ry="8" fill="#1a1f1c" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+        <rect x="23" y="16" width="8" height="20" rx="2" fill="#1a1f1c"/>
+        <rect x="24" y="34" width="6" height="14" rx="1" fill="rgba(255,255,255,.06)"/>
+        <rect x="10" y="48" width="34" height="52" rx="10" fill="url(#dpg)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+        <rect x="14" y="54" width="26" height="36" rx="6" fill="url(#dc)"/>
+        <ellipse cx="27" cy="58" rx="8" ry="3" fill="rgba(255,255,255,.06)"/>
+      </svg>
+      <div class="lbl" style="color:#f5954a">柑 橘</div>
+    </div>
+
+    <div class="bottle-wrap" onclick="addDrop('lavender')">
+      <div class="tap-hint">▼ 轻触滴入</div>
+      <svg width="54" height="110" viewBox="0 0 54 110">
+        <defs>
+          <linearGradient id="dl" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4a3090"/><stop offset="50%" stop-color="#7c5cbf"/><stop offset="100%" stop-color="#4a3090"/></linearGradient>
+        </defs>
+        <ellipse cx="27" cy="12" rx="12" ry="8" fill="#1a1f1c" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+        <rect x="23" y="16" width="8" height="20" rx="2" fill="#1a1f1c"/>
+        <rect x="24" y="34" width="6" height="14" rx="1" fill="rgba(255,255,255,.06)"/>
+        <rect x="10" y="48" width="34" height="52" rx="10" fill="url(#dpg)" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+        <rect x="14" y="54" width="26" height="36" rx="6" fill="url(#dl)"/>
+        <ellipse cx="27" cy="58" rx="8" ry="3" fill="rgba(255,255,255,.06)"/>
+      </svg>
+      <div class="lbl" style="color:#b49ce0">薰衣草</div>
+    </div>
+  </div>
+
+  <!-- 中：大香水瓶 -->
+  <div id="centerCol">
+    <div id="dropLayer"></div>
+    <div id="bottleWrap">
+      <svg id="bottleSvg" viewBox="0 0 340 540">
+        <defs>
+          <clipPath id="bc"><path d="M130,165 C130,155 135,140 140,125 L140,80 C140,70 145,62 150,55 L150,40 L190,40 L190,55 C195,62 200,70 200,80 L200,125 C205,140 210,155 210,165 L220,440 C220,460 210,478 185,484 L155,484 C130,478 120,460 120,440 Z"/></clipPath>
+          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="rgba(255,255,255,.14)"/><stop offset="30%" stop-color="rgba(255,255,255,.02)"/><stop offset="70%" stop-color="rgba(255,255,255,.01)"/><stop offset="100%" stop-color="rgba(255,255,255,.07)"/></linearGradient>
+          <radialGradient id="liquidGlow" cx=".4" cy=".3"><stop offset="0%" stop-color="rgba(255,255,255,.1)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+        <!-- 瓶身玻璃 -->
+        <path d="M130,165 C130,155 135,140 140,125 L140,80 C140,70 145,62 150,55 L150,40 L190,40 L190,55 C195,62 200,70 200,80 L200,125 C205,140 210,155 210,165 L220,440 C220,460 210,478 185,484 L155,484 C130,478 120,460 120,440 Z" fill="url(#bg)" stroke="rgba(200,220,210,.2)" stroke-width="1.5"/>
+        <!-- 液体 -->
+        <g clip-path="url(#bc)">
+          <rect id="liquidBody" x="115" y="180" width="115" height="310" fill="#1a5632"/>
+          <rect x="115" y="180" width="115" height="310" fill="url(#liquidGlow)"/>
+        </g>
+        <!-- 液面波纹 -->
+        <ellipse id="liquidSurface" cx="170" cy="180" rx="52" ry="7" fill="rgba(255,255,255,.04)" style="transition:cy .8s cubic-bezier(.4,0,.2,1)"/>
+        <!-- 玻璃高光 -->
+        <path d="M138,170 L138,450" stroke="rgba(255,255,255,.08)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M143,175 L143,440" stroke="rgba(255,255,255,.03)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M200,170 L200,440" stroke="rgba(255,255,255,.03)" stroke-width="1" stroke-linecap="round"/>
+        <!-- 瓶盖 -->
+        <rect x="148" y="22" width="44" height="22" rx="7" fill="#1a201c" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+        <rect x="152" y="14" width="36" height="12" rx="5" fill="#242c26" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+        <ellipse cx="170" cy="40" rx="20" ry="4" fill="rgba(255,255,255,.04)"/>
+        <!-- 标签 -->
+        <rect x="148" y="370" width="44" height="30" rx="4" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.06)" stroke-width=".5"/>
+        <text x="170" y="390" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="8" letter-spacing="2">EMBER</text>
+      </svg>
+      <div id="statusOverlay"><div class="txt">⚠️ 退让中…<div class="nums" id="countdownTxt"></div></div></div>
+    </div>
+  </div>
+
+  <!-- 右：控制面板 -->
+  <div id="rightCol">
+    <div class="glass-panel" id="ratioBox">
+      <h3>📊 当前配方</h3>
+      <div class="ratios">
+        <span><span class="swatch" style="background:#2d8a4e"></span><span style="color:#4ade80">松木</span><span class="val" id="vpine" style="color:#4ade80">40%</span></span>
+        <span><span class="swatch" style="background:#f5954a"></span><span style="color:#fb923c">柑橘</span><span class="val" id="vcitrus" style="color:#fb923c">30%</span></span>
+        <span><span class="swatch" style="background:#b49ce0"></span><span style="color:#c084fc">薰衣草</span><span class="val" id="vlav" style="color:#c084fc">30%</span></span>
+      </div>
+    </div>
+
+    <div class="glass-panel">
+      <h3>🌿 森林时刻</h3>
+      <div id="presets">
+        <button onclick="setPreset('morning')"><span class="rswatch" style="background:linear-gradient(135deg,#b49ce0 20%,#f5954a 80%)"></span><span>清晨山坡<span class="rtime">6am</span></span></button>
+        <button onclick="setPreset('midday')"><span class="rswatch" style="background:linear-gradient(135deg,#1a5632 60%,#b49ce0 40%)"></span><span>正午密林<span class="rtime">12pm</span></span></button>
+        <button onclick="setPreset('dusk')"><span class="rswatch" style="background:linear-gradient(135deg,#1a5632 80%,#f5954a 20%)"></span><span>黄昏暖室<span class="rtime">6pm</span></span></button>
+        <button onclick="setPreset('sleep')"><span class="rswatch" style="background:#b49ce0"></span><span>深夜安眠<span class="rtime">10pm</span></span></button>
+      </div>
+    </div>
+
+    <div class="glass-panel">
+      <h3>🕐 时间轴</h3>
+      <input type="range" id="timeSlider" min="0" max="24" value="8" step="0.5">
+      <div id="timeDisplay">08:00</div>
+    </div>
+
+    <div class="glass-panel" id="logBox"></div>
+
+    <button id="btnNoise" onclick="simNoise()">⚠️ 模拟翻身噪音</button>
+  </div>
+</div>
+
+<script>
+// ═══ 状态 ═══
+let mix = { pine:40, citrus:30, lavender:30 };
+let paused = false, pauseTimer = null, countdownInterval = null;
+let savedMix = null;
+
+const RGB = {
+  pine:{r:26,g:86,b:50}, citrus:{r:232,g:104,b:26}, lavender:{r:124,g:92,b:191}
+};
+
+function blend(){const t=mix.pine+mix.citrus+mix.lavender||1;
+  const r=Math.round((RGB.pine.r*mix.pine+RGB.citrus.r*mix.citrus+RGB.lavender.r*mix.lavender)/t);
+  const g=Math.round((RGB.pine.g*mix.pine+RGB.citrus.g*mix.citrus+RGB.lavender.g*mix.lavender)/t);
+  const b=Math.round((RGB.pine.b*mix.pine+RGB.citrus.b*mix.citrus+RGB.lavender.b*mix.lavender)/t);
+  return `rgb(${r},${g},${b})`;
+}
+
+function updUI(){
+  const c=blend();
+  document.getElementById('liquidBody').setAttribute('fill',c);
+  const total=mix.pine+mix.citrus+mix.lavender;
+  const ly=Math.min(420,170+(total/100)*250);
+  document.getElementById('liquidBody').setAttribute('y',ly);
+  document.getElementById('liquidBody').setAttribute('height',490-ly);
+  document.getElementById('liquidSurface').setAttribute('cy',ly);
+  document.getElementById('vpine').textContent=mix.pine+'%';
+  document.getElementById('vcitrus').textContent=mix.citrus+'%';
+  document.getElementById('vlav').textContent=mix.lavender+'%';
+}
+
+// ═══ 水滴动画 ═══
+function droplet(type){
+  const layer=document.getElementById('dropLayer');
+  const wrap=document.getElementById('bottleWrap');
+  const r=wrap.getBoundingClientRect(),lr=layer.getBoundingClientRect();
+  const tx=r.left+r.width*.5-lr.left, ty=r.top+r.height*.12-lr.top;
+  const d=document.createElement('div');d.className='droplet';
+  const c=RGB[type];d.style.background=`rgb(${c.r},${c.g},${c.b})`;
+  d.style.boxShadow=`0 0 8px rgb(${c.r},${c.g},${c.b})`;
+  d.style.left=(tx+(Math.random()-.5)*80)+'px';d.style.top=(ty-60-Math.random()*30)+'px';
+  d.style.opacity='1';layer.appendChild(d);
+  requestAnimationFrame(()=>{
+    d.style.left=tx+'px';d.style.top=ty+'px';
+    d.style.opacity='.3';d.style.transform='scale(.3)';
+    d.style.width='4px';d.style.height='10px';
+  });
+  setTimeout(()=>d.remove(),550);
+}
+
+// ═══ 添加 ═══
+function addDrop(type){
+  if(paused)return;
+  mix[type]=(mix[type]||0)+10;
+  const t=mix.pine+mix.citrus+mix.lavender;
+  if(t>100){const s=100/t;mix.pine=Math.round(mix.pine*s);mix.citrus=Math.round(mix.citrus*s);mix.lavender=100-mix.pine-mix.citrus;}
+  droplet(type);updUI();
+  log('em',`🧪 滴入${type==='pine'?'松木':type==='citrus'?'柑橘':'薰衣草'} → ${mix.pine}/${mix.citrus}/${mix.lavender}`);
+}
+
+// ═══ 预设 ═══
+const PS={
+  morning:{pine:0,citrus:80,lavender:20,l:'🌄 清晨山坡 (柑橘80%+薰衣草20%)'},
+  midday:{pine:60,citrus:0,lavender:40,l:'🌲 正午密林 (松木60%+薰衣草40%)'},
+  dusk:{pine:80,citrus:20,lavender:0,l:'🏠 黄昏暖室 (松木80%+柑橘20%)'},
+  sleep:{pine:0,citrus:0,lavender:100,l:'🌙 深夜安眠 (纯薰衣草)'},
+};
+function setPreset(k){
+  if(paused)return;
+  mix={...PS[k]};updUI();
+  for(let i=0;i<5;i++)setTimeout(()=>{const ts=[];if(mix.pine>0)ts.push('pine');if(mix.citrus>0)ts.push('citrus');if(mix.lavender>0)ts.push('lavender');if(ts.length)droplet(ts[i%ts.length]);},i*100);
+  log('em','🎯 '+PS[k].l);
+}
+
+// ═══ 时间轴 ═══
+const ts=document.getElementById('timeSlider'),td=document.getElementById('timeDisplay');
+ts.addEventListener('input',()=>{
+  if(paused)return;
+  const h=parseFloat(ts.value),hrs=Math.floor(h),mins=Math.round((h-hrs)*60);
+  td.textContent=String(hrs).padStart(2,'0')+':'+String(mins).padStart(2,'0');
+  let m;if(h>=6&&h<10)m={pine:0,citrus:80,lavender:20};
+  else if(h>=10&&h<18)m={pine:60,citrus:0,lavender:40};
+  else m={pine:0,citrus:0,lavender:100};
+  mix={...m};updUI();
+  const ns=[];if(m.pine)ns.push('松木'+m.pine+'%');if(m.citrus)ns.push('柑橘'+m.citrus+'%');if(m.lavender)ns.push('薰衣草'+m.lavender+'%');
+  log('warn','🕐 ['+td.textContent+'] '+ns.join(' + '));
+});
+
+// ═══ 噪音 ═══
+function simNoise(){
+  if(paused)return;paused=true;
+  document.getElementById('btnNoise').classList.add('off');
+  document.getElementById('btnNoise').textContent='⏳ 退让中…';
+  document.getElementById('bottleWrap').classList.add('shake');
+  document.getElementById('alertFlash').classList.add('on');
+  document.getElementById('statusOverlay').classList.add('on');
+  document.getElementById('liquidBody').setAttribute('fill','#3a3a3a');
+  document.getElementById('vpine').textContent='0%';document.getElementById('vcitrus').textContent='0%';document.getElementById('vlav').textContent='0%';
+  savedMix={...mix};mix={pine:0,citrus:0,lavender:0};
+  log('err','⚠️ [HAL退让] 检测到翻身噪音，瞬间切断所有香氛通道！');
+
+  let count=3;const ct=document.getElementById('countdownTxt');
+  ct.textContent=count+'秒后恢复…';
+  countdownInterval=setInterval(()=>{
+    count--;ct.textContent=count>0?count+'秒后恢复…':'';
+    if(count<=0){clearInterval(countdownInterval);countdownInterval=null;}
+  },1000);
+
+  pauseTimer=setTimeout(()=>{
+    paused=false;mix=savedMix;updUI();
+    document.getElementById('bottleWrap').classList.remove('shake');
+    document.getElementById('alertFlash').classList.remove('on');
+    document.getElementById('statusOverlay').classList.remove('on');
+    document.getElementById('btnNoise').classList.remove('off');
+    document.getElementById('btnNoise').textContent='⚠️ 模拟翻身噪音';
+    log('warn','✅ [HAL恢复] 3秒冷却期结束，香氛已恢复');
+    pauseTimer=null;
+  },3000);
+}
+
+// ═══ 日志 ═══
+function log(cls,msg){
+  const b=document.getElementById('logBox');
+  const d=document.createElement('div');d.className='log-entry '+cls;
+  d.textContent=new Date().toLocaleTimeString()+'  '+msg;
+  b.appendChild(d);b.scrollTop=b.scrollHeight;
+  while(b.children.length>40)b.firstChild.remove();
+}
+
+updUI();log('em','🟢 森林调香实验室已就绪 — 轻触左侧香精瓶开始');
+</script>
+</body>
+</html>
