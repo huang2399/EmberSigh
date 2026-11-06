@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f8f4ed">
+<title>EmberSigh 听眠 · 产品展示与互动控制台 v2</title>
+<meta name="description" content="EmberSigh 听眠 — 不佩戴、无摄像头、纯听觉感知的桌面睡眠环境管家。懂退让，不打扰。">
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+   EmberSigh Website v2
+   ─────────────────────────────────────────────────────────────
+   本文件为「网页版/index.html」最终整合版的响应式重构版本，
+   原 website/index.html 保持不动。
+
+   相对网页版/index.html 的主要改进：
+   1. 全设备响应式：移除 body{overflow:hidden} 与固定 100vh 视图，
+      移动端改为纵向滚动 + 横向可滑动 Tab 栏（原版在手机上被裁切）
+   2. 零外部依赖字体：改用本地字体栈（Georgia / 宋体 / 苹方），
+      避免 Google Fonts 被墙导致的排版塌陷
+   3. 无障碍：Tab 支持键盘 1-5 与方向键、aria-selected、focus-visible
+   4. 动效可关闭：完整支持 prefers-reduced-motion
+   5. 内容补全：新增「硬件 Hardware」视图（规格表 + 接线拓扑 + 避坑），
+      理念页补充使用场景与 CTA
+   6. 性能：光晕动画仅在可视区域运行（IntersectionObserver 暂停）
+   7. 状态机：显式 EMA 平滑系数展示 + 手动三态按钮 + 自动模拟拍手
+  ═══════════════════════════════════════════════════════════════
+-->
+
+<style>
+/* ══════════════════════════════════════════
+   0. 设计系统 Design Tokens
+   ══════════════════════════════════════════ */
+:root{
+  /* 墨色阶 */
+  --ink:#2f2620;
+  --ink-soft:#6f6254;
+  --ink-faint:#a3937f;
+  /* 主色：暖金 */
+  --gold:#b08d57;
+  --gold-l:#c9a86f;
+  --gold-d:#8a6b47;
+  /* 香精色板 */
+  --pine:#7d9471;
+  --citrus:#e2a24b;
+  --lav:#9d8ec7;
+  --sky:#6f8fb5;
+  --amber:#c08a3e;
+  --rose:#b0442f;
+  /* 结构 */
+  --line:rgba(80,64,46,.14);
+  --line-hi:rgba(80,64,46,.28);
+  --card:rgba(255,255,255,.58);
+  --card-hi:rgba(255,255,255,.78);
+  --radius:22px;
+  --radius-sm:14px;
+  --shadow:0 18px 44px -26px rgba(96,76,48,.55);
+  /* 字体栈（全部本地，无 CDN 依赖） */
+  --display:Georgia,'Times New Roman','Songti SC','STSong',serif;
+  --serif:'Songti SC','STSong','SimSun',Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI Variable','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Cascadia Mono',Consolas,'Liberation Mono',monospace;
+  --nav-h:64px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  /* ⚠ 关键修复：不再 overflow:hidden，允许自然滚动 */
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  background:
+    radial-gradient(1100px 720px at 10% -12%, rgba(255,232,205,.88), transparent 62%),
+    radial-gradient(920px 660px at 96% 4%, rgba(212,226,206,.70), transparent 55%),
+    radial-gradient(860px 640px at 62% 116%, rgba(232,214,238,.58), transparent 60%),
+    linear-gradient(160deg,#f8f4ed 0%,#f2ece2 48%,#ece5d7 100%);
+  background-attachment:fixed;
+}
+::selection{background:rgba(176,141,87,.22)}
+
+h1,h2,h3,h4{font-family:var(--display);font-weight:600;line-height:1.25}
+b{font-weight:700}
+
+/* 焦点可见（无障碍） */
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+
+/* ══════════════════════════════════════════
+   1. 环境层：光晕 + 噪点 + 顶线
+   ══════════════════════════════════════════ */
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.ambient .orb{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+.orb-a{width:560px;height:560px;left:-150px;top:-200px;
+  background:radial-gradient(circle,rgba(255,226,186,.72),transparent 66%);
+  animation:floatA 28s ease-in-out infinite alternate}
+.orb-b{width:640px;height:640px;right:-190px;top:-150px;
+  background:radial-gradient(circle,rgba(206,222,198,.58),transparent 66%);
+  animation:floatB 34s ease-in-out infinite alternate}
+.orb-c{width:600px;height:600px;left:40%;bottom:-330px;
+  background:radial-gradient(circle,rgba(226,214,240,.52),transparent 66%);
+  animation:floatA 32s ease-in-out infinite alternate-reverse}
+@keyframes floatA{from{transform:translate(0,0) scale(1)}to{transform:translate(44px,52px) scale(1.08)}}
+@keyframes floatB{from{transform:translate(0,0) scale(1.03)}to{transform:translate(-50px,44px) scale(.96)}}
+
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
+.topline{position:fixed;left:0;right:0;top:0;height:1px;z-index:99;
+  background:linear-gradient(90deg,transparent,rgba(176,141,87,.55),rgba(176,141,87,.12),transparent)}
+
+/* ══════════════════════════════════════════
+   2. 导航栏
+   ══════════════════════════════════════════ */
+.nav{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:0 clamp(14px,3vw,40px);
+  background:rgba(250,246,239,.80);
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:11px;flex:none;text-decoration:none;color:inherit}
+.logo{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:linear-gradient(150deg,#fffdf8,#efe6d6);
+  border:1px solid rgba(176,141,87,.34);
+  box-shadow:0 8px 18px -12px rgba(96,76,48,.6),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.logo svg{width:15px;height:15px}
+.brand .nm{display:flex;align-items:baseline;gap:9px}
+.brand .nm em{font-family:var(--display);font-style:italic;font-size:24px;font-weight:600;letter-spacing:.01em;line-height:1}
+.brand .nm .zh{font-family:var(--serif);font-size:10px;letter-spacing:.36em;color:var(--ink-soft)}
+
+/* Tab 栏：桌面居中，移动端横向滑动 */
+.tabs-wrap{flex:1;display:flex;justify-content:center;min-width:0}
+.tabs{
+  position:relative;display:flex;gap:2px;
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-ms-overflow-style:none;
+  max-width:100%;
+}
+.tabs::-webkit-scrollbar{display:none}
+.glider{
+  position:absolute;bottom:0;left:0;height:1.5px;width:0;
+  background:linear-gradient(90deg,rgba(176,141,87,0),var(--gold),rgba(176,141,87,0));
+  transition:transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;
+}
+.tab{
+  position:relative;z-index:2;display:flex;align-items:baseline;gap:6px;
+  padding:11px 13px 13px;border:0;background:none;cursor:pointer;
+  color:var(--ink-faint);font-family:var(--serif);font-size:13px;font-weight:500;
+  letter-spacing:.12em;transition:color .3s;white-space:nowrap;
+}
+.tab:hover{color:var(--ink-soft)}
+.tab.active{color:var(--ink);font-weight:600}
+.tab em{font-style:italic;font-family:var(--display);font-size:11px;letter-spacing:.06em;color:var(--ink-faint);transition:color .3s}
+.tab.active em{color:var(--gold)}
+
+.nav-right{display:flex;align-items:center;gap:12px;flex:none}
+.status{
+  display:flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:20px;padding:5px 11px;
+  background:rgba(255,255,255,.5);
+}
+.status i{width:6px;height:6px;border-radius:50%;background:var(--pine);
+  box-shadow:0 0 6px rgba(125,148,113,.9);animation:blink 2.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.gh-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;letter-spacing:.04em;
+  color:var(--ink-soft);text-decoration:none;
+  border:1px solid var(--line);border-radius:20px;padding:6px 13px;
+  background:rgba(255,255,255,.55);transition:all .28s;
+}
+.gh-link:hover{color:#fff;background:var(--ink);border-color:var(--ink)}
+
+/* ══════════════════════════════════════════
+   3. 主容器 / 视图切换
+   ══════════════════════════════════════════ */
+main{
+  position:relative;z-index:2;
+  max-width:1280px;margin:0 auto;
+  padding:calc(var(--nav-h) + clamp(18px,3vw,36px)) clamp(14px,3vw,40px) 72px;
+}
+.view{display:none}
+.view.active{display:block;animation:viewIn .5s cubic-bezier(.22,1,.36,1) both}
+@keyframes viewIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* 玻璃卡片 */
+.glass{
+  background:var(--card);
+  backdrop-filter:blur(18px) saturate(130%);
+  -webkit-backdrop-filter:blur(18px) saturate(130%);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+
+/* 卡片头 */
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.card-title{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:12.5px;font-weight:600;letter-spacing:.1em;color:var(--ink)}
+.tick{width:5px;height:5px;border-radius:50%;background:var(--gold);flex:none}
+.card-note{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);letter-spacing:.06em}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.22em;
+  color:var(--gold-d);text-transform:uppercase;margin-bottom:16px;
+}
+.eyebrow::before{content:'';width:22px;height:1px;background:var(--gold)}
+
+/* ══════════════════════════════════════════
+   4. 视图一 · 理念 Vision
+   ══════════════════════════════════════════ */
+.vision{
+  display:grid;grid-template-columns:1.15fr .85fr;
+  gap:clamp(24px,4vw,56px);align-items:center;
+  margin-bottom:clamp(30px,5vw,56px);
+}
+.vision h1{font-size:clamp(30px,5.2vw,56px);letter-spacing:-.015em;margin-bottom:14px}
+.vision h1 b{
+  font-style:italic;color:var(--gold-d);
+  background:linear-gradient(120deg,var(--gold-d),var(--gold-l));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.kicker{
+  font-family:var(--display);font-style:italic;font-size:clamp(13px,1.6vw,16px);
+  color:var(--ink-faint);margin-bottom:22px;letter-spacing:.01em;
+}
+.vision p{font-size:clamp(13px,1.5vw,14.5px);line-height:1.95;color:var(--ink-soft);max-width:52ch}
+.vision p b{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}
+.chip{
+  display:flex;align-items:baseline;gap:6px;
+  font-size:11px;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:20px;
+  padding:6px 13px;background:rgba(255,255,255,.55);
+}
+.chip .k{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--gold-d)}
+.chip .k.m{color:var(--rose)}
+.chip .k.s{color:var(--sky)}
+
+/* 设备视觉 */
+.vision-visual{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
+.device{position:relative;width:min(260px,68vw)}
+.device-body{
+  position:relative;aspect-ratio:1/1.06;border-radius:26px;
+  background:linear-gradient(155deg,#fffdf8,#efe6d6 62%,#e6dbc8);
+  border:1px solid rgba(120,98,68,.26);
+  box-shadow:0 28px 60px -28px rgba(96,76,48,.62),inset 0 1px 0 rgba(255,255,255,.95);
+  display:grid;place-items:center;padding:16%;
+}
+.screen-orb{
+  width:100%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,#2b4a72,#132a45 62%,#0d1e33);
+  display:grid;place-items:center;gap:3px;
+  box-shadow:inset 0 0 28px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);
+  position:relative;overflow:hidden;
+}
+.screen-orb::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  box-shadow:inset 0 0 0 1.5px rgba(255,225,180,.14);
+}
+.screen-orb .lbl{
+  font-family:var(--display);font-style:italic;font-size:clamp(15px,2vw,19px);
+  color:#eaf1fa;letter-spacing:.03em;
+}
+.wave{display:flex;align-items:flex-end;gap:3px;height:20px}
+.wave i{width:2.5px;border-radius:2px;background:rgba(200,222,246,.75);animation:waveB 1.5s ease-in-out infinite}
+.wave i:nth-child(1){height:7px;animation-delay:0s}
+.wave i:nth-child(2){height:13px;animation-delay:.12s}
+.wave i:nth-child(3){height:19px;animation-delay:.24s}
+.wave i:nth-child(4){height:12px;animation-delay:.36s}
+.wave i:nth-child(5){height:6px;animation-delay:.48s}
+@keyframes waveB{0%,100%{transform:scaleY(.5);opacity:.55}50%{transform:scaleY(1);opacity:1}}
+
+.float-card{
+  position:absolute;display:flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);
+  background:rgba(255,255,255,.82);border:1px solid var(--line);
+  border-radius:10px;padding:6px 10px;white-space:nowrap;
+  box-shadow:0 10px 24px -16px rgba(96,76,48,.8);
+  animation:bob 5s ease-in-out infinite;
+}
+.float-card b{color:var(--gold-d);font-size:11px}
+.fc1{top:8%;left:-6%;animation-delay:0s}
+.fc2{bottom:22%;right:-8%;animation-delay:1.6s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.device-cap{text-align:center}
+.device-cap .n{font-size:11.5px;font-weight:600;color:var(--ink)}
+.device-cap .s{font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);letter-spacing:.1em;margin-top:3px}
+
+/* 三原则 */
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.p-card{padding:20px;display:flex;gap:14px;align-items:flex-start}
+.p-ico{
+  width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
+  background:rgba(255,255,255,.7);border:1px solid var(--line);
+}
+.p-ico svg{width:18px;height:18px}
+.p-card h3{font-size:14px;margin-bottom:6px;font-family:var(--sans);font-weight:700}
+.p-card p{font-size:12.5px;line-height:1.75;color:var(--ink-soft)}
+.p-card .tag{
+  display:inline-block;margin-top:9px;
+  font-family:var(--mono);font-size:8px;letter-spacing:.13em;
+  color:var(--gold-d);border:1px solid rgba(176,141,87,.3);
+  border-radius:4px;padding:2px 6px;
+}
+
+/* 场景条 */
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.scene{padding:18px}
+.scene .st{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.scene .st .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.scene h4{font-size:13px;font-family:var(--sans);font-weight:700}
+.scene .tm{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-bottom:8px}
+.scene p{font-size:12px;line-height:1.7;color:var(--ink-soft)}
+
+/* ══════════════════════════════════════════
+   5. 视图二 · 控制台 Console
+   ══════════════════════════════════════════ */
+.console-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;align-items:start}
+
+.screen-card{padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.device-frame{
+  position:relative;width:min(280px,70vw);aspect-ratio:1;
+  border-radius:20px;padding:12px;
+  background:linear-gradient(155deg,#fffdf8,#e9dfcd);
+  border:1px solid rgba(120,98,68,.24);
+  box-shadow:0 22px 46px -26px rgba(96,76,48,.6),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.cam{position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  width:5px;height:5px;border-radius:50%;background:#3a3228;opacity:.5}
+
+/* 240×240 屏幕 */
+.screen{
+  position:relative;width:100%;height:100%;border-radius:13px;overflow:hidden;
+  display:grid;place-items:center;
+  transition:background .7s cubic-bezier(.22,1,.36,1),box-shadow .7s;
+}
+.screen.s-calm{background:radial-gradient(circle at 42% 34%,#254a78,#0e2340 68%,#091829);
+  box-shadow:inset 0 0 30px rgba(0,0,0,.5),0 0 30px rgba(60,120,200,.12)}
+.screen.s-noise{background:radial-gradient(circle at 42% 34%,#6b1a2c,#3a0d18 68%,#280810);
+  box-shadow:inset 0 0 30px rgba(0,0,0,.5),0 0 34px rgba(200,40,60,.16)}
+.screen.s-calming{background:radial-gradient(circle at 42% 34%,#6b4218,#3d2408 68%,#2a1804);
+  box-shadow:inset 0 0 30px rgba(0,0,0,.5),0 0 30px rgba(200,140,60,.14)}
+
+/* 呼吸光环 */
+.ring{
+  position:absolute;border-radius:50%;border:1px solid rgba(180,214,248,.24);
+  animation:ringBreath 3.6s ease-in-out infinite;
+}
+.ring.r1{width:52%;height:52%}
+.ring.r2{width:76%;height:76%;animation-delay:.6s;opacity:.55}
+.screen.s-noise .ring{border-color:rgba(255,170,180,.24)}
+.screen.s-calming .ring{border-color:rgba(255,206,150,.26)}
+@keyframes ringBreath{0%,100%{transform:scale(.88);opacity:.35}50%{transform:scale(1.06);opacity:.85}}
+
+/* 冷却进度环 */
+.cd-ring{position:absolute;inset:5%;border-radius:50%;pointer-events:none;
+  mask:radial-gradient(circle,transparent 62%,#000 63%);
+  -webkit-mask:radial-gradient(circle,transparent 62%,#000 63%)}
+
+/* 音频柱 */
+.bars{
+  position:absolute;bottom:13%;left:50%;transform:translateX(-50%);
+  display:flex;align-items:flex-end;gap:3px;height:26px;
+}
+.bars i{width:3px;border-radius:2px;background:rgba(170,206,244,.6);height:20%;transition:height .3s}
+.screen.s-noise .bars i{background:rgba(255,170,180,.7)}
+.screen.s-calming .bars i{background:rgba(255,206,150,.7)}
+
+.scr-content{text-align:center;z-index:3;padding:0 12px}
+.scr-main{
+  font-family:var(--display);font-style:italic;
+  font-size:clamp(20px,3.6vw,27px);font-weight:600;
+  color:#eef4fb;letter-spacing:.02em;line-height:1.15;
+  transition:color .5s;
+}
+.scr-sub{font-family:var(--mono);font-size:9px;color:rgba(200,222,246,.72);margin-top:5px;letter-spacing:.05em}
+.scr-foot{
+  position:absolute;bottom:4.5%;left:0;right:0;text-align:center;
+  font-family:var(--mono);font-size:7px;letter-spacing:.05em;
+  color:rgba(190,214,240,.5);padding:0 10px;line-height:1.5;
+}
+.screen.shake{animation:shk .85s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shk{
+  10%,90%{transform:translate(-1.5px,0)}20%,80%{transform:translate(2.5px,0)}
+  30%,50%,70%{transform:translate(-3.5px,0)}40%,60%{transform:translate(3.5px,0)}
+}
+
+/* 状态药丸 */
+.sm{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
+.sm-pill{
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  border:1px solid var(--line);border-radius:20px;padding:5px 11px;
+  color:var(--ink-faint);background:rgba(255,255,255,.5);transition:all .35s;
+}
+.sm-pill.on{color:#fff;background:var(--ink);border-color:var(--ink)}
+.sm-arrow{font-size:9px;color:var(--ink-faint)}
+
+.btn{
+  width:100%;padding:12px;border-radius:12px;border:1px solid var(--ink);
+  background:var(--ink);color:#f8f4ed;cursor:pointer;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.05em;
+  transition:all .28s;
+}
+.btn:hover:not(:disabled){background:var(--gold-d);border-color:var(--gold-d)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+
+.screen-meta{
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;width:100%;
+  font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);
+  border-top:1px solid var(--line);padding-top:11px;
+}
+
+/* 终端 */
+.term-card{padding:20px;display:flex;flex-direction:column;gap:10px}
+.term-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:10px}
+.term-title{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:12px;
+  font-weight:600;letter-spacing:.09em;color:var(--ink)}
+.term-dots{display:flex;gap:4px}
+.term-dots i{width:7px;height:7px;border-radius:50%;background:var(--line-hi)}
+.term-dots i:nth-child(1){background:rgba(176,68,47,.55)}
+.term-dots i:nth-child(2){background:rgba(192,138,62,.6)}
+.term-dots i:nth-child(3){background:rgba(125,148,113,.6)}
+.term-body{
+  height:280px;overflow-y:auto;
+  font-family:var(--mono);font-size:10.5px;line-height:1.75;
+  padding-right:4px;
+}
+.term-body::-webkit-scrollbar{width:4px}
+.term-body::-webkit-scrollbar-thumb{background:var(--line-hi);border-radius:2px}
+.term-body .line{display:flex;gap:8px;padding:1.5px 0;animation:lineIn .3s both}
+@keyframes lineIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+.line .t{color:var(--ink-faint);flex:none}
+.line .tag{flex:none;font-weight:700}
+.line .msg{color:var(--ink-soft);word-break:break-word}
+.line.ok .tag{color:var(--pine)}
+.line.warn .tag{color:var(--citrus)}
+.line.err .tag{color:var(--rose)}
+.line.dim .tag{color:var(--sky)}
+.term-foot{
+  display:flex;flex-wrap:wrap;gap:6px 14px;
+  border-top:1px solid var(--line);padding-top:10px;
+  font-family:var(--mono);font-size:9px;color:var(--ink-faint);
+}
+.term-foot b{color:var(--ink)}
+.term-foot .v-em{color:var(--sky)}
+.term-foot .v-rose{color:var(--rose)}
+.term-foot .v-amber{color:var(--amber)}
+
+/* ══════════════════════════════════════════
+   6. 视图三 · 嗅觉实验室 Lab
+   ══════════════════════════════════════════ */
+.lab-card{padding:clamp(16px,2.4vw,28px)}
+.lab-grid{
+  display:grid;grid-template-columns:1fr 1.05fr 1fr;
+  gap:clamp(16px,2.4vw,30px);
+}
+.col{display:flex;flex-direction:column;gap:11px;min-width:0}
+.col-label{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;
+  color:var(--ink-faint);border-bottom:1px solid var(--line);padding-bottom:6px;
+}
+
+/* 香精瓶 */
+.vial{
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  border:1px solid transparent;border-radius:12px;padding:7px 9px;
+  transition:all .28s;
+}
+.vial:hover{background:rgba(255,255,255,.62);border-color:var(--line)}
+.vial:active{transform:scale(.98)}
+.vial svg{width:30px;height:56px;flex:none}
+.vial .vn{font-size:12.5px;font-weight:600;color:var(--ink)}
+.vial .vn i{font-family:var(--display);font-style:italic;font-size:10.5px;color:var(--ink-faint);font-weight:400}
+.vial .vm{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:2px}
+.vial .vm b{color:var(--gold-d);font-size:10.5px}
+
+/* 预设 */
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.preset{
+  display:flex;align-items:center;gap:7px;
+  border:1px solid var(--line);border-radius:9px;
+  padding:8px 10px;background:rgba(255,255,255,.5);
+  font-family:var(--sans);font-size:11px;color:var(--ink-soft);
+  cursor:pointer;transition:all .25s;
+}
+.preset:hover{border-color:var(--line-hi);background:rgba(255,255,255,.8)}
+.preset.on{border-color:var(--gold);background:rgba(176,141,87,.1);color:var(--ink);font-weight:600}
+.preset i{width:8px;height:8px;border-radius:50%;flex:none}
+
+.btn-noise{
+  margin-top:auto;padding:10px;border-radius:10px;cursor:pointer;
+  border:1px solid rgba(176,68,47,.35);background:rgba(176,68,47,.07);
+  color:var(--rose);font-family:var(--sans);font-size:11.5px;font-weight:600;
+  transition:all .25s;
+}
+.btn-noise:hover:not(:disabled){background:rgba(176,68,47,.14)}
+.btn-noise:disabled{opacity:.5;cursor:not-allowed}
+
+/* 主瓶 */
+.bottle-col{align-items:center;text-align:center}
+.bottle-name{font-family:var(--display);font-style:italic;font-size:17px;color:var(--ink)}
+.bottle-sub{font-family:var(--mono);font-size:9px;color:var(--ink-faint);margin-top:3px}
+.bwrap{width:100%;max-width:230px}
+.bwrap svg{width:100%;height:auto;display:block;overflow:visible}
+.bwrap.shake{animation:shk2 .8s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shk2{
+  10%,90%{transform:translate(-2px,0) rotate(-.6deg)}20%,80%{transform:translate(3px,0) rotate(.6deg)}
+  30%,50%,70%{transform:translate(-4px,0) rotate(-.9deg)}40%,60%{transform:translate(4px,0) rotate(.9deg)}
+}
+.wave2{transition:fill .5s}
+
+/* 时间轴 */
+.tl{width:100%;margin-top:4px}
+.tl-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.tl-time{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink)}
+.tl-phase{font-size:10.5px;color:var(--ink-soft)}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:3px;
+  background:linear-gradient(90deg,var(--sky),var(--citrus),var(--pine),var(--lav));
+  border-radius:3px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:#fffdf8;border:2px solid var(--gold);cursor:grab;
+  box-shadow:0 2px 8px -2px rgba(96,76,48,.6);
+}
+input[type=range]::-moz-range-thumb{
+  width:15px;height:15px;border-radius:50%;
+  background:#fffdf8;border:2px solid var(--gold);cursor:grab;
+}
+.tl-ticks{display:flex;justify-content:space-between;margin-top:5px;
+  font-family:var(--mono);font-size:7.5px;color:var(--ink-faint)}
+
+/* 比例条 */
+.ratio-row{margin-bottom:9px}
+.ratio-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);margin-bottom:4px}
+.ratio-top b{font-family:var(--mono);font-size:10.5px}
+.rbar{height:5px;border-radius:3px;background:rgba(120,98,68,.11);overflow:hidden}
+.rbar i{display:block;height:100%;border-radius:3px;transition:width .55s cubic-bezier(.22,1,.36,1)}
+
+/* 情绪预测 */
+.pred-item{margin-bottom:8px}
+.pred-top{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-bottom:3px}
+.pred-top b{font-family:var(--mono);font-size:10px;color:var(--ink)}
+.pbar{height:4px;border-radius:2px;background:rgba(120,98,68,.1);overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:2px;width:0;transition:width .6s cubic-bezier(.22,1,.36,1)}
+
+/* 混色卡 */
+.swatch-box{
+  display:flex;align-items:center;gap:11px;margin-top:auto;
+  border:1px solid var(--line);border-radius:11px;padding:9px 11px;
+  background:rgba(255,255,255,.5);
+}
+.swatch{width:34px;height:34px;border-radius:9px;flex:none;transition:background .5s;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.sc-l{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ink-faint)}
+.sc-v{font-family:var(--mono);font-size:10.5px;color:var(--ink);margin-top:2px}
+
+/* ══════════════════════════════════════════
+   7. 视图四 · 硬件 Hardware
+   ══════════════════════════════════════════ */
+.hw-top{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;margin-bottom:18px;align-items:start}
+.wire-card{padding:20px;overflow:hidden}
+.wire-card svg{width:100%;height:auto;display:block}
+.mod-title{font-family:var(--serif);font-size:11px;font-weight:700;fill:var(--ink);letter-spacing:.06em}
+.mod-sub{font-family:var(--mono);font-size:8px;fill:var(--ink-faint);letter-spacing:.03em}
+.pin-dot{transition:all .3s}
+.wire{transition:stroke-width .3s,filter .3s;filter:none}
+.wire.hot{stroke-width:3.6;filter:drop-shadow(0 0 5px currentColor)}
+
+.spec-card{padding:20px}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.spec{
+  border:1px solid var(--line);border-radius:9px;padding:9px 10px;
+  background:rgba(255,255,255,.45);
+}
+.spec .v{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gold-d)}
+.spec .l{font-size:9.5px;color:var(--ink-faint);margin-top:2px}
+
+.hw-bottom{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:start}
+.pin-card{padding:20px}
+table.pins{width:100%;border-collapse:collapse;font-size:11px}
+table.pins th{
+  text-align:left;font-family:var(--mono);font-size:8.5px;font-weight:600;
+  letter-spacing:.1em;color:var(--ink-faint);
+  border-bottom:1px solid var(--line-hi);padding:0 8px 7px;
+}
+table.pins td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--ink-soft)}
+table.pins tbody tr{cursor:default;transition:background .2s}
+table.pins tbody tr:hover{background:rgba(255,255,255,.6)}
+table.pins .sig{font-weight:600;color:var(--ink)}
+table.pins .gpio{font-family:var(--mono);font-weight:700}
+
+.note-card{padding:20px}
+.pit-list{display:flex;flex-direction:column;gap:10px}
+.pit{display:flex;gap:10px;font-size:11px;line-height:1.7;color:var(--ink-soft)}
+.pit .n{
+  font-family:var(--mono);font-size:8.5px;font-weight:700;color:var(--gold-d);
+  border:1px solid rgba(176,141,87,.3);border-radius:4px;
+  padding:1px 5px;height:fit-content;flex:none;margin-top:2px;
+}
+.pit b{color:var(--ink)}
+.pit .k{font-family:var(--mono);color:var(--rose);font-weight:700}
+
+/* ══════════════════════════════════════════
+   8. 视图五 · 开发者 Developer
+   ══════════════════════════════════════════ */
+.dev-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.dev-card{padding:22px}
+.arch{display:flex;flex-direction:column;gap:9px}
+.arch-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:center}
+.arch-box{
+  font-family:var(--mono);font-size:9.5px;font-weight:600;
+  border-radius:7px;padding:6px 11px;border:1px solid transparent;white-space:nowrap;
+}
+.arch-box.core{background:rgba(111,143,181,.14);color:#4d7296;border-color:rgba(111,143,181,.28)}
+.arch-box.audio{background:rgba(192,127,69,.12);color:#a8672f;border-color:rgba(192,127,69,.26)}
+.arch-box.ui{background:rgba(176,141,87,.14);color:var(--gold-d);border-color:rgba(176,141,87,.3)}
+.arch-box.io{background:rgba(109,138,99,.13);color:#4f7047;border-color:rgba(109,138,99,.28)}
+.arch-box.bus{background:rgba(120,98,68,.07);color:var(--ink-faint);font-size:8.5px}
+.arch-arrow{color:var(--ink-faint);font-size:11px}
+.arch-line{height:1px;background:var(--line);margin:5px 0}
+.arch-foot{
+  text-align:center;font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);
+  background:rgba(120,98,68,.06);border-radius:7px;padding:7px;
+}
+
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.tag-p{
+  font-family:var(--mono);font-size:9px;
+  border:1px solid var(--line);border-radius:20px;
+  padding:4px 10px;color:var(--ink-soft);background:rgba(255,255,255,.5);
+}
+.dev-cta{display:flex;gap:9px;flex-wrap:wrap}
+.btn-github{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 18px;border-radius:11px;
+  background:var(--ink);color:#f8f4ed;text-decoration:none;
+  font-size:11.5px;font-weight:600;transition:all .28s;
+}
+.btn-github:hover{background:var(--gold-d)}
+.btn-ghost2{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:11px 18px;border-radius:11px;
+  border:1px solid var(--line-hi);color:var(--ink-soft);text-decoration:none;
+  font-size:11.5px;font-weight:600;background:rgba(255,255,255,.5);transition:all .28s;
+}
+.btn-ghost2:hover{border-color:var(--ink);color:var(--ink)}
+
+.road{display:flex;flex-direction:column;gap:0}
+.road-item{display:flex;gap:13px;padding:11px 0;border-bottom:1px solid var(--line)}
+.road-item:last-child{border-bottom:0}
+.road-dot{
+  width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px;
+  border:2px solid var(--line-hi);background:#fffdf8;
+}
+.road-dot.done{background:var(--pine);border-color:var(--pine)}
+.road-dot.now{background:var(--citrus);border-color:var(--citrus);
+  box-shadow:0 0 0 3px rgba(226,162,75,.18);animation:blink 2s ease-in-out infinite}
+.road-body{flex:1;min-width:0}
+.road-body .rt{font-size:12px;font-weight:600;color:var(--ink)}
+.road-body .rd{font-size:10.5px;color:var(--ink-faint);margin-top:2px;line-height:1.6}
+
+/* ══════════════════════════════════════════
+   9. Toast
+   ══════════════════════════════════════════ */
+.toast{
+  position:fixed;left:50%;bottom:26px;z-index:200;
+  transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  display:flex;align-items:center;gap:9px;
+  background:rgba(47,38,32,.94);color:#f8f4ed;
+  border-radius:13px;padding:11px 18px;
+  font-size:11.5px;letter-spacing:.02em;
+  box-shadow:0 16px 40px -18px rgba(0,0,0,.7);
+  transition:all .35s cubic-bezier(.22,1,.36,1);
+  max-width:calc(100vw - 32px);
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.toast .ico{color:var(--gold-l);flex:none}
+.toast.warn{background:rgba(176,68,47,.95)}
+
+/* ══════════════════════════════════════════
+   10. 响应式 Breakpoints
+   ══════════════════════════════════════════ */
+@media(max-width:1024px){
+  .vision{grid-template-columns:1fr;gap:32px}
+  .vision-visual{order:-1}
+  .console-grid{grid-template-columns:1fr}
+  .lab-grid{grid-template-columns:1fr 1fr}
+  .bottle-col{grid-column:1/-1;order:-1}
+  .hw-top{grid-template-columns:1fr}
+  .hw-bottom{grid-template-columns:1fr}
+  .dev-grid{grid-template-columns:1fr}
+  .principles{grid-template-columns:1fr}
+  .scenes{grid-template-columns:1fr}
+}
+@media(max-width:820px){
+  .brand .nm .zh{display:none}
+  .status{display:none}
+  .nav-right .gh-link span{display:none}
+  .nav-right .gh-link{padding:7px 10px}
+}
+@media(max-width:640px){
+  :root{--nav-h:56px;--radius:16px}
+  main{padding-bottom:60px}
+  .tabs{justify-content:flex-start}
+  .tab{padding:10px 9px 12px;font-size:12px}
+  .tab em{display:none}
+  .lab-grid{grid-template-columns:1fr}
+  .bottle-col{order:0}
+  .bwrap{max-width:190px}
+  .term-body{height:220px}
+  .spec-grid{grid-template-columns:1fr}
+  .float-card{display:none}
+  table.pins{font-size:10px}
+  table.pins th,table.pins td{padding:6px 5px}
+  .vision h1{font-size:clamp(27px,8vw,36px)}
+}
+
+/* ══════════════════════════════════════════
+   11. 动效可关闭（无障碍）
+   ══════════════════════════════════════════ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- 环境层 -->
+<div class="ambient" aria-hidden="true">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<div class="topline" aria-hidden="true"></div>
+
+<!-- ══════════════ 导航栏 ══════════════ -->
+<nav class="nav">
+  <a href="#" class="brand" aria-label="EmberSigh 首页">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#b08d57" stroke-width="1.5" stroke-linecap="round">
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+        <circle cx="12" cy="12" r="4"/>
+      </svg>
+    </span>
+    <span class="nm">
+      <em>EmberSigh</em>
+      <span class="zh">听眠</span>
+    </span>
+  </a>
+
+  <div class="tabs-wrap">
+    <div class="tabs" role="tablist" aria-label="页面视图">
+      <div class="glider" id="glider" aria-hidden="true"></div>
+      <button class="tab active" role="tab" data-view="vision" aria-selected="true" aria-controls="v-vision">理念<em>Vision</em></button>
+      <button class="tab" role="tab" data-view="console" aria-selected="false" aria-controls="v-console">控制台<em>Console</em></button>
+      <button class="tab" role="tab" data-view="lab" aria-selected="false" aria-controls="v-lab">嗅觉实验室<em>Lab</em></button>
+      <button class="tab" role="tab" data-view="hardware" aria-selected="false" aria-controls="v-hardware">硬件<em>Hardware</em></button>
+      <button class="tab" role="tab" data-view="dev" aria-selected="false" aria-controls="v-dev">开发者<em>Developer</em></button>
+    </div>
+  </div>
+
+  <div class="nav-right">
+    <div class="status"><i></i><span>ALL SYSTEMS NORMAL</span></div>
+    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      <span>GitHub</span>
+    </a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════
+     视图一 · 理念 Vision
+     ══════════════════════════════════════════════════════════ -->
+<section class="view active" id="v-vision" role="tabpanel" aria-labelledby="tab-vision">
+
+  <div class="vision">
+    <div>
+      <div class="eyebrow">Vision · 端侧睡眠环境管家</div>
+      <h1>最高级的智能，<br>是<b>懂得退让</b>。</h1>
+      <div class="kicker">The highest intelligence is knowing when to recede.</div>
+      <p>
+        EmberSigh 不佩戴、不拍摄，只用一支麦克风<b>「听」</b>你的房间。<br>
+        当它听见你翻身、听见环境忽然变吵，它不会加大音量提醒你，
+        而是安静地降低声景、暂停香氛 —— 然后在你重新安静下来时，
+        让森林与气味，慢慢回来。
+      </p>
+      <div class="chips">
+        <div class="chip"><span class="k m">0</span>摄像头</div>
+        <div class="chip"><span class="k s">0</span>可穿戴</div>
+        <div class="chip"><span class="k">100%</span>端侧推理</div>
+        <div class="chip"><span class="k">3s</span>冷却退让</div>
+      </div>
+    </div>
+
+    <div class="vision-visual">
+      <div class="float-card fc1">MIC · RMS <b>42</b> dB</div>
+      <div class="float-card fc2">AROMA · <b>3</b> CH</div>
+      <div class="device">
+        <div class="device-body">
+          <div class="screen-orb">
+            <div class="lbl">Calm</div>
+            <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="device-cap">
+        <div class="n">EmberSigh One · 概念样机</div>
+        <div class="s">ESP32-S3 · 240×240 · SOUNDSCAPE + AROMA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principles">
+    <div class="p-card glass">
+      <div class="p-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#6f8fb5" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+        </svg>
+      </div>
+      <div>
+        <h3>纯听觉感知</h3>
+        <p>ES8311 Codec + 滑动平均滤波 + 迟滞区间，只判断「此刻是否适合打扰」。</p>
+        <span class="tag">PRIVACY BY DEFAULT</span>
+      </div>
+    </div>
+    <div class="p-card glass">
+      <div class="p-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#b08d57" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 3h6M10 3v6L5.5 17.5A2.5 2.5 0 0 0 7.8 21h8.4a2.5 2.5 0 0 0 2.3-3.5L14 9V3"/><path d="M7.5 15h9"/>
+        </svg>
+      </div>
+      <div>
+        <h3>动态香氛配方</h3>
+        <p>三通道雾化按时间与状态实时混合：清晨松木柑橘，深夜薰衣草苔藓。</p>
+        <span class="tag">AROMA BLENDING</span>
+      </div>
+    </div>
+    <div class="p-card glass">
+      <div class="p-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#9d8ec7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v6M12 21v-4M4.2 8l4.6 3M15.2 13l4.6 3M4.2 16l4.6-3M15.2 11l4.6-3"/><circle cx="12" cy="12" r="2.4"/>
+        </svg>
+      </div>
+      <div>
+        <h3>主动退让</h3>
+        <p>识别噪音即刻降音、断香、灯环转暗红；3 秒安静后平滑恢复，拒绝惊扰。</p>
+        <span class="tag">HAL · FALLBACK FIRST</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-h" style="margin-top:34px;margin-bottom:14px">
+    <div class="card-title"><span class="tick"></span>三个时刻，三种守护</div>
+    <div class="card-note">SCENARIOS</div>
+  </div>
+  <div class="scenes">
+    <div class="scene glass">
+      <div class="st"><span class="dot" style="background:var(--citrus)"></span><h4>清晨唤醒</h4></div>
+      <div class="tm">06:00 — 09:00</div>
+      <p>鸟鸣声景轻柔渐入，灯环模拟日出暖光，香氛释放薄荷与柑橘，把身体慢慢拉回清醒。</p>
+    </div>
+    <div class="scene glass">
+      <div class="st"><span class="dot" style="background:var(--lav)"></span><h4>深夜安眠</h4></div>
+      <div class="tm">22:00 — 06:00</div>
+      <p>深蓝微光只够看清轮廓，水流声景持续播放，灯环熄灭。检测到翻身即刻降至最低。</p>
+    </div>
+    <div class="scene glass">
+      <div class="st"><span class="dot" style="background:var(--pine)"></span><h4>工作小憩</h4></div>
+      <div class="tm">13:00 — 14:00</div>
+      <p>林间风声与溪流混合，灯环保持暗橙不打扰，香氛暂停。十五分钟快速充电。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     视图二 · 控制台 Console
+     ══════════════════════════════════════════════════════════ -->
+<section class="view" id="v-console" role="tabpanel" aria-labelledby="tab-console">
+  <div class="console-grid">
+
+    <!-- 设备屏 -->
+    <div class="glass screen-card">
+      <div class="card-h" style="width:100%;margin-bottom:0">
+        <div class="card-title"><span class="tick"></span>设备屏幕 · 240×240</div>
+        <div class="card-note">LVGL v9.6</div>
+      </div>
+
+      <div class="device-frame">
+        <div class="cam" aria-hidden="true"></div>
+        <div class="screen s-calm" id="screen">
+          <div class="ring r1" aria-hidden="true"></div>
+          <div class="ring r2" aria-hidden="true"></div>
+          <div class="cd-ring" id="cdRing" aria-hidden="true"></div>
+          <div class="bars" id="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="scr-content">
+            <div class="scr-main" id="scrMain">Calm</div>
+            <div class="scr-sub" id="scrSub">42 dB · 环境稳定</div>
+          </div>
+          <div class="scr-foot" id="scrFoot">SCENE · 森林鸟鸣 42% ｜ AROMA · 薰衣草 82%</div>
+        </div>
+      </div>
+
+      <div class="sm">
+        <button class="sm-pill on" data-s="calm" type="button">CALM</button>
+        <span class="sm-arrow" aria-hidden="true">→</span>
+        <button class="sm-pill" data-s="noise" type="button">NOISE!</button>
+        <span class="sm-arrow" aria-hidden="true">→</span>
+        <button class="sm-pill" data-s="calming" type="button">CALMING</button>
+      </div>
+
+      <button class="btn" id="clapBtn" type="button">模拟拍手 · 触发噪音</button>
+
+      <div class="screen-meta">
+        <span>THRESHOLD 50 / 150</span>
+        <span>EMA α = 0.20</span>
+        <span>COOLDOWN 3.0s</span>
+      </div>
+    </div>
+
+    <!-- 终端 -->
+    <div class="glass term-card">
+      <div class="term-head">
+        <div class="term-title">
+          <div class="term-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+          HAL / SENSOR 实时日志
+        </div>
+        <div class="card-note" id="termState">STATE · CALM</div>
+      </div>
+      <div class="term-body" id="termBody" role="log" aria-live="polite"></div>
+      <div class="term-foot">
+        <span>RMS <b id="ftRms">42</b></span>
+        <span>状态 <b id="ftState" class="v-em">CALM</b></span>
+        <span>音量 <b id="ftVol">42%</b></span>
+        <span>香氛 <b id="ftAroma">薰衣草 82%</b></span>
+        <span>灯环 <b id="ftLed" class="v-em">#1F3A5F</b></span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     视图三 · 嗅觉实验室 Lab
+     ══════════════════════════════════════════════════════════ -->
+<section class="view" id="v-lab" role="tabpanel" aria-labelledby="tab-lab">
+  <div class="glass lab-card">
+    <div class="card-h">
+      <div class="card-title"><span class="tick"></span>嗅觉实验室</div>
+      <div class="card-note">Aroma Blending · 3 Channel Mist</div>
+    </div>
+
+    <div class="lab-grid">
+
+      <!-- 左列：原料 + 预设 -->
+      <div class="col">
+        <div class="col-label">香精原料 · ESSENCES</div>
+
+        <div class="vial" data-es="pine" role="button" tabindex="0">
+          <svg viewBox="0 0 64 118" aria-hidden="true">
+            <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+            <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                  fill="rgba(255,255,255,.62)" stroke="rgba(90,74,54,.42)" stroke-width="1.6"/>
+            <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#7d9471" opacity=".9"/>
+            <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+          </svg>
+          <div>
+            <div class="vn">松木 <i>Pine Forest</i></div>
+            <div class="vm">已滴入 <b class="vml">0</b> ml</div>
+          </div>
+        </div>
+
+        <div class="vial" data-es="citrus" role="button" tabindex="0">
+          <svg viewBox="0 0 64 118" aria-hidden="true">
+            <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+            <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                  fill="rgba(255,255,255,.62)" stroke="rgba(90,74,54,.42)" stroke-width="1.6"/>
+            <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#e2a24b" opacity=".9"/>
+            <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+          </svg>
+          <div>
+            <div class="vn">柑橘 <i>Sun Citrus</i></div>
+            <div class="vm">已滴入 <b class="vml">0</b> ml</div>
+          </div>
+        </div>
+
+        <div class="vial" data-es="lavender" role="button" tabindex="0">
+          <svg viewBox="0 0 64 118" aria-hidden="true">
+            <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+            <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                  fill="rgba(255,255,255,.62)" stroke="rgba(90,74,54,.42)" stroke-width="1.6"/>
+            <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#9d8ec7" opacity=".9"/>
+            <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+          </svg>
+          <div>
+            <div class="vn">薰衣草 <i>Night Lavender</i></div>
+            <div class="vm">已滴入 <b class="vml">0</b> ml</div>
+          </div>
+        </div>
+
+        <div class="col-label" style="margin-top:6px">场景预设 · PRESETS</div>
+        <div class="presets">
+          <button class="preset" data-p="morning" type="button"><i style="background:#e2a24b"></i>清晨山坡</button>
+          <button class="preset" data-p="forest" type="button"><i style="background:#7d9471"></i>正午密林</button>
+          <button class="preset" data-p="dusk" type="button"><i style="background:#c9a86f"></i>黄昏暖室</button>
+          <button class="preset" data-p="sleep" type="button"><i style="background:#9d8ec7"></i>深夜安眠</button>
+        </div>
+
+        <button class="btn-noise" id="labNoise" type="button">⚠ 模拟翻身噪音</button>
+      </div>
+
+      <!-- 中列：主瓶 + 时间轴 -->
+      <div class="col bottle-col">
+        <div class="bottle-name" id="blendName">深夜安眠 · Nocturne</div>
+        <div class="bottle-sub" id="blendSub">松木 5% ｜ 柑橘 5% ｜ 薰衣草 90%</div>
+
+        <div class="bwrap" id="bwrap">
+          <svg id="bottleSvg" viewBox="0 0 320 440" aria-label="配方主瓶">
+            <defs>
+              <clipPath id="liqClip">
+                <path d="M143 48 L143 108 C143 128 84 138 84 190 L84 352 C84 366 96 378 110 378 L210 378 C224 378 236 366 236 352 L236 190 C236 138 177 128 177 108 L177 48 Z"/>
+              </clipPath>
+              <linearGradient id="glassG" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#fff" stop-opacity=".62"/>
+                <stop offset=".28" stop-color="#fff" stop-opacity=".07"/>
+                <stop offset=".72" stop-color="#fff" stop-opacity=".05"/>
+                <stop offset="1" stop-color="#fff" stop-opacity=".42"/>
+              </linearGradient>
+              <linearGradient id="capG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#c9a877"/><stop offset="1" stop-color="#8a6b47"/>
+              </linearGradient>
+              <radialGradient id="floorG" cx=".5" cy=".5" r=".5">
+                <stop offset="0" stop-color="rgba(96,76,48,.26)"/><stop offset="1" stop-color="rgba(96,76,48,0)"/>
+              </radialGradient>
+            </defs>
+
+            <ellipse cx="160" cy="416" rx="116" ry="15" fill="url(#floorG)"/>
+
+            <g clip-path="url(#liqClip)">
+              <g id="liquidG2">
+                <path class="wave2 back" id="waveB" fill="#9d8ec7"/>
+                <path class="wave2 front" id="waveF" fill="#9d8ec7"/>
+              </g>
+              <rect x="96" y="150" width="9" height="200" rx="4.5" fill="rgba(255,255,255,.42)"/>
+            </g>
+
+            <path d="M137 42 L137 108 C137 128 78 138 78 190 L78 356 C78 372 92 384 108 384 L212 384 C228 384 242 372 242 356 L242 190 C242 138 183 128 183 108 L183 42"
+                  fill="url(#glassG)" stroke="rgba(96,80,58,.45)" stroke-width="2.4"/>
+            <rect x="97" y="168" width="12" height="176" rx="6" fill="rgba(255,255,255,.52)"/>
+            <rect x="228" y="184" width="4" height="146" rx="2" fill="rgba(255,255,255,.45)"/>
+            <path d="M141 50 L141 106" stroke="rgba(255,255,255,.6)" stroke-width="3" stroke-linecap="round"/>
+
+            <rect x="129" y="34" width="62" height="10" rx="5" fill="rgba(120,100,72,.55)"/>
+            <rect x="127" y="12" width="66" height="26" rx="9" fill="url(#capG)"/>
+            <rect x="127" y="12" width="66" height="9" rx="4.5" fill="rgba(255,255,255,.3)"/>
+
+            <text x="160" y="250" text-anchor="middle" font-family="Georgia,serif"
+                  font-style="italic" font-size="23" fill="rgba(52,40,28,.36)" letter-spacing="1">EmberSigh</text>
+            <text x="160" y="274" text-anchor="middle" font-family="'Songti SC',serif"
+                  font-size="8.5" fill="rgba(52,40,28,.24)" letter-spacing="5">嗅 觉 实 验 室</text>
+          </svg>
+        </div>
+
+        <div class="tl">
+          <div class="tl-top">
+            <div class="tl-time" id="tlTime">22:00</div>
+            <div class="tl-phase" id="tlPhase">深夜 · 薰衣草安眠</div>
+          </div>
+          <input type="range" id="tlSlider" min="0" max="24" step="0.25" value="22" aria-label="时间轴，调节一天中的香氛配方">
+          <div class="tl-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+      </div>
+
+      <!-- 右列：比例 + 预测 -->
+      <div class="col">
+        <div class="col-label">当前配方比例 · RATIO</div>
+
+        <div class="ratio-row">
+          <div class="ratio-top"><span>松木 Pine</span><b id="rPineV" style="color:#7d9471">5%</b></div>
+          <div class="rbar"><i id="rPine" style="width:5%;background:linear-gradient(90deg,#a9bd9c,#7d9471)"></i></div>
+        </div>
+        <div class="ratio-row">
+          <div class="ratio-top"><span>柑橘 Citrus</span><b id="rCitV" style="color:#d1933d">5%</b></div>
+          <div class="rbar"><i id="rCit" style="width:5%;background:linear-gradient(90deg,#eec27f,#e2a24b)"></i></div>
+        </div>
+        <div class="ratio-row">
+          <div class="ratio-top"><span>薰衣草 Lavender</span><b id="rLavV" style="color:#9d8ec7">90%</b></div>
+          <div class="rbar"><i id="rLav" style="width:90%;background:linear-gradient(90deg,#b8abd8,#9d8ec7)"></i></div>
+        </div>
+
+        <div class="col-label" style="margin-top:10px">多模态情绪预测 · FORECAST</div>
+        <div class="pred-item">
+          <div class="pred-top"><span>放松度 Relax</span><b id="pvRelax">—</b></div>
+          <div class="pbar"><i id="pbRelax" style="background:linear-gradient(90deg,#a9c09c,#7d9471)"></i></div>
+        </div>
+        <div class="pred-item">
+          <div class="pred-top"><span>专注度 Focus</span><b id="pvFocus">—</b></div>
+          <div class="pbar"><i id="pbFocus" style="background:linear-gradient(90deg,#eec27f,#e2a24b)"></i></div>
+        </div>
+        <div class="pred-item">
+          <div class="pred-top"><span>安定度 Calm</span><b id="pvCalm">—</b></div>
+          <div class="pbar"><i id="pbCalm" style="background:linear-gradient(90deg,#b8abd8,#9d8ec7)"></i></div>
+        </div>
+        <div class="pred-item">
+          <div class="pred-top"><span>愉悦度 Joy</span><b id="pvJoy">—</b></div>
+          <div class="pbar"><i id="pbJoy" style="background:linear-gradient(90deg,#f0c3a8,#d99a72)"></i></div>
+        </div>
+
+        <div class="swatch-box">
+          <div class="swatch" id="swatch" style="background:#9d8ec7"></div>
+          <div>
+            <div class="sc-l">混合色 · BLEND</div>
+            <div class="sc-v" id="swatchHex">#9D8EC7 · 100 ml</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     视图四 · 硬件 Hardware
+     ══════════════════════════════════════════════════════════ -->
+<section class="view" id="v-hardware" role="tabpanel" aria-labelledby="tab-hardware">
+
+  <div class="hw-top">
+    <!-- 接线拓扑 -->
+    <div class="glass wire-card">
+      <div class="card-h">
+        <div class="card-title"><span class="tick"></span>接线拓扑 · ESP32-S3 → 外设</div>
+        <div class="card-note">悬停引脚行可高亮连线</div>
+      </div>
+
+      <svg viewBox="0 0 1000 360" id="wireSvg" role="img" aria-label="ESP32-S3 到各外设的接线拓扑图">
+        <defs>
+          <linearGradient id="boardG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f1e7d7"/>
+          </linearGradient>
+          <linearGradient id="modG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="rgba(255,255,255,.92)"/><stop offset="1" stop-color="rgba(255,255,255,.55)"/>
+          </linearGradient>
+        </defs>
+
+        <g>
+          <rect x="34" y="42" width="216" height="278" rx="18" fill="url(#boardG)" stroke="rgba(120,98,68,.3)"/>
+          <rect x="34" y="42" width="216" height="30" rx="18" fill="rgba(176,141,87,.1)"/>
+          <text x="52" y="63" class="mod-title">ESP32-S3-EYE</text>
+          <text x="52" y="90" class="mod-sub">DUAL-CORE 240MHz · 8MB PSRAM</text>
+          <rect x="66" y="108" width="152" height="94" rx="12" fill="rgba(140,116,82,.1)" stroke="rgba(120,98,68,.22)"/>
+          <text x="142" y="148" text-anchor="middle" class="mod-sub" fill="#8a7a64">ESP32-S3 QFN56</text>
+          <text x="142" y="166" text-anchor="middle" class="mod-sub" fill="#a3937f">Wi-Fi · BLE · I2S ×2</text>
+          <text x="52" y="230" class="mod-sub">USB-C · 5V IN (仅供板)</text>
+          <text x="52" y="250" class="mod-sub" fill="#b0442f">⚠ 拔除 CAMERA 排线释放 IO16-18</text>
+          <text x="52" y="268" class="mod-sub" fill="#b0442f">⚠ GPIO19 = USB D−，禁用</text>
+
+          <g>
+            <circle class="pin-dot" id="p-io18" cx="250" cy="110" r="4.5" fill="#8b7aa8"/>
+            <circle class="pin-dot" id="p-io17" cx="250" cy="140" r="4.5" fill="#5f7f9e"/>
+            <circle class="pin-dot" id="p-io14" cx="250" cy="170" r="4.5" fill="#c07f45"/>
+            <circle class="pin-dot" id="p-io1"  cx="250" cy="200" r="4.5" fill="#b08d57"/>
+            <circle class="pin-dot" id="p-io16" cx="250" cy="230" r="4.5" fill="#6d8a63"/>
+            <circle class="pin-dot" id="p-gnd"  cx="250" cy="260" r="4.5" fill="#9a8b78"/>
+            <g text-anchor="end">
+              <text x="240" y="113" class="mod-sub" fill="#8b7aa8">IO18</text>
+              <text x="240" y="143" class="mod-sub" fill="#5f7f9e">IO17</text>
+              <text x="240" y="173" class="mod-sub" fill="#c07f45">IO14</text>
+              <text x="240" y="203" class="mod-sub" fill="#b08d57">IO1</text>
+              <text x="240" y="233" class="mod-sub" fill="#6d8a63">IO16</text>
+              <text x="240" y="263" class="mod-sub" fill="#9a8b78">GND</text>
+            </g>
+          </g>
+        </g>
+
+        <g id="wires">
+          <path class="wire" id="w-io18" stroke="#8b7aa8" color="#8b7aa8" fill="none" stroke-width="2" d="M250,110 C360,110 380,70 470,70 L660,70 C680,70 686,62 706,62"/>
+          <path class="wire" id="w-io17" stroke="#5f7f9e" color="#5f7f9e" fill="none" stroke-width="2" d="M250,140 C360,140 400,120 470,120 L660,120 C680,120 686,110 706,110"/>
+          <path class="wire" id="w-io14" stroke="#c07f45" color="#c07f45" fill="none" stroke-width="2" d="M250,170 C360,170 400,170 470,170 L660,170 C680,170 686,158 706,158"/>
+          <path class="wire" id="w-io1"  stroke="#b08d57" color="#b08d57" fill="none" stroke-width="2" d="M250,200 C370,200 430,235 520,235 L660,235 C680,235 686,225 706,225"/>
+          <path class="wire" id="w-io16" stroke="#6d8a63" color="#6d8a63" fill="none" stroke-width="2" d="M250,230 C370,230 440,290 540,290 L706,290"/>
+          <path class="wire" id="w-gnd"  stroke="#9a8b78" color="#9a8b78" fill="none" stroke-width="2" d="M250,260 C350,260 380,320 470,320 L880,320"/>
+        </g>
+
+        <g>
+          <rect x="700" y="38" width="272" height="112" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
+          <text x="718" y="62" class="mod-title">MAX98357 · I2S 功放</text>
+          <text x="718" y="80" class="mod-sub">3W CLASS-D → 8Ω 喇叭</text>
+          <circle cx="700" cy="62" r="4" fill="#8b7aa8"/><text x="684" y="66" class="mod-sub" text-anchor="end">BCLK</text>
+          <circle cx="700" cy="110" r="4" fill="#5f7f9e"/><text x="684" y="114" class="mod-sub" text-anchor="end">LRC</text>
+          <circle cx="700" cy="158" r="4" fill="#c07f45"/><text x="684" y="162" class="mod-sub" text-anchor="end">DIN</text>
+          <rect x="718" y="96" width="236" height="36" rx="8" fill="rgba(140,116,82,.09)" stroke="rgba(120,98,68,.14)"/>
+          <text x="836" y="118" text-anchor="middle" class="mod-sub" fill="#8a7a64">VIN 5V · GND · SPK±</text>
+        </g>
+
+        <g>
+          <rect x="700" y="190" width="272" height="78" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
+          <text x="718" y="216" class="mod-title">光耦 MOS 模块</text>
+          <text x="718" y="234" class="mod-sub">DC+ / DC− → 加湿器（独立 5V）</text>
+          <circle cx="700" cy="225" r="4" fill="#b08d57"/><text x="684" y="229" class="mod-sub" text-anchor="end">SIG</text>
+          <rect x="790" y="246" width="164" height="12" rx="5" fill="rgba(176,68,47,.12)"/>
+        </g>
+
+        <g>
+          <rect x="700" y="272" width="272" height="66" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
+          <text x="718" y="296" class="mod-title">WS2812 · 16 灯环</text>
+          <text x="718" y="314" class="mod-sub">RMT · 5V / 0.96A 峰值</text>
+          <circle cx="700" cy="290" r="4" fill="#6d8a63"/><text x="684" y="294" class="mod-sub" text-anchor="end">DIN</text>
+        </g>
+
+        <text x="470" y="345" class="mod-sub" fill="#9a8b78">共地母线 · 所有 GND 汇接于面包板蓝轨</text>
+      </svg>
+    </div>
+
+    <!-- 规格 -->
+    <div class="glass spec-card">
+      <div class="card-h">
+        <div class="card-title"><span class="tick"></span>技术规格</div>
+        <div class="card-note">SPECS</div>
+      </div>
+      <div class="spec-grid">
+        <div class="spec"><div class="v">ESP32-S3</div><div class="l">主控 · 240MHz / 8MB PSRAM</div></div>
+        <div class="spec"><div class="v">ES8311</div><div class="l">音频 Codec · I2S 48kHz</div></div>
+        <div class="spec"><div class="v">MAX98357</div><div class="l">I2S 功放 · 3W 单声道</div></div>
+        <div class="spec"><div class="v">ST7789</div><div class="l">LCD · 240×240 SPI</div></div>
+        <div class="spec"><div class="v">WS2812×16</div><div class="l">灯环 · RMT 驱动</div></div>
+        <div class="spec"><div class="v">MOS 光耦</div><div class="l">香氛雾化 · IO1 开关</div></div>
+        <div class="spec"><div class="v">LVGL 9.6</div><div class="l">UI · FreeRTOS 多任务</div></div>
+        <div class="spec"><div class="v">端侧运算</div><div class="l">无网络 · 数据不出设备</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hw-bottom">
+    <!-- 引脚表 -->
+    <div class="glass pin-card">
+      <div class="card-h" style="margin-bottom:10px">
+        <div class="card-title"><span class="tick" style="background:#6f8fb5"></span>引脚分配</div>
+        <div class="card-note">PIN MAP</div>
+      </div>
+      <table class="pins">
+        <thead><tr><th>信号</th><th>GPIO</th><th>目标</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr data-wire="w-io18"><td class="sig">I2S BCLK</td><td class="gpio" style="color:#8b7aa8">IO18</td><td>MAX98357 BCLK</td><td>原 Camera D5</td></tr>
+          <tr data-wire="w-io17"><td class="sig">I2S LRC</td><td class="gpio" style="color:#5f7f9e">IO17</td><td>MAX98357 LRC</td><td>原 Camera D6</td></tr>
+          <tr data-wire="w-io14"><td class="sig">I2S DIN</td><td class="gpio" style="color:#c07f45">IO14</td><td>MAX98357 DIN</td><td>—</td></tr>
+          <tr data-wire="w-io1"><td class="sig">MOS SIG</td><td class="gpio" style="color:#b08d57">IO1</td><td>光耦 MOS 模块</td><td>加湿器开关</td></tr>
+          <tr data-wire="w-io16"><td class="sig">LED DIN</td><td class="gpio" style="color:#6d8a63">IO16</td><td>WS2812 灯环</td><td>原 Camera D7</td></tr>
+          <tr data-wire="w-gnd"><td class="sig">GND</td><td class="gpio">GND</td><td>共地母线</td><td>必须共地</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 避坑 -->
+    <div class="glass note-card">
+      <div class="card-h" style="margin-bottom:10px">
+        <div class="card-title"><span class="tick" style="background:#b0442f"></span>引脚冲突避坑</div>
+        <div class="card-note">FIELD NOTES</div>
+      </div>
+      <div class="pit-list">
+        <div class="pit"><span class="n">01</span><div><b>GPIO19 = USB D−，绝对禁用。</b> 一旦配置为 I2S 会导致 USB 断连、烧录死锁，只能 BOOT+RST 手动救板。</div></div>
+        <div class="pit"><span class="n">02</span><div><b>IO16 / IO17 / IO18 原属 Camera DVP。</b> 使用前拔掉摄像头排线，否则总线被占用。</div></div>
+        <div class="pit"><span class="n">03</span><div><b>供电必须隔离。</b> 加湿器走充电宝 → MOS DC+；ESP32 只吃电脑 USB 5V，禁止共用同一路。</div></div>
+        <div class="pit"><span class="n">04</span><div><b>所有 GND 必须共地。</b> 功放、灯环、MOS、主控缺一根都会造成底噪或随机复位。</div></div>
+        <div class="pit"><span class="n">05</span><div><b>灯环布线。</b> 16 颗全白约 <span class="k">0.96A</span>，数据线串 330Ω，就近加 1000µF 电解。</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     视图五 · 开发者 Developer
+     ══════════════════════════════════════════════════════════ -->
+<section class="view" id="v-dev" role="tabpanel" aria-labelledby="tab-dev">
+  <div class="dev-grid">
+
+    <div class="glass dev-card">
+      <div class="card-h">
+        <div class="card-title"><span class="tick"></span>系统架构</div>
+        <div class="card-note">ARCHITECTURE</div>
+      </div>
+      <div class="arch">
+        <div class="arch-row">
+          <span class="arch-box core">ESP32-S3</span>
+          <span class="arch-arrow">→</span>
+          <span class="arch-box audio">I2S ×2</span>
+          <span class="arch-arrow">→</span>
+          <span class="arch-box bus">ES8311 / MAX98357</span>
+        </div>
+        <div class="arch-line"></div>
+        <div class="arch-row">
+          <span class="arch-box bus">SPI</span>
+          <span class="arch-box ui">LVGL 9.6</span>
+          <span class="arch-arrow">→</span>
+          <span class="arch-box bus">ST7789 240×240</span>
+        </div>
+        <div class="arch-line"></div>
+        <div class="arch-row">
+          <span class="arch-box bus">RMT</span>
+          <span class="arch-box io">WS2812 ×16</span>
+          <span class="arch-box bus">GPIO</span>
+          <span class="arch-box io">MOS 香氛</span>
+        </div>
+        <div class="arch-line"></div>
+        <div class="arch-foot">FreeRTOS Tasks · LVGL / AudioPlay / RMS_Sensor / StateMachine</div>
+      </div>
+    </div>
+
+    <div class="glass dev-card">
+      <div class="card-h">
+        <div class="card-title"><span class="tick"></span>技术栈与源码</div>
+        <div class="card-note">MIT LICENSE</div>
+      </div>
+      <div class="tags">
+        <span class="tag-p">ESP-IDF v5.4</span>
+        <span class="tag-p">LVGL 9.6</span>
+        <span class="tag-p">FreeRTOS</span>
+        <span class="tag-p">I2S / I2C / SPI</span>
+        <span class="tag-p">HAL 抽象层</span>
+        <span class="tag-p">C17</span>
+        <span class="tag-p">CMake / Ninja</span>
+        <span class="tag-p">EMA 滤波</span>
+        <span class="tag-p">迟滞状态机</span>
+        <span class="tag-p">EMBED_FILES</span>
+      </div>
+      <div class="dev-cta">
+        <a class="btn-github" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub 仓库
+        </a>
+        <a class="btn-ghost2" href="https://github.com/huang2399/EmberSigh/blob/main/README.md" target="_blank" rel="noopener">技术文档</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass dev-card">
+    <div class="card-h">
+      <div class="card-title"><span class="tick"></span>开发进度</div>
+      <div class="card-note">ROADMAP</div>
+    </div>
+    <div class="road">
+      <div class="road-item">
+        <span class="road-dot done"></span>
+        <div class="road-body">
+          <div class="rt">音频链路打通</div>
+          <div class="rd">ES8311 底层驱动 + I2C 地址确认（0x12）· 原始 I2S 读取规避 data_if 冲突</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <span class="road-dot done"></span>
+        <div class="road-body">
+          <div class="rt">产品级三级状态机 UI</div>
+          <div class="rd">Calm / Noise! / Calming 三态 · EMA 阻尼平滑 · 背景色渐变插值 · 迟滞防抖</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <span class="road-dot done"></span>
+        <div class="road-body">
+          <div class="rt">森林声景嵌入</div>
+          <div class="rd">真实鸟鸣录音截取 12s · 16kHz mono PCM · EMBED_FILES 嵌入固件</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <span class="road-dot done"></span>
+        <div class="road-body">
+          <div class="rt">引脚冲突排障</div>
+          <div class="rd">GPIO19 = USB D− 导致烧录死锁 · 重新分配 I2S 至 IO18/IO17/IO14</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <span class="road-dot now"></span>
+        <div class="road-body">
+          <div class="rt">外设硬件接入（进行中）</div>
+          <div class="rd">MAX98357 功放 · 3070 喇叭 · 光耦 MOS + 加湿器 · WS2812 16 灯环 · 面包板联调</div>
+        </div>
+      </div>
+      <div class="road-item">
+        <span class="road-dot"></span>
+        <div class="road-body">
+          <div class="rt">三通道香氛混配</div>
+          <div class="rd">雾化泵 · 时间轴自动配方 · 情绪预测模型标定</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="ico" id="toastIco">✦</span><span id="toastMsg"></span>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ══════════════════════════════════════════════════
+   0. 工具函数
+   ══════════════════════════════════════════════════ */
+var $ = function(id){ return document.getElementById(id); };
+var clamp = function(v,a,b){ return Math.max(a, Math.min(b, v)); };
+var lerp = function(a,b,t){ return a + (b-a)*t; };
+var easeInOut = function(t){ return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; };
+
+var reduceMotion = window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Toast */
+var toastTimer = null;
+function toast(msg, ico, type){
+  $('toastMsg').textContent = msg;
+  $('toastIco').textContent = ico || '✦';
+  var el = $('toast');
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+}
+
+/* ══════════════════════════════════════════════════
+   1. 视图路由
+   ══════════════════════════════════════════════════ */
+var VIEWS = ['vision','console','lab','hardware','dev'];
+var current = 'vision';
+var switching = false;
+var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+var glider = $('glider');
+
+function moveGlider(tab){
+  if(!tab) return;
+  glider.style.width = tab.offsetWidth + 'px';
+  glider.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
+}
+function activeTabEl(){ return document.querySelector('.tab.active'); }
+
+function goView(name){
+  if(name === current || switching || VIEWS.indexOf(name) < 0) return;
+  if(!$('v-' + name)) return;
+  switching = true;
+
+  tabs.forEach(function(t){
+    var on = t.dataset.view === name;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  moveGlider(activeTabEl());
+
+  var from = $('v-' + current);
+  var to = $('v-' + name);
+  from.classList.remove('active');
+  to.classList.add('active');
+  current = name;
+
+  // 移动端切视图后回到顶部
+  if(window.innerWidth <= 1024) window.scrollTo({top:0, behavior: reduceMotion ? 'auto' : 'smooth'});
+
+  // 历史记录（不刷新页面）
+  if(history.replaceState) history.replaceState(null, '', '#' + name);
+
+  setTimeout(function(){
+    switching = false;
+    // 实验室在隐藏状态下尺寸为 0，需重算
+    if(name === 'lab') labRender();
+  }, 340);
+}
+
+tabs.forEach(function(t){
+  t.addEventListener('click', function(){ goView(t.dataset.view); });
+});
+
+/* 键盘：1-5 切换，左右方向键在 tab 间移动 */
+window.addEventListener('keydown', function(e){
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  var n = parseInt(e.key, 10);
+  if(n >= 1 && n <= VIEWS.length){ goView(VIEWS[n-1]); return; }
+  if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+    var i = VIEWS.indexOf(current);
+    var next = e.key === 'ArrowRight' ? (i+1) % VIEWS.length : (i-1+VIEWS.length) % VIEWS.length;
+    goView(VIEWS[next]);
+  }
+});
+
+window.addEventListener('resize', function(){ moveGlider(activeTabEl()); });
+setTimeout(function(){ moveGlider(activeTabEl()); }, 80);
+
+/* URL 锚点直达 */
+(function(){
+  var init = (location.hash || '').replace('#','');
+  if(VIEWS.indexOf(init) > -1 && init !== current){
+    setTimeout(function(){ goView(init); }, 100);
+  }
+})();
+
+/* ══════════════════════════════════════════════════
+   2. 控制台 · 三级状态机
+   Calm(深蓝) → Noise(紫红) → Calming(橙,3s) → Calm
+   ══════════════════════════════════════════════════ */
+var state = 'calm';
+var rms = 42;
+var volume = 42;
+var rmsTimer = null;
+var seqTimers = [];
+var EMA_ALPHA = 0.20;   // 与固件一致
+
+var scr = $('screen'), scrMain = $('scrMain'), scrSub = $('scrSub'),
+    scrFoot = $('scrFoot'), cdRing = $('cdRing'), barsEl = $('bars'),
+    termBody = $('termBody');
+
+/* 清理串联定时器 */
+function clearSeq(){
+  seqTimers.forEach(clearTimeout);
+  seqTimers = [];
+}
+function after(ms, fn){ seqTimers.push(setTimeout(fn, ms)); }
+
+/* 日志 */
+function log(type, tag, msg){
+  var line = document.createElement('div');
+  line.className = 'line ' + type;
+  var d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
+  var t = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  line.innerHTML = '<span class="t">' + t + '</span><span class="tag">[' + tag + ']</span><span class="msg">' + msg + '</span>';
+  termBody.appendChild(line);
+  if(termBody.children.length > 90) termBody.removeChild(termBody.firstChild);
+  termBody.scrollTop = termBody.scrollHeight;
+}
+
+/* 屏幕重绘 */
+function paintScreen(){
+  scr.className = 'screen s-' + state;
+
+  document.querySelectorAll('.sm-pill').forEach(function(p){
+    p.classList.toggle('on', p.dataset.s === state);
+  });
+
+  if(state === 'calm'){
+    scrMain.textContent = 'Calm';
+    scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
+    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · 薰衣草 82%';
+  } else if(state === 'noise'){
+    scrMain.textContent = 'Noise!';
+    scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
+    scrFoot.textContent = 'FALLBACK · 声景 0% ｜ AROMA OFF ｜ LED 防守暗红';
+  } else {
+    scrMain.textContent = 'Calming…';
+    scrSub.textContent = '冷却中 · 3 秒';
+    scrFoot.textContent = 'COOLDOWN · 等待环境恢复安静';
+  }
+
+  $('termState').textContent = 'STATE · ' + state.toUpperCase();
+  var fs = $('ftState');
+  fs.textContent = state.toUpperCase();
+  fs.className = state === 'calm' ? 'v-em' : (state === 'noise' ? 'v-rose' : 'v-amber');
+}
+
+/* 音频柱抖动 */
+var barT = 0;
+function animBars(){
+  if(reduceMotion){
+    for(var j=0;j<barsEl.children.length;j++) barsEl.children[j].style.height = '40%';
+    return;
+  }
+  barT++;
+  for(var i=0;i<barsEl.children.length;i++){
+    var base = state === 'noise' ? 55 : (state === 'calming' ? 28 : 20);
+    var amp  = state === 'noise' ? 45 : (state === 'calming' ? 22 : 30);
+    var h = base + Math.abs(Math.sin((barT + i*1.7) * 0.35)) * amp;
+    barsEl.children[i].style.height = clamp(h, 12, 100) + '%';
+  }
+}
+
+/* RMS 呼吸式抖动（EMA 平滑，与固件一致） */
+function startRms(){
+  clearInterval(rmsTimer);
+  rmsTimer = setInterval(function(){
+    var target;
+    if(state === 'calm')        target = 38 + Math.random()*9;
+    else if(state === 'noise')  target = 158 + Math.random()*32;
+    else                        target = Math.max(46, rms - 6 - Math.random()*8);
+
+    /* 关键：指数移动平均，而非直接赋值 */
+    rms = rms + (target - rms) * EMA_ALPHA;
+
+    $('ftRms').textContent = Math.round(rms);
+    $('ftRms').className = rms > 150 ? 'v-rose' : '';
+
+    if(state === 'calm')       scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
+    if(state === 'noise')      scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
+    animBars();
+  }, 420);
+  animBars();
+}
+
+/* 触发噪音 */
+function triggerNoise(){
+  if(state !== 'calm') return;
+  clearSeq();
+  state = 'noise';
+  $('clapBtn').disabled = true;
+  paintScreen();
+  startRms();
+
+  scr.classList.add('shake');
+  setTimeout(function(){ scr.classList.remove('shake'); }, 900);
+
+  log('err', 'MIC', 'RMS ' + Math.round(160+Math.random()*20) + ' &gt; 150 · 触发噪音门限');
+  after(120, function(){ log('warn','HAL','检测到噪音，切入退让模式'); });
+  after(260, function(){ log('dim','I2S','声景音量 42% → 0%（阻尼 300ms）'); });
+  after(400, function(){ log('dim','MOS','香氛通道切断 · 薰衣草 82% 暂停'); });
+  after(520, function(){ log('dim','LED','WS2812 → 防守暗红 #FF1E1E'); });
+
+  volume = 0;
+  $('ftVol').textContent = '0%';
+  $('ftAroma').textContent = 'OFF';
+  var fl = $('ftLed');
+  fl.textContent = '#FF1E1E';
+  fl.className = 'v-rose';
+
+  /* 1.4s 后进入冷却态 */
+  after(1400, function(){
+    state = 'calming';
+    paintScreen();
+    log('warn','HAL','进入 Calming 冷却态 · 3.0s');
+
+    var t0 = performance.now(), DUR = 3000;
+    (function ring(t){
+      if(state !== 'calming') return;
+      var p = Math.min((t - t0) / DUR, 1);
+      cdRing.style.background = 'conic-gradient(var(--amber) ' + (p*360) + 'deg, rgba(255,255,255,.05) 0deg)';
+      scrSub.textContent = '冷却中 · ' + Math.max(1, Math.ceil(3 - p*3)) + ' 秒';
+      if(p < 1) requestAnimationFrame(ring);
+    })(t0);
+
+    after(1000, function(){ log('dim','TIMER','冷却 3s → 2s'); });
+    after(2000, function(){ log('dim','TIMER','冷却 2s → 1s'); });
+
+    after(3000, function(){
+      state = 'calm';
+      volume = 42;
+      paintScreen();
+      startRms();
+      $('clapBtn').disabled = false;
+      $('ftVol').textContent = '42%';
+      $('ftAroma').textContent = '薰衣草 82%';
+      var fl2 = $('ftLed');
+      fl2.textContent = '#1F3A5F';
+      fl2.className = 'v-em';
+      cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
+      log('ok','HAL','环境恢复安静 · 平滑恢复');
+      after(180, function(){ log('dim','I2S','音量 0% → 42%'); });
+      after(340, function(){ log('ok','MOS','香氛恢复 · 配比 松木 5 / 柑橘 5 / 薰衣草 90'); });
+      after(520, function(){ log('ok','SYS','三级状态机回到 Calm · 待机'); });
+    });
+  });
+}
+
+$('clapBtn').addEventListener('click', triggerNoise);
+
+/* 手动三态药丸 */
+document.querySelectorAll('.sm-pill').forEach(function(p){
+  p.addEventListener('click', function(){
+    var s = p.dataset.s;
+    clearSeq();
+    clearInterval(rmsTimer);
+    state = s;
+    if(s === 'calm'){
+      rms = 42; volume = 42;
+      $('clapBtn').disabled = false;
+      $('ftVol').textContent = '42%';
+      $('ftAroma').textContent = '薰衣草 82%';
+      var f = $('ftLed'); f.textContent = '#1F3A5F'; f.className = 'v-em';
+      cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
+      log('ok','HAL','手动切换 · Calm 待机');
+    } else if(s === 'noise'){
+      rms = 176; volume = 0;
+      $('clapBtn').disabled = false;
+      $('ftVol').textContent = '0%';
+      $('ftAroma').textContent = 'OFF';
+      var f2 = $('ftLed'); f2.textContent = '#FF1E1E'; f2.className = 'v-rose';
+      log('err','HAL','手动切换 · Noise 退让态');
+    } else {
+      rms = 96; volume = 0;
+      $('ftVol').textContent = '0%';
+      $('ftAroma').textContent = 'OFF';
+      var f3 = $('ftLed'); f3.textContent = '#FF8844'; f3.className = 'v-amber';
+      log('warn','HAL','手动切换 · Calming 冷却态');
+      /* 冷却态手动进入后同样自动回 Calm */
+      after(3000, function(){
+        if(state !== 'calming') return;
+        state = 'calm';
+        $('ftVol').textContent = '42%';
+        $('ftAroma').textContent = '薰衣草 82%';
+        var f4 = $('ftLed'); f4.textContent = '#1F3A5F'; f4.className = 'v-em';
+        cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
+        paintScreen(); startRms();
+        log('ok','HAL','冷却完成 · 回到 Calm');
+      });
+    }
+    paintScreen();
+    startRms();
+  });
+});
+
+/* 控制台初始化 */
+paintScreen();
+startRms();
+log('ok','SYS','EmberSigh 控制台已就绪 · LVGL v9.6');
+log('dim','MIC','ES8311 Codec 初始化完成 · 48kHz / 16bit / 左声道');
+log('dim','HAL','阈值 安静&lt;50 / 噪音&gt;150 · 迟滞区间启用 · EMA α=0.20');
+log('dim','I2S','森林鸟鸣 WAV 已嵌入固件 · 12s / EMBED_FILES');
+log('dim','MOS','加湿器通道待命 · 目标配比 薰衣草 82%');
+log('dim','LED','WS2812 ×16 灯环 · RMT 通道就绪');
+
+/* 安静时心跳日志 */
+setInterval(function(){
+  if(state === 'calm' && document.visibilityState === 'visible'){
+    var pool = [
+      ['dim','MIC','RMS ' + Math.round(38+Math.random()*8) + ' · 环境稳定'],
+      ['dim','SYS','FreeRTOS 任务正常 · heap 182KB'],
+      ['dim','LED','WS2812 呼吸灯 · 亮度 18%']
+    ];
+    var p = pool[Math.floor(Math.random()*pool.length)];
+    log(p[0], p[1], p[2]);
+  }
+}, 9000);
+
+/* ══════════════════════════════════════════════════
+   3. 嗅觉实验室
+   ══════════════════════════════════════════════════ */
+var CAP = 120, DROP = 8;
+var ESS = {
+  pine:     { rgb:[125,148,113], hex:'#7d9471' },
+  citrus:   { rgb:[226,162,75],  hex:'#e2a24b' },
+  lavender: { rgb:[157,142,199], hex:'#9d8ec7' }
+};
+var mix = { pine:5, citrus:5, lavender:90 };
+var shown = { pine:5, citrus:5, lavender:90 };
+var labBusy = false, labAlert = false;
+
+/* 波浪路径 */
+function wavePath(amp){
+  var d = 'M0 12';
+  for(var x=0;x<600;x+=50){
+    var up = (x/50) % 2 === 0;
+    d += ' Q ' + (x+25) + ' ' + (up ? 12-amp : 12+amp) + ' ' + (x+50) + ' 12';
+  }
+  return d + ' V 430 H 0 Z';
+}
+$('waveF').setAttribute('d', wavePath(7));
+$('waveB').setAttribute('d', wavePath(5));
+
+function blendRGB(m){
+  var t = m.pine + m.citrus + m.lavender;
+  if(t <= 0) return [168,156,140];
+  return [
+    Math.round((ESS.pine.rgb[0]*m.pine + ESS.citrus.rgb[0]*m.citrus + ESS.lavender.rgb[0]*m.lavender)/t),
+    Math.round((ESS.pine.rgb[1]*m.pine + ESS.citrus.rgb[1]*m.citrus + ESS.lavender.rgb[1]*m.lavender)/t),
+    Math.round((ESS.pine.rgb[2]*m.pine + ESS.citrus.rgb[2]*m.citrus + ESS.lavender.rgb[2]*m.lavender)/t)
+  ];
+}
+function rgb2hex(c){
+  return '#' + c.map(function(v){ return v.toString(16).padStart(2,'0'); }).join('').toUpperCase();
+}
+
+/* 渲染 */
+function labRender(){
+  var total = shown.pine + shown.citrus + shown.lavender;
+  var frac = clamp(total / CAP, 0, 1);
+
+  /* 液面：底部 378，最高 150 */
+  var topY = 378 - frac * (378 - 150);
+  var lq = $('liquidG2');
+  if(lq) lq.style.transform = 'translate(84px,' + (topY - 12).toFixed(2) + 'px)';
+
+  var c = blendRGB(shown);
+  var fill = labAlert ? 'rgb(150,140,132)' : 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  var wf = $('waveF'), wb = $('waveB');
+  if(wf) wf.style.fill = fill;
+  if(wb) wb.style.fill = fill;
+
+  var pP = total > 0 ? shown.pine/total*100 : 0;
+  var pC = total > 0 ? shown.citrus/total*100 : 0;
+  var pL = total > 0 ? shown.lavender/total*100 : 0;
+
+  $('rPine').style.width = pP + '%';
+  $('rCit').style.width = pC + '%';
+  $('rLav').style.width = pL + '%';
+  $('rPineV').textContent = Math.round(pP) + '%';
+  $('rCitV').textContent = Math.round(pC) + '%';
+  $('rLavV').textContent = Math.round(pL) + '%';
+
+  document.querySelectorAll('.vial').forEach(function(v){
+    v.querySelector('.vml').textContent = Math.round(mix[v.dataset.es]);
+  });
+
+  $('swatch').style.background = fill;
+  $('swatchHex').textContent = (labAlert ? '#968C84' : rgb2hex(c)) + ' · ' + Math.round(total) + ' ml';
+
+  /* 命名 */
+  var name = '私人定制 · Bespoke';
+  var sub = '松木 ' + Math.round(pP) + '% ｜ 柑橘 ' + Math.round(pC) + '% ｜ 薰衣草 ' + Math.round(pL) + '%';
+  if(total <= 0) name = '空瓶待调 · Blank';
+  else if(pL >= 55) name = '深夜安眠 · Nocturne';
+  else if(pP >= 55) name = '正午密林 · Deep Forest';
+  else if(pC >= 55) name = '清晨山坡 · Morning Hill';
+  else if(pP >= 35 && pC >= 30) name = '黄昏暖室 · Dusk Room';
+  $('blendName').textContent = labAlert ? '紧急退让 · Fallback' : name;
+  $('blendSub').textContent = labAlert ? '香氛通道已切断 · 3 秒后恢复' : sub;
+
+  /* 情绪预测 */
+  var relax = Math.round(clamp(18 + pL*.52 + pP*.30, 0, 98));
+  var focus = Math.round(clamp(14 + pC*.55 + pP*.38, 0, 98));
+  var calm  = Math.round(clamp(10 + pL*.62 + pP*.18, 0, 98));
+  var joy   = Math.round(clamp(12 + pC*.60 + pL*.18, 0, 98));
+  if(total <= 0) relax = focus = calm = joy = 0;
+
+  [['Relax',relax],['Focus',focus],['Calm',calm],['Joy',joy]].forEach(function(p){
+    $('pv' + p[0]).textContent = p[1] + '%';
+    $('pb' + p[0]).style.width = p[1] + '%';
+  });
+}
+
+/* 平滑过渡 */
+var animToken = 0;
+function labGoTo(target, dur){
+  var token = ++animToken;
+  var from = { pine:shown.pine, citrus:shown.citrus, lavender:shown.lavender };
+
+  if(reduceMotion){
+    shown.pine = target.pine; shown.citrus = target.citrus; shown.lavender = target.lavender;
+    labRender(); return;
+  }
+
+  var t0 = performance.now();
+  (function step(t){
+    if(token !== animToken) return;
+    var p = Math.min((t - t0) / dur, 1), e = easeInOut(p);
+    shown.pine     = lerp(from.pine,     target.pine,     e);
+    shown.citrus   = lerp(from.citrus,   target.citrus,   e);
+    shown.lavender = lerp(from.lavender, target.lavender, e);
+    labRender();
+    if(p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+/* 香精滴落动画 */
+function droplet(key, silent){
+  var vial = document.querySelector('.vial[data-es="' + key + '"] svg');
+  if(!vial || reduceMotion){ onDrop(key, silent); return; }
+
+  var vr = vial.getBoundingClientRect();
+  var pr = $('bottleSvg').getBoundingClientRect();
+  if(vr.width === 0 || pr.width === 0){ onDrop(key, silent); return; }
+
+  var sx = vr.left + vr.width/2, sy = vr.top + vr.height*.12;
+  var ex = pr.left + pr.width/2,  ey = pr.top + pr.height*.13;
+
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:' + (sx-4) + 'px;top:' + (sy-6) + 'px;width:8px;height:12px;' +
+    'z-index:90;border-radius:50% 50% 50% 50%/62% 62% 40% 40%;pointer-events:none;' +
+    'background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85),' + ESS[key].hex + ' 68%);' +
+    'box-shadow:0 0 12px ' + ESS[key].hex + '99;';
+  document.body.appendChild(d);
+
+  var dx = ex - sx, dy = ey - sy;
+  var anim = d.animate([
+    { transform:'translate(0,0) scale(1)', opacity:1 },
+    { transform:'translate(' + dx*.42 + 'px,' + dy*.55 + 'px) scale(.9)', offset:.55 },
+    { transform:'translate(' + dx + 'px,' + dy + 'px) scale(.55)', opacity:.8 }
+  ], { duration:620, easing:'cubic-bezier(.5,.05,.85,.5)' });
+
+  anim.onfinish = function(){ d.remove(); onDrop(key, silent); };
+}
+
+/* 滴落完成后的配比更新 */
+function onDrop(key, silent){
+  if(silent) return;
+  var total = mix.pine + mix.citrus + mix.lavender;
+  var add = Math.min(DROP, CAP - total);
+  if(add <= 0){ toast('主瓶已满 · 可切换预设或拖动时间轴','✦'); return; }
+  mix[key] += add;
+  mix = normalize(mix);
+  labGoTo(mix, 720);
+  document.querySelectorAll('.preset').forEach(function(p){ p.classList.remove('on'); });
+}
+
+function normalize(m){
+  var total = m.pine + m.citrus + m.lavender;
+  if(total <= CAP) return m;
+  var k = CAP / total;
+  return { pine:m.pine*k, citrus:m.citrus*k, lavender:m.lavender*k };
+}
+
+/* 点击香精瓶 */
+document.querySelectorAll('.vial').forEach(function(v){
+  function hit(){
+    if(labAlert){ toast('退让中 · 香氛通道已锁闭','⚠','warn'); return; }
+    droplet(v.dataset.es, false);
+  }
+  v.addEventListener('click', hit);
+  v.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); hit(); }
+  });
+});
+
+/* 预设 */
+var PRESETS = {
+  morning: { pine:4,  citrus:56, lavender:14 },
+  forest:  { pine:58, citrus:8,  lavender:14 },
+  dusk:    { pine:44, citrus:28, lavender:8  },
+  sleep:   { pine:5,  citrus:5,  lavender:72 }
+};
+document.querySelectorAll('.preset').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    if(labAlert) return;
+    var p = PRESETS[btn.dataset.p];
+    mix = { pine:p.pine, citrus:p.citrus, lavender:p.lavender };
+    labGoTo(mix, 1000);
+    document.querySelectorAll('.preset').forEach(function(b){ b.classList.toggle('on', b === btn); });
+    var i = 0;
+    Object.keys(p).forEach(function(k){
+      if(p[k] > 0 && i < 3){
+        setTimeout(function(){ droplet(k, true); }, i*160);
+        i++;
+      }
+    });
+    toast('已切换 · ' + btn.textContent.trim(), '✧');
+  });
+});
+
+/* 时间轴 */
+var TL = [
+  { t:6,  r:{ pine:4,  citrus:54, lavender:16 }, label:'清晨 · 柑橘唤醒' },
+  { t:12, r:{ pine:58, citrus:10, lavender:14 }, label:'正午 · 松木专注' },
+  { t:18, r:{ pine:42, citrus:30, lavender:10 }, label:'黄昏 · 暖室木质' },
+  { t:22, r:{ pine:5,  citrus:5,  lavender:72 }, label:'深夜 · 薰衣草安眠' }
+];
+function tlRecipe(h){
+  if(h <= TL[0].t) return { r:TL[0].r, label:TL[0].label };
+  for(var i=0;i<TL.length-1;i++){
+    var a = TL[i], b = TL[i+1];
+    if(h >= a.t && h <= b.t){
+      var f = (h - a.t) / (b.t - a.t);
+      return {
+        r:{
+          pine:     lerp(a.r.pine,     b.r.pine,     f),
+          citrus:   lerp(a.r.citrus,   b.r.citrus,   f),
+          lavender: lerp(a.r.lavender, b.r.lavender, f)
+        },
+        label: f < .5 ? a.label : b.label
+      };
+    }
+  }
+  var last = TL[TL.length-1];
+  return { r:last.r, label:last.label };
+}
+
+var slider = $('tlSlider');
+function onTimeline(){
+  var h = parseFloat(slider.value);
+  var hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  $('tlTime').textContent = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  var rec = tlRecipe(h);
+  $('tlPhase').textContent = rec.label;
+  if(labAlert) return;
+  mix = { pine:rec.r.pine, citrus:rec.r.citrus, lavender:rec.r.lavender };
+  labGoTo(mix, 420);
+  document.querySelectorAll('.preset').forEach(function(p){ p.classList.remove('on'); });
+}
+slider.addEventListener('input', onTimeline);
+
+/* 实验室噪音干扰 */
+$('labNoise').addEventListener('click', function(){
+  if(labAlert) return;
+  labAlert = true;
+  this.disabled = true;
+  this.textContent = '⏳ 退让中…';
+  var bwrap = $('bwrap');
+  bwrap.classList.add('shake');
+
+  var savedMix = { pine:mix.pine, citrus:mix.citrus, lavender:mix.lavender };
+  mix = { pine:0, citrus:0, lavender:0 };
+  labGoTo(mix, 320);
+  labRender();
+  toast('检测到翻身噪音 · 已切断香氛释放', '⚠', 'warn');
+
+  setTimeout(function(){
+    bwrap.classList.remove('shake');
+    labAlert = false;
+    mix = savedMix;
+    labGoTo(mix, 1200);
+    $('labNoise').disabled = false;
+    $('labNoise').textContent = '⚠ 模拟翻身噪音';
+    toast('环境恢复安静 · 香氛缓缓回归', '✧');
+  }, 3000);
+});
+
+labRender();
+
+/* ══════════════════════════════════════════════════
+   4. 硬件：引脚表 ↔ 连线高亮
+   ══════════════════════════════════════════════════ */
+document.querySelectorAll('table.pins tbody tr').forEach(function(row){
+  var wire = document.getElementById(row.dataset.wire);
+  row.addEventListener('mouseenter', function(){
+    document.querySelectorAll('.wire').forEach(function(w){ w.classList.remove('hot'); });
+    if(wire) wire.classList.add('hot');
+  });
+  row.addEventListener('mouseleave', function(){
+    if(wire) wire.classList.remove('hot');
+  });
+  /* 触屏：点击也能高亮 */
+  row.addEventListener('click', function(){
+    document.querySelectorAll('.wire').forEach(function(w){ w.classList.remove('hot'); });
+    if(wire) wire.classList.add('hot');
+  });
+});
+
+/* ══════════════════════════════════════════════════
+   5. 性能：不可见时暂停光晕动画
+   ══════════════════════════════════════════════════ */
+if('IntersectionObserver' in window){
+  var orbIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      e.target.style.animationPlayState = e.isIntersecting ? 'running' : 'paused';
+    });
+  });
+  document.querySelectorAll('.ambient .orb').forEach(function(o){ orbIO.observe(o); });
+}
+
+document.addEventListener('visibilitychange', function(){
+  var hidden = document.hidden;
+  document.querySelectorAll('.ambient .orb, .ring, .wave i, .float-card').forEach(function(el){
+    el.style.animationPlayState = hidden ? 'paused' : 'running';
+  });
+});
+
+})();
+</script>
+
+</body>
+</html>
