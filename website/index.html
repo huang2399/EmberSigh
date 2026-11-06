@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberSigh 听眠 — 懂退让的桌面睡眠环境管家</title>
+<meta name="description" content="EmberSigh 听眠，基于 ESP32-S3 的端侧睡眠环境自适应调节设备。无摄像头、纯听觉感知、自适应退让。">
+<style>
+/* ============================================================
+   EmberSigh Color System
+   ============================================================ */
+:root {
+  --bg-deep:      #0A0A0A;
+  --bg-dark:      #111118;
+  --bg-card:      #1A1A28;
+  --blue-calm:    #3366FF;
+  --blue-deep:    #0A0A2E;
+  --red-noise:    #FF3344;
+  --red-deep:     #3C0A0A;
+  --orange-warm:  #FF8844;
+  --orange-deep:  #30100A;
+  --text-primary: #EEEEF0;
+  --text-secondary: #8888A0;
+  --text-muted:   #555568;
+  --radius:       16px;
+  --radius-sm:    10px;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+.container{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+h1,h2,h3{font-weight:700;line-height:1.2}
+h1{font-size:clamp(2.2rem,5.5vw,4.2rem)}
+h2{font-size:clamp(1.7rem,3.5vw,2.8rem)}
+h3{font-size:clamp(1.05rem,2vw,1.35rem)}
+.section-tag{
+  display:inline-block;
+  font-size:0.75rem;font-weight:600;
+  letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--blue-calm);
+  margin-bottom:16px;
+}
+.section-title{margin-bottom:24px}
+.section-desc{color:var(--text-secondary);font-size:1.05rem;max-width:560px;line-height:1.8}
+section{padding:100px 0}
+
+/* ============================================================
+   Navbar
+   ============================================================ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  padding:14px 0;
+  transition:background .4s,backdrop-filter .4s;
+}
+.nav.scrolled{
+  background:rgba(10,10,10,.88);
+  backdrop-filter:blur(20px)saturate(180%);
+  -webkit-backdrop-filter:blur(20px)saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.nav-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto;padding:0 24px;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+.nav-logo .dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--blue-calm);
+  animation:logoBreath 2.5s ease-in-out infinite;
+}
+@keyframes logoBreath{
+  0%,100%{box-shadow:0 0 6px var(--blue-calm);transform:scale(1)}
+  50%{box-shadow:0 0 16px var(--blue-calm);transform:scale(1.25)}
+}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:.85rem;font-weight:500;color:var(--text-secondary);transition:color .3s}
+.nav-links a:hover{color:var(--text-primary)}
+.nav-cta{
+  padding:7px 18px;border:1px solid var(--blue-calm);border-radius:100px;
+  color:var(--blue-calm)!important;font-weight:600;transition:all .3s!important;
+}
+.nav-cta:hover{background:var(--blue-calm)!important;color:#fff!important}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;z-index:1001}
+.hamburger span{width:24px;height:2px;background:var(--text-primary);transition:.3s;border-radius:2px}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.hero{
+  position:relative;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;overflow:hidden;
+  padding:100px 24px 80px;
+}
+.hero-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.hero-orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:.3;animation:orbFloat 8s ease-in-out infinite}
+.hero-orb.blue{width:460px;height:460px;background:var(--blue-calm);top:-20%;left:-12%}
+.hero-orb.red{width:380px;height:380px;background:var(--red-noise);bottom:-25%;right:-8%;opacity:.16;animation-delay:4s}
+.hero-orb.orange{width:260px;height:260px;background:var(--orange-warm);top:40%;left:50%;opacity:.12;animation-delay:2s}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0)scale(1)}
+  33%{transform:translate(28px,-36px)scale(1.07)}
+  66%{transform:translate(-18px,18px)scale(.94)}
+}
+/* 产品轮廓 */
+.hero-device{width:200px;height:200px;position:relative;z-index:2;margin:0 auto 36px}
+.device-body{
+  width:150px;height:130px;margin:0 auto;border-radius:26px;
+  background:linear-gradient(145deg,#1E1E32,#121224);
+  border:2px solid rgba(255,255,255,.08);
+  box-shadow:0 28px 56px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.04);
+  position:relative;
+}
+.device-screen{
+  position:absolute;top:18px;left:18px;right:18px;bottom:18px;
+  border-radius:16px;background:var(--blue-deep);
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.device-ring{
+  width:44px;height:44px;border-radius:50%;
+  border:3px solid var(--blue-calm);
+  animation:ringPulse 3s ease-in-out infinite;
+}
+.device-ring::after{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:1.5px solid rgba(51,102,255,.25);
+  animation:ringPulse 3s ease-in-out .5s infinite;
+}
+@keyframes ringPulse{
+  0%,100%{opacity:.45;transform:scale(.82)}
+  50%{opacity:1;transform:scale(1.12)}
+}
+.device-led{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  width:56px;height:3px;border-radius:3px;
+  background:linear-gradient(90deg,var(--blue-calm),var(--orange-warm),var(--red-noise));
+  opacity:.55;
+}
+.hero-content{position:relative;z-index:2;max-width:680px}
+.hero-title{font-weight:900;margin-bottom:18px;letter-spacing:-.02em}
+.hero-title .accent{
+  background:linear-gradient(135deg,var(--blue-calm),var(--orange-warm));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-subtitle{font-size:clamp(1rem,2.4vw,1.2rem);color:var(--text-secondary);font-weight:300;margin-bottom:36px;line-height:1.8}
+.hero-buttons{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 30px;border-radius:100px;font-weight:600;font-size:.92rem;
+  cursor:pointer;transition:all .4s cubic-bezier(.25,.46,.45,.94);
+  border:none;font-family:inherit;
+}
+.btn-primary{background:var(--blue-calm);color:#fff}
+.btn-primary:hover{background:#4d7aff;box-shadow:0 8px 30px rgba(51,102,255,.35);transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--text-primary);border:1px solid rgba(255,255,255,.18)}
+.btn-ghost:hover{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.05)}
+.scroll-hint{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--text-muted);font-size:.72rem;
+  animation:fadeHint 2s ease-in-out infinite;
+}
+.scroll-hint .arrow{
+  width:20px;height:20px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);
+  transform:rotate(45deg);animation:arrowBounce 2s infinite;
+}
+@keyframes arrowBounce{
+  0%,100%{transform:rotate(45deg)translate(0,0)}
+  50%{transform:rotate(45deg)translate(4px,4px)}
+}
+@keyframes fadeHint{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* ============================================================
+   Story
+   ============================================================ */
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.story-bad,.story-good{padding:32px;border-radius:var(--radius);position:relative}
+.story-bad{background:rgba(255,51,68,.05);border:1px solid rgba(255,51,68,.1)}
+.story-bad::before{
+  content:'✕ 传统方案';position:absolute;top:-14px;left:20px;
+  background:var(--red-deep);color:var(--red-noise);
+  font-size:.73rem;font-weight:700;padding:4px 12px;border-radius:100px;
+}
+.story-good{background:rgba(51,102,255,.05);border:1px solid rgba(51,102,255,.1)}
+.story-good::before{
+  content:'✓ EmberSigh 听眠';position:absolute;top:-14px;left:20px;
+  background:var(--blue-deep);color:var(--blue-calm);
+  font-size:.73rem;font-weight:700;padding:4px 12px;border-radius:100px;
+}
+.story-bad h3{color:var(--red-noise);margin-bottom:12px}
+.story-good h3{color:var(--blue-calm);margin-bottom:12px}
+.story-bad p,.story-good p{color:var(--text-secondary);font-size:.92rem;line-height:1.8}
+.story-divider{display:flex;align-items:center;justify-content:center;padding:42px 0}
+.story-divider .line{width:2px;height:50px;background:linear-gradient(to bottom,var(--red-noise),var(--blue-calm));border-radius:2px}
+
+/* ============================================================
+   Features
+   ============================================================ */
+.features-header{text-align:center;margin-bottom:72px}
+.features-header .section-desc{margin:0 auto}
+.features-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px}
+.feature-card{
+  background:var(--bg-card);border-radius:var(--radius);padding:36px;
+  border:1px solid rgba(255,255,255,.04);
+  transition:all .4s cubic-bezier(.25,.46,.45,.94);
+}
+.feature-card:hover{border-color:rgba(255,255,255,.1);transform:translateY(-3px);box-shadow:0 18px 44px rgba(0,0,0,.3)}
+.feature-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.45rem;margin-bottom:22px}
+.feature-icon.blue{background:rgba(51,102,255,.12)}
+.feature-icon.red{background:rgba(255,51,68,.12)}
+.feature-icon.orange{background:rgba(255,136,68,.12)}
+.feature-icon.green{background:rgba(68,200,136,.12)}
+.feature-card h3{margin-bottom:10px;font-size:1.15rem}
+.feature-card p{color:var(--text-secondary);font-size:.88rem;line-height:1.7}
+.state-bars{display:flex;gap:8px;margin-top:18px}
+.state-bar{flex:1;height:6px;border-radius:3px}
+.state-bar.calm{background:var(--blue-calm)}
+.state-bar.cooldown{background:var(--orange-warm)}
+.state-bar.noise{background:var(--red-noise)}
+.state-labels{display:flex;gap:8px;margin-top:8px;font-size:.7rem;font-weight:600;color:var(--text-muted)}
+.state-labels span{flex:1;text-align:center}
+
+/* ============================================================
+   Specs
+   ============================================================ */
+.specs{background:var(--bg-dark)}
+.specs-header{text-align:center;margin-bottom:60px}
+.specs-header .section-desc{margin:0 auto}
+.specs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.spec-card{
+  background:var(--bg-card);border-radius:var(--radius-sm);padding:26px;
+  border:1px solid rgba(255,255,255,.04);text-align:center;
+  transition:all .4s cubic-bezier(.25,.46,.45,.94);
+}
+.spec-card:hover{border-color:rgba(255,255,255,.1)}
+.spec-card .spec-value{font-size:1.4rem;font-weight:700;color:var(--blue-calm);margin-bottom:5px}
+.spec-card .spec-label{font-size:.78rem;color:var(--text-muted);font-weight:500}
+.spec-card .spec-sub{font-size:.7rem;color:var(--text-muted);margin-top:4px}
+.specs-privacy{
+  text-align:center;margin-top:36px;padding:18px 30px;
+  background:rgba(51,102,255,.05);border-radius:100px;
+  display:inline-block;position:relative;left:50%;transform:translateX(-50%);
+  font-size:.88rem;color:var(--blue-calm);font-weight:500;
+}
+
+/* ============================================================
+   Experience
+   ============================================================ */
+.exp-header{text-align:center;margin-bottom:72px}
+.exp-header .section-desc{margin:0 auto}
+.exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.exp-card{
+  background:var(--bg-card);border-radius:var(--radius);padding:36px 24px;
+  text-align:center;border:1px solid rgba(255,255,255,.04);
+  transition:all .4s cubic-bezier(.25,.46,.45,.94);
+}
+.exp-card:hover{border-color:rgba(255,255,255,.1);transform:translateY(-3px)}
+.exp-icon{width:60px;height:60px;border-radius:50%;margin:0 auto 22px;display:flex;align-items:center;justify-content:center;font-size:1.7rem}
+.exp-card.morning .exp-icon{background:rgba(255,136,68,.12)}
+.exp-card.night .exp-icon{background:rgba(51,102,255,.12)}
+.exp-card.rest .exp-icon{background:rgba(200,100,255,.12)}
+.exp-card h3{margin-bottom:6px;font-size:1.08rem}
+.exp-card .exp-time{font-size:.74rem;color:var(--text-muted);margin-bottom:14px}
+.exp-card p{color:var(--text-secondary);font-size:.83rem;line-height:1.7}
+.exp-states{display:flex;gap:8px;justify-content:center;margin-top:18px}
+.exp-dot{width:8px;height:8px;border-radius:50%}
+.exp-dot.on{background:var(--blue-calm);box-shadow:0 0 6px var(--blue-calm)}
+.exp-dot.off{background:rgba(255,255,255,.1)}
+.exp-dot.pulse{animation:dotPulse 2s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:.35;transform:scale(.75)}50%{opacity:1;transform:scale(1.25)}}
+
+/* ============================================================
+   Developer
+   ============================================================ */
+.developer{background:var(--bg-dark)}
+.dev-header{text-align:center;margin-bottom:60px}
+.dev-header .section-desc{margin:0 auto}
+.dev-content{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
+.arch-diagram{background:var(--bg-card);border-radius:var(--radius);padding:30px 24px;border:1px solid rgba(255,255,255,.04)}
+.arch-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.arch-box{padding:8px 14px;border-radius:8px;font-size:.72rem;font-weight:600;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.arch-box.chip{background:rgba(51,102,255,.15);color:var(--blue-calm)}
+.arch-box.audio{background:rgba(255,51,68,.12);color:var(--red-noise)}
+.arch-box.ui{background:rgba(255,136,68,.12);color:var(--orange-warm)}
+.arch-box.ctrl{background:rgba(68,200,136,.12);color:#44C888}
+.arch-box.bus{background:rgba(255,255,255,.04);color:var(--text-muted);font-size:.64rem}
+.arch-arrow{color:var(--text-muted);font-size:1.1rem;font-weight:bold}
+.arch-divider{width:100%;height:1px;background:rgba(255,255,255,.05);margin:16px 0}
+.dev-right{display:flex;flex-direction:column;gap:22px}
+.dev-right h3{font-size:1.3rem}
+.tech-tags{display:flex;flex-wrap:wrap;gap:9px}
+.tech-tag{
+  padding:6px 14px;border-radius:100px;font-size:.76rem;font-weight:600;
+  background:rgba(255,255,255,.04);color:var(--text-secondary);border:1px solid rgba(255,255,255,.07);
+}
+.github-btn{
+  display:inline-flex;align-items:center;gap:10px;padding:13px 26px;
+  background:#24292e;color:#fff;border-radius:100px;font-weight:600;font-size:.88rem;
+  transition:all .4s cubic-bezier(.25,.46,.45,.94);width:fit-content;
+}
+.github-btn:hover{background:#2f363d;transform:translateY(-2px)}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.footer{padding:60px 0 36px;border-top:1px solid rgba(255,255,255,.05)}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:44px;margin-bottom:36px}
+.footer-brand p{color:var(--text-muted);font-size:.83rem;margin-top:14px;max-width:260px}
+.footer-col h4{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px;color:var(--text-muted)}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.footer-col a{color:var(--text-secondary);font-size:.83rem;transition:color .3s}
+.footer-col a:hover{color:var(--blue-calm)}
+.footer-bottom{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+  padding-top:28px;border-top:1px solid rgba(255,255,255,.04);
+  font-size:.78rem;color:var(--text-muted);
+}
+.social-icons{display:flex;gap:14px}
+.social-icons a{
+  width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;font-size:.88rem;
+  transition:all .4s cubic-bezier(.25,.46,.45,.94);
+}
+.social-icons a:hover{background:var(--blue-calm);color:#fff;transform:translateY(-2px)}
+
+/* ============================================================
+   Scroll Reveal — 内容默认可见，JS 增强渐入动画
+   ============================================================ */
+.reveal{}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media(max-width:1024px){
+  .features-grid{grid-template-columns:1fr}
+  .exp-grid{grid-template-columns:1fr;max-width:420px;margin:0 auto}
+}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .nav-links.open{
+    display:flex;flex-direction:column;
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(10,10,10,.97);backdrop-filter:blur(30px);
+    align-items:center;justify-content:center;gap:28px;
+  }
+  .nav-links.open a{font-size:1.15rem}
+  .hamburger{display:flex}
+  .story-grid{grid-template-columns:1fr;gap:28px}
+  .dev-content{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr;gap:28px}
+  .specs-privacy{white-space:normal;border-radius:var(--radius-sm);left:auto;transform:none;display:block}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Navbar
+     ============================================================ -->
+<nav class="nav" id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo"><span class="dot"></span> EmberSigh</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#story">理念</a></li>
+      <li><a href="#features">功能</a></li>
+      <li><a href="#specs">规格</a></li>
+      <li><a href="#experience">体验</a></li>
+      <li><a href="#developer" class="nav-cta">GitHub</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </div>
+</nav>
+
+<!-- ============================================================
+     Hero
+     ============================================================ -->
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <div class="hero-orb blue"></div>
+    <div class="hero-orb red"></div>
+    <div class="hero-orb orange"></div>
+  </div>
+
+  <div class="hero-device">
+    <div class="device-body">
+      <div class="device-screen"><div class="device-ring"></div></div>
+      <div class="device-led"></div>
+    </div>
+  </div>
+
+  <div class="hero-content">
+    <h1 class="hero-title">最高级的智能，<br>是<span class="accent">懂退让</span>。</h1>
+    <p class="hero-subtitle">
+      桌面睡眠环境管家 · 无摄像头 · 纯听觉感知<br>
+      在你翻身时自动安静，在你入睡后悄然守护。
+    </p>
+    <div class="hero-buttons">
+      <a href="#features" class="btn btn-primary">探索听眠</a>
+      <a href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" class="btn btn-ghost">查看源码 ↗</a>
+    </div>
+  </div>
+
+  <div class="scroll-hint"><span>向下滚动</span><div class="arrow"></div></div>
+</section>
+
+<!-- ============================================================
+     Story
+     ============================================================ -->
+<section class="story" id="story">
+  <div class="container">
+    <div class="story-grid">
+      <div class="story-bad">
+        <h3>传统白噪音机的困境</h3>
+        <p>只会机械地播放固定声音，不分昼夜、不理你状态。当你翻身、接电话、需要安静时，它依然在无差别输出。深夜突然响起的流水声，反而惊扰了你的睡意。</p>
+      </div>
+      <div class="story-good">
+        <h3>EmberSigh 的感知退让</h3>
+        <p>我们给设备装上了"耳朵"。ES8311 麦克风 24 小时感知环境音量变化——当你发出声响（翻身、谈话），设备立刻降低音量、暂停香氛、调暗灯光。不打扰，是最高级的温柔。</p>
+      </div>
+    </div>
+    <div class="story-divider"><div class="line"></div></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Features
+     ============================================================ -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="features-header">
+      <span class="section-tag">核心功能</span>
+      <h2 class="section-title">四维感知，一体联动</h2>
+      <p class="section-desc">声光味多模态协同，端侧运算无需联网，数据不出设备。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon blue">🎤</div>
+        <h3>纯听觉感知</h3>
+        <p>ES8311 高灵敏度麦克风通过 I2S 实时采集环境音，左声道 RMS 计算 + 滑动平均滤波。只感知音量大小，不记录任何语音内容——没有摄像头，没有录音，只有分贝。</p>
+        <div class="state-bars">
+          <div class="state-bar calm"></div><div class="state-bar cooldown"></div><div class="state-bar noise"></div>
+        </div>
+        <div class="state-labels"><span>安静 &lt;50</span><span>灰色区</span><span>噪音 &gt;150</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon orange">🖥️</div>
+        <h3>产品级三级状态机 UI</h3>
+        <p>ST7789 240×240 触控屏，LVGL 9.6 驱动。Calm（深蓝呼吸）、Noise!（紫红警告）、Calming...（橙色过渡冷却）。所有动画经 EMA 阻尼平滑处理，如呼吸般自然。</p>
+        <div class="state-bars" style="margin-top:16px">
+          <div class="state-bar calm" style="flex:4"></div><div class="state-bar cooldown" style="flex:2"></div><div class="state-bar noise" style="flex:3"></div>
+        </div>
+        <div class="state-labels"><span>Calm</span><span>Calming...</span><span>Noise!</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon red">🔇</div>
+        <h3>自适应退让机制</h3>
+        <p>噪音触发后 100ms 内自动执行：白噪音静音、MOS 管关闭香氛、WS2812 灯环切换至暗红防守色。安静持续 3 秒后逐步恢复，迟滞逻辑杜绝误触发与闪烁。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">🌿</div>
+        <h3>沉浸式森林声景</h3>
+        <p>不是在播放合成的白噪音。我们从真实森林录音中提取鸟鸣、水流与风声，16kHz 采样嵌入固件，通过 MAX98357 I2S 功放驱动外置喇叭。闭上眼睛，如卧林间。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Specs
+     ============================================================ -->
+<section class="specs" id="specs">
+  <div class="container">
+    <div class="specs-header">
+      <span class="section-tag">技术规格</span>
+      <h2 class="section-title">硬件与架构</h2>
+      <p class="section-desc">全栈自主设计，从 PCB 到固件到 UI 框架。</p>
+    </div>
+    <div class="specs-grid">
+      <div class="spec-card"><div class="spec-value">ESP32-S3</div><div class="spec-label">主控芯片</div><div class="spec-sub">240MHz · 8MB PSRAM</div></div>
+      <div class="spec-card"><div class="spec-value">ES8311</div><div class="spec-label">音频 Codec</div><div class="spec-sub">I2S · 48kHz · 16-bit</div></div>
+      <div class="spec-card"><div class="spec-value">MAX98357</div><div class="spec-label">I2S 功放</div><div class="spec-sub">3W · 单声道</div></div>
+      <div class="spec-card"><div class="spec-value">ST7789</div><div class="spec-label">LCD 显示屏</div><div class="spec-sub">240×240 · SPI</div></div>
+      <div class="spec-card"><div class="spec-value">WS2812 ×8</div><div class="spec-label">可寻址灯环</div><div class="spec-sub">RMT 驱动 · 状态联动</div></div>
+      <div class="spec-card"><div class="spec-value">MOS 管</div><div class="spec-label">香氛雾化器控制</div><div class="spec-sub">GPIO · 自适应启停</div></div>
+      <div class="spec-card"><div class="spec-value">LVGL 9.6</div><div class="spec-label">UI 框架</div><div class="spec-sub">FreeRTOS · 阻尼动画</div></div>
+      <div class="spec-card"><div class="spec-value">端侧运算</div><div class="spec-label">隐私保护</div><div class="spec-sub">无 WiFi 依赖 · 零数据外传</div></div>
+    </div>
+    <div class="specs-privacy">🔒 纯端侧运算，数据不出设备 · 无摄像头 · 无录音 · 无需网络</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Experience
+     ============================================================ -->
+<section class="experience" id="experience">
+  <div class="container">
+    <div class="exp-header">
+      <span class="section-tag">场景体验</span>
+      <h2 class="section-title">三个时刻，三种守护</h2>
+      <p class="section-desc">EmberSigh 根据环境和你的状态，自动切换不同的声光味联动模式。</p>
+    </div>
+    <div class="exp-grid">
+      <div class="exp-card morning">
+        <div class="exp-icon">🌅</div>
+        <h3>清晨唤醒</h3><div class="exp-time">06:00 — 09:00</div>
+        <p>鸟鸣声景轻柔渐入，灯环模拟日出暖光，香氛释放薄荷或柑橘，温柔地把从深睡中拉回现实。</p>
+        <div class="exp-states">
+          <span class="exp-dot on pulse"></span><span class="exp-dot on"></span><span class="exp-dot off"></span>
+        </div>
+      </div>
+      <div class="exp-card night">
+        <div class="exp-icon">🌙</div>
+        <h3>深夜安眠</h3><div class="exp-time">22:00 — 06:00</div>
+        <p>深蓝微光仅够看清轮廓，水流声景持续播放，灯环完全熄灭。一旦检测到翻身声响，声光自动降至最低。</p>
+        <div class="exp-states">
+          <span class="exp-dot off"></span><span class="exp-dot off"></span><span class="exp-dot on pulse"></span>
+        </div>
+      </div>
+      <div class="exp-card rest">
+        <div class="exp-icon">☕</div>
+        <h3>工作小憩</h3><div class="exp-time">13:00 — 14:00</div>
+        <p>混合林间风声与溪流声景，灯环保持暗橙色不打扰，香氛暂停。15 分钟快速充电式小憩。</p>
+        <div class="exp-states">
+          <span class="exp-dot on"></span><span class="exp-dot off"></span><span class="exp-dot on"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Developer
+     ============================================================ -->
+<section class="developer" id="developer">
+  <div class="container">
+    <div class="dev-header">
+      <span class="section-tag">开源 & 开发者</span>
+      <h2 class="section-title">完全开源，欢迎贡献</h2>
+      <p class="section-desc">MIT 协议。从硬件原理图到固件源码，从 PCB 到 UI 动画设计。</p>
+    </div>
+    <div class="dev-content">
+      <div class="arch-diagram">
+        <div class="arch-row">
+          <span class="arch-box chip">ESP32-S3</span><span class="arch-arrow">→</span>
+          <span class="arch-box audio">I2S Audio</span><span class="arch-arrow">→</span>
+          <span class="arch-box bus">ES8311 / MAX98357</span>
+        </div>
+        <div class="arch-row">
+          <span class="arch-box bus">SPI</span><span class="arch-box ui">LVGL 9.6</span>
+          <span class="arch-arrow">→</span><span class="arch-box bus">ST7789 LCD</span>
+        </div>
+        <div class="arch-divider"></div>
+        <div class="arch-row">
+          <span class="arch-box bus">RMT</span><span class="arch-box ctrl">WS2812 ×8</span>
+          <span class="arch-box bus">GPIO</span><span class="arch-box ctrl">MOS 香氛</span>
+        </div>
+        <div class="arch-divider"></div>
+        <div class="arch-row" style="margin-top:8px">
+          <span class="arch-box bus" style="text-align:center;width:100%">FreeRTOS: LVGL · Audio Playback · RMS Sensor · State Machine</span>
+        </div>
+      </div>
+      <div class="dev-right">
+        <h3>技术栈</h3>
+        <div class="tech-tags">
+          <span class="tech-tag">ESP-IDF v5.4</span><span class="tech-tag">LVGL 9.6</span>
+          <span class="tech-tag">FreeRTOS</span><span class="tech-tag">I2S / I2C / SPI</span>
+          <span class="tech-tag">HAL 抽象层</span><span class="tech-tag">C17</span>
+          <span class="tech-tag">CMake / Ninja</span>
+          <span class="tech-tag">EMA 滤波</span><span class="tech-tag">迟滞状态机</span><span class="tech-tag">EMBED_FILES</span>
+        </div>
+        <a href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" class="github-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          在 GitHub 上查看 <span style="font-weight:300;opacity:0.6">huang2399/EmberSigh</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Footer
+     ============================================================ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo"><span class="dot"></span> EmberSigh 听眠</a>
+        <p>懂退让的桌面睡眠环境管家。无摄像头，纯听觉感知，声光味多模态自适应联动。</p>
+      </div>
+      <div class="footer-col">
+        <h4>导航</h4>
+        <ul>
+          <li><a href="#story">理念</a></li><li><a href="#features">功能</a></li>
+          <li><a href="#specs">规格</a></li><li><a href="#experience">体验</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>资源</h4>
+        <ul>
+          <li><a href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener">GitHub 仓库</a></li>
+          <li><a href="https://github.com/huang2399/EmberSigh/blob/main/README.md" target="_blank" rel="noopener">技术文档</a></li>
+          <li><a href="https://github.com/huang2399/EmberSigh/issues" target="_blank" rel="noopener">提交 Issue</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 EmberSigh · MIT License · Made with ❤️</span>
+      <div class="social-icons">
+        <a href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
+        <a href="#" title="Twitter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================================
+     JavaScript — 零外部依赖
+     ============================================================ -->
+<script>
+(function(){
+  'use strict';
+
+  /* === Navbar Scroll === */
+  var navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', function(){
+    var y = window.pageYOffset || document.documentElement.scrollTop;
+    if(y > 60) navbar.classList.add('scrolled');
+    else navbar.classList.remove('scrolled');
+  }, {passive:true});
+
+  /* === Hamburger === */
+  var hamburger = document.getElementById('hamburger');
+  var navLinks = document.getElementById('navLinks');
+  hamburger.addEventListener('click', function(){
+    navLinks.classList.toggle('open');
+  });
+  var links = navLinks.querySelectorAll('a');
+  for(var i=0; i<links.length; i++){
+    links[i].addEventListener('click', function(){
+      navLinks.classList.remove('open');
+    });
+  }
+
+  /* === Scroll Reveal — 内容默认可见，渐进增强 === */
+  var revealEls = document.querySelectorAll('.reveal');
+  if('IntersectionObserver' in window && revealEls.length > 0){
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('visible');
+        }
+      });
+    }, {threshold:0.1, rootMargin:'0px 0px -30px 0px'});
+    revealEls.forEach(function(el){ observer.observe(el); });
+  }
+
+  /* === Hero Parallax === */
+  var heroDevice = document.querySelector('.hero-device');
+  var heroOrbBlue = document.querySelector('.hero-orb.blue');
+  var heroOrbRed = document.querySelector('.hero-orb.red');
+  var scrollHint = document.querySelector('.scroll-hint');
+
+  window.addEventListener('scroll', function(){
+    var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    var heroH = document.querySelector('.hero').offsetHeight;
+    if(scrollY < heroH){
+      var p = scrollY / heroH;
+      if(heroDevice) heroDevice.style.transform = 'translateY(' + (-scrollY*0.15) + 'px)';
+      if(heroOrbBlue) heroOrbBlue.style.transform = 'translate(' + (scrollY*0.06) + 'px, ' + (-scrollY*0.1) + 'px)';
+      if(heroOrbRed) heroOrbRed.style.transform = 'translate(' + (-scrollY*0.04) + 'px, ' + (scrollY*0.08) + 'px)';
+      if(scrollHint) scrollHint.style.opacity = Math.max(0, 1 - scrollY/(heroH*0.3));
+    }
+  }, {passive:true});
+
+  console.log('🌙 EmberSigh 听眠 — 产品网站就绪');
+})();
+</script>
+</body>
+</html>
