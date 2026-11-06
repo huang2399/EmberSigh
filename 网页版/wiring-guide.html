@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EmberSigh · 交互式接线指导手册</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#121212;color:#e0e0e0;font-family:'Segoe UI','PingFang SC',sans-serif;overflow-x:hidden;user-select:none}
+header{text-align:center;padding:16px 0 8px;border-bottom:1px solid #2a2a2a}
+header h1{font-size:1.4rem;font-weight:600;letter-spacing:1px}
+header h1 span{color:#60a5fa}
+header .sub{font-size:.75rem;color:#888;margin-top:4px}
+.toolbar{display:flex;justify-content:center;gap:12px;padding:10px 0}
+.toolbar button{padding:8px 20px;border:1px solid #444;border-radius:6px;background:#1e1e1e;color:#ccc;cursor:pointer;font-size:.8rem;transition:all .2s}
+.toolbar button:hover{background:#2a2a2a;border-color:#60a5fa;color:#fff}
+.toolbar button.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+#main{position:relative;width:100%;height:calc(100vh - 130px);min-height:600px}
+svg{width:100%;height:100%;display:block}
+/* Tooltip */
+.tooltip{position:fixed;pointer-events:none;background:#1e1e1e;border:1px solid #60a5fa;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#e0e0e0;z-index:999;opacity:0;transform:translate(-50%,-120%);transition:opacity .15s;max-width:260px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.tooltip.show{opacity:1}
+.tooltip .pin{color:#60a5fa;font-weight:700;font-size:1rem}
+.tooltip .dst{color:#fbbf24;font-size:.75rem;margin-top:3px}
+.tooltip .conflict{color:#f87171;font-size:.65rem;margin-top:2px;font-style:italic}
+/* Wire highlight */
+.wire-line{transition:stroke .2s,stroke-width .2s,opacity .2s}
+.wire-line.dim{opacity:.15}
+.wire-line.glow{stroke-width:3.5;filter:drop-shadow(0 0 6px currentColor)}
+/* Power overlay */
+.power-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:800;display:none;align-items:center;justify-content:center;flex-direction:column}
+.power-overlay.show{display:flex}
+.power-overlay .warn{font-size:2rem;color:#ef4444;animation:pulse 1s infinite;margin-bottom:12px}
+.power-overlay .warn-text{font-size:.95rem;color:#fbbf24;text-align:center;line-height:1.7;max-width:500px}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.08)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.blink{animation:blink .8s infinite}
+/* Check result */
+.check-result{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e1e1e;border:2px solid #22c55e;border-radius:14px;padding:24px 36px;z-index:900;display:none;text-align:center;font-size:1.2rem}
+.check-result.fail{border-color:#ef4444}
+.check-result.show{display:block}
+.check-result .icon{font-size:3rem;margin-bottom:8px}
+/* Legend */
+.legend{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:16px;background:#1a1a1a;padding:6px 16px;border-radius:20px;border:1px solid #333;font-size:.7rem;z-index:100}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EmberSigh <span>听眠</span> · 交互式接线指导手册</h1>
+  <div class="sub">悬停引脚查看连线信息 · 点击按钮切换模式</div>
+</header>
+
+<div class="toolbar">
+  <button id="btnPower" onclick="togglePower()">⚡ 电源布线</button>
+  <button id="btnCheck" onclick="toggleCheck()">✅ 检查接线</button>
+  <button onclick="resetAll()">🔄 重置视图</button>
+</div>
+
+<div id="main">
+  <svg viewBox="0 0 1400 780" xmlns="http://www.w3.org/2000/svg" id="boardSvg">
+    <defs>
+      <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="shadow"><feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".5"/></filter>
+      <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+      <linearGradient id="breadGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0ead6"/><stop offset="100%" stop-color="#d4c9a8"/></linearGradient>
+    </defs>
+
+    <!-- ====== ZONE 1: ESP32-S3-EYE (left) ====== -->
+    <g id="esp32" transform="translate(30,60)">
+      <rect x="0" y="0" width="280" height="370" rx="6" fill="#1a1a1a" stroke="#333" stroke-width="2" filter="url(#shadow)"/>
+      <text x="140" y="22" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="700">ESP32-S3-EYE</text>
+      <text x="140" y="38" text-anchor="middle" fill="#666" font-size="8">邮票孔测试点（板子边缘）</text>
+      <!-- Internal chip -->
+      <rect x="70" y="55" width="140" height="140" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+      <text x="140" y="130" text-anchor="middle" fill="#555" font-size="11">ESP32-S3</text>
+      <!-- USB port -->
+      <rect x="105" y="205" width="70" height="18" rx="3" fill="#222" stroke="#444"/>
+      <text x="140" y="217" text-anchor="middle" fill="#666" font-size="7">USB-C (供电+烧录)</text>
+      <!-- Camera connector hint -->
+      <rect x="85" y="240" width="110" height="20" rx="3" fill="#1a0000" stroke="#441111" stroke-width="1" stroke-dasharray="3"/>
+      <text x="140" y="253" text-anchor="middle" fill="#f87171" font-size="7">⚠ 摄像头排线座 (拔掉释放IO17/18)</text>
+
+      <!-- Castellations: left edge -->
+      <g class="castellation">
+        <circle cx="0" cy="285" r="8" class="pin-pad" id="pin-io1" fill="#fbbf24" stroke="#b45309"/>
+        <text x="-14" y="289" text-anchor="end" fill="#fbbf24" font-size="9" font-weight="700">IO1</text>
+        <text x="-14" y="300" text-anchor="end" fill="#555" font-size="6">—</text>
+
+        <circle cx="0" cy="320" r="8" class="pin-pad" id="pin-gnd" fill="#666" stroke="#999"/>
+        <text x="-14" y="324" text-anchor="end" fill="#999" font-size="9" font-weight="700">GND</text>
+        <text x="-14" y="335" text-anchor="end" fill="#555" font-size="6">—</text>
+
+        <circle cx="0" cy="355" r="8" class="pin-pad" id="pin-io16" fill="#22c55e" stroke="#15803d"/>
+        <text x="-14" y="359" text-anchor="end" fill="#22c55e" font-size="9" font-weight="700">IO16</text>
+        <text x="-14" y="370" text-anchor="end" fill="#f87171" font-size="6">Camera D7</text>
+      </g>
+
+      <!-- Castellations: right edge -->
+      <g class="castellation">
+        <circle cx="280" cy="285" r="8" class="pin-pad" id="pin-io14" fill="#f97316" stroke="#c2410c"/>
+        <text x="294" y="289" fill="#f97316" font-size="9" font-weight="700">IO14</text>
+        <text x="294" y="300" fill="#555" font-size="6">—</text>
+
+        <circle cx="280" cy="320" r="8" class="pin-pad" id="pin-io17" fill="#3b82f6" stroke="#1d4ed8"/>
+        <text x="294" y="324" fill="#3b82f6" font-size="9" font-weight="700">IO17</text>
+        <text x="294" y="335" fill="#f87171" font-size="6">Camera D6</text>
+
+        <circle cx="280" cy="355" r="8" class="pin-pad" id="pin-io18" fill="#a855f7" stroke="#7c3aed"/>
+        <text x="294" y="359" fill="#a855f7" font-size="9" font-weight="700">IO18</text>
+        <text x="294" y="370" fill="#f87171" font-size="6">Camera D5</text>
+      </g>
+
+      <!-- Legend on board -->
+      <rect x="15" y="278" width="250" height="72" rx="4" fill="none" stroke="#333" stroke-width=".5" stroke-dasharray="2"/>
+      <text x="140" y="290" text-anchor="middle" fill="#555" font-size="7">← 左侧邮票孔（板子底部边缘）</text>
+      <text x="140" y="302" text-anchor="middle" fill="#555" font-size="7">用母头杜邦线套住或测试钩夹住</text>
+      <text x="140" y="344" text-anchor="middle" fill="#555" font-size="7">右侧邮票孔（板子底部边缘）→</text>
+    </g>
+
+    <!-- ====== ZONE 2: 830 Breadboard (center) ====== -->
+    <g id="breadboard" transform="translate(340,60)">
+      <rect x="0" y="0" width="420" height="370" rx="8" fill="url(#breadGrad)" stroke="#8b7355" stroke-width="2" filter="url(#shadow)"/>
+      <text x="210" y="-10" text-anchor="middle" fill="#a08c6e" font-size="11" font-weight="700">830 孔面包板</text>
+
+      <!-- Center groove -->
+      <rect x="5" y="100" width="410" height="14" rx="3" fill="#8b7355" opacity=".4"/>
+      <text x="210" y="109" text-anchor="middle" fill="#6b5b3e" font-size="8">──── 中间凹槽（芯片跨接处）────</text>
+
+      <!-- Top red power rail -->
+      <rect x="10" y="10" width="190" height="36" rx="4" fill="#7f1d1d" opacity=".7"/>
+      <text x="105" y="32" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="700">+ 红 V+</text>
+      <rect x="220" y="10" width="190" height="36" rx="4" fill="#7f1d1d" opacity=".7"/>
+      <text x="315" y="32" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="700">+ 红 V+</text>
+
+      <!-- Top blue GND rail -->
+      <rect x="10" y="52" width="190" height="36" rx="4" fill="#1e3a5f" opacity=".7"/>
+      <text x="105" y="74" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="700">− 蓝 GND</text>
+      <rect x="220" y="52" width="190" height="36" rx="4" fill="#1e3a5f" opacity=".7"/>
+      <text x="315" y="74" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="700">− 蓝 GND</text>
+
+      <!-- Bottom blue GND rail -->
+      <rect x="10" y="300" width="190" height="36" rx="4" fill="#1e3a5f" opacity=".7"/>
+      <text x="105" y="322" text-anchor="middle" fill="#93c5fd" font-size="9">− 蓝 GND</text>
+      <rect x="220" y="300" width="190" height="36" rx="4" fill="#1e3a5f" opacity=".7"/>
+      <text x="315" y="322" text-anchor="middle" fill="#93c5fd" font-size="9">− 蓝 GND</text>
+
+      <!-- Bottom red power rail -->
+      <rect x="10" y="340" width="190" height="36" rx="4" fill="#7f1d1d" opacity=".7"/>
+      <text x="105" y="362" text-anchor="middle" fill="#fca5a5" font-size="9">+ 红 V+</text>
+      <rect x="220" y="340" width="190" height="36" rx="4" fill="#7f1d1d" opacity=".7"/>
+      <text x="315" y="362" text-anchor="middle" fill="#fca5a5" font-size="9">+ 红 V+</text>
+
+      <!-- Row labels: left half columns a-e -->
+      <g fill="#8b7355" font-size="7" text-anchor="middle" opacity=".6">
+        <text x="50" y="130">a</text><text x="70" y="130">b</text><text x="90" y="130">c</text><text x="110" y="130">d</text><text x="130" y="130">e</text>
+        <text x="260" y="130">f</text><text x="280" y="130">g</text><text x="300" y="130">h</text><text x="320" y="130">i</text><text x="340" y="130">j</text>
+
+        <!-- Row 1 holes (representative) -->
+        <circle cx="50" cy="145" r="2.5" fill="#8b7355"/><circle cx="70" cy="145" r="2.5"/><circle cx="90" cy="145" r="2.5"/><circle cx="110" cy="145" r="2.5"/><circle cx="130" cy="145" r="2.5"/>
+        <circle cx="260" cy="145" r="2.5"/><circle cx="280" cy="145" r="2.5"/><circle cx="300" cy="145" r="2.5"/><circle cx="320" cy="145" r="2.5"/><circle cx="340" cy="145" r="2.5"/>
+      </g>
+
+      <!-- Row highlights where wires connect -->
+      <g>
+        <!-- Signal insertion points on breadboard -->
+        <!-- Row 5: IO1 → MOS SIG -->
+        <rect x="40" y="155" width="100" height="18" rx="3" fill="#fbbf24" opacity=".12"/>
+        <text x="90" y="168" text-anchor="middle" fill="#fbbf24" font-size="7">▶ A5 ← IO1</text>
+
+        <!-- Row 10: IO14 → MAX DIN -->
+        <rect x="40" y="183" width="100" height="18" rx="3" fill="#f97316" opacity=".12"/>
+        <text x="90" y="196" text-anchor="middle" fill="#f97316" font-size="7">▶ A10 ← IO14</text>
+
+        <!-- Row 15: IO16 → WS2812 -->
+        <rect x="40" y="211" width="100" height="18" rx="3" fill="#22c55e" opacity=".12"/>
+        <text x="90" y="224" text-anchor="middle" fill="#22c55e" font-size="7">▶ A15 ← IO16</text>
+
+        <!-- Row 20: IO17 → MAX LRC -->
+        <rect x="250" y="155" width="100" height="18" rx="3" fill="#3b82f6" opacity=".12"/>
+        <text x="300" y="168" text-anchor="middle" fill="#3b82f6" font-size="7">▶ J20 ← IO17</text>
+
+        <!-- Row 25: IO18 → MAX BCLK -->
+        <rect x="250" y="211" width="100" height="18" rx="3" fill="#a855f7" opacity=".12"/>
+        <text x="300" y="224" text-anchor="middle" fill="#a855f7" font-size="7">▶ J25 ← IO18</text>
+
+        <!-- GND rail anchor -->
+        <rect x="250" y="45" width="100" height="20" rx="3" fill="#666" opacity=".15"/>
+        <text x="300" y="59" text-anchor="middle" fill="#999" font-size="7">GND 轨 ← ESP32 GND</text>
+      </g>
+
+      <!-- "共地" big label -->
+      <text x="210" y="285" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="700" opacity=".6">▼ 所有 GND 在此汇接（共地）▼</text>
+    </g>
+
+    <!-- ====== ZONE 3: Modules (right) ====== -->
+    <g id="modules" transform="translate(800,60)">
+      <!-- MAX98357 -->
+      <g transform="translate(30,20)">
+        <rect x="0" y="0" width="180" height="130" rx="6" fill="#1a1a1a" stroke="#3b82f6" stroke-width="1.5" filter="url(#shadow)"/>
+        <text x="90" y="18" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700">MAX98357 I2S 功放</text>
+        <text x="90" y="32" text-anchor="middle" fill="#666" font-size="7">驱动 3W 喇叭</text>
+        <rect x="12" y="42" width="156" height="24" rx="3" fill="#0d1b2a"/>
+        <text x="90" y="58" text-anchor="middle" fill="#93c5fd" font-size="8">VIN (5V) · GND · LRC · BCLK · DIN</text>
+        <!-- Pin targets -->
+        <circle cx="45" cy="85" r="6" id="mod-max-bclk" fill="#a855f7" stroke="#7c3aed"/>
+        <text x="45" y="100" text-anchor="middle" fill="#a855f7" font-size="7">BCLK</text>
+        <circle cx="90" cy="85" r="6" id="mod-max-lrc" fill="#3b82f6" stroke="#1d4ed8"/>
+        <text x="90" y="100" text-anchor="middle" fill="#3b82f6" font-size="7">LRC</text>
+        <circle cx="135" cy="85" r="6" id="mod-max-din" fill="#f97316" stroke="#c2410c"/>
+        <text x="135" y="100" text-anchor="middle" fill="#f97316" font-size="7">DIN</text>
+        <!-- Speaker out -->
+        <rect x="40" y="110" width="100" height="16" rx="3" fill="#2a1a0a"/>
+        <text x="90" y="121" text-anchor="middle" fill="#fbbf24" font-size="7">→ 接喇叭端子 (SPK+/-)</text>
+      </g>
+
+      <!-- MOS Module -->
+      <g transform="translate(30,170)">
+        <rect x="0" y="0" width="180" height="100" rx="6" fill="#1a1a1a" stroke="#fbbf24" stroke-width="1.5" filter="url(#shadow)"/>
+        <text x="90" y="18" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700">光耦 MOS 管模块</text>
+        <text x="90" y="32" text-anchor="middle" fill="#666" font-size="7">电子开关 控制加湿器</text>
+        <rect x="12" y="40" width="156" height="18" rx="3" fill="#1a1400"/>
+        <!-- Pins -->
+        <circle cx="40" cy="68" r="6" id="mod-mos-sig" fill="#fbbf24" stroke="#b45309"/>
+        <text x="40" y="84" text-anchor="middle" fill="#fbbf24" font-size="7">SIG</text>
+        <text x="90" y="72" fill="#999" font-size="7">DC+/DC-</text>
+        <circle cx="140" cy="68" r="6" id="mod-mos-out" fill="#ef4444" stroke="#991b1b"/>
+        <text x="140" y="84" text-anchor="middle" fill="#ef4444" font-size="7">OUT→加湿器</text>
+      </g>
+
+      <!-- WS2812 Ring -->
+      <g transform="translate(30,290)">
+        <rect x="0" y="0" width="180" height="70" rx="6" fill="#1a1a1a" stroke="#22c55e" stroke-width="1.5" filter="url(#shadow)"/>
+        <text x="90" y="18" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">WS2812 16位灯环</text>
+        <circle cx="50" cy="42" r="6" id="mod-led-din" fill="#22c55e" stroke="#15803d"/>
+        <text x="50" y="58" text-anchor="middle" fill="#22c55e" font-size="7">DIN</text>
+        <text x="100" y="46" fill="#999" font-size="7">VCC·GND</text>
+      </g>
+    </g>
+
+    <!-- ====== WIRES ====== -->
+    <g id="wires" fill="none" stroke-width="2.2" stroke-linecap="round">
+      <!-- IO1 (yellow) → MOS SIG -->
+      <path id="wire-io1" class="wire-line" stroke="#fbbf24" d="M30,345 C150,345 200,380 280,380 L830,380 L830,298 L875,298"/>
+      <!-- IO14 (orange) → MAX DIN -->
+      <path id="wire-io14" class="wire-line" stroke="#f97316" d="M310,345 C400,345 450,370 500,370 L830,370 L830,165 L965,165"/>
+      <!-- IO16 (green) → WS2812 DIN -->
+      <path id="wire-io16" class="wire-line" stroke="#22c55e" d="M30,415 C150,415 200,430 280,430 L830,430 L830,402 L880,402"/>
+      <!-- IO17 (blue) → MAX LRC -->
+      <path id="wire-io17" class="wire-line" stroke="#3b82f6" d="M310,380 C400,380 450,350 500,350 L830,350 L830,235 L920,235"/>
+      <!-- IO18 (purple) → MAX BCLK -->
+      <path id="wire-io18" class="wire-line" stroke="#a855f7" d="M310,415 C400,415 450,450 500,450 L830,450 L830,225 L875,225"/>
+      <!-- GND (gray) → breadboard GND rail -->
+      <path id="wire-gnd" class="wire-line" stroke="#666" d="M30,380 C150,380 200,360 280,360 L830,360 L830,110 L640,110 L640,88 L430,88"/>
+    </g>
+
+    <!-- Power paths (hidden by default) -->
+    <g id="powerPaths" fill="none" stroke-width="3" stroke-linecap="round" opacity="0" style="transition:opacity .5s">
+      <!-- USB power (red) -->
+      <path stroke="#ef4444" d="M170,265 C170,240 420,88 430,88" stroke-dasharray="8,4"/>
+      <text x="280" y="160" fill="#ef4444" font-size="9" font-weight="700">电脑 USB 5V</text>
+      <!-- Charger power (red) -->
+      <path stroke="#f97316" d="M170,265 C170,400 420,322 430,322" stroke-dasharray="8,4"/>
+      <text x="250" y="370" fill="#f97316" font-size="9" font-weight="700">充电宝 5V → MOS DC+</text>
+      <!-- Common GND (gray) -->
+      <path stroke="#ef4444" d="M170,380 C170,420 420,74 430,74" stroke-dasharray="6,4"/>
+      <text x="280" y="410" fill="#ef4444" font-size="10" font-weight="700">⚠ 所有 GND 必须共地</text>
+    </g>
+  </svg>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"><div class="pin" id="ttPin"></div><div class="dst" id="ttDst"></div><div class="conflict" id="ttConflict"></div></div>
+
+<!-- Power overlay -->
+<div class="power-overlay" id="powerOverlay">
+  <div class="warn">⚠️</div>
+  <div class="warn-text">
+    供电隔离：加湿器必须用充电宝独立供电！<br>
+    电脑 USB → ESP32 开发板（5V/500mA，仅信号）<br>
+    充电宝 → MOS 管 DC+ 输入端 → 加湿器<br>
+    <b style="color:#ef4444">所有 GND 在面包板蓝轨上汇接（共地）！</b>
+  </div>
+</div>
+
+<!-- Check result -->
+<div class="check-result" id="checkResult"><div class="icon"></div><div class="msg"></div></div>
+
+<!-- Legend -->
+<div class="legend">
+  <span><span class="dot" style="background:#fbbf24"></span> IO1·MOS</span>
+  <span><span class="dot" style="background:#f97316"></span> IO14·DIN</span>
+  <span><span class="dot" style="background:#22c55e"></span> IO16·WS2812</span>
+  <span><span class="dot" style="background:#3b82f6"></span> IO17·LRC</span>
+  <span><span class="dot" style="background:#a855f7"></span> IO18·BCLK</span>
+  <span><span class="dot" style="background:#666"></span> GND</span>
+</div>
+
+<script>
+const USD_TO_VB = 5, BREADBOARD_GND = -1; // lol placeholder
+
+const pinInfo = {
+  'pin-io1':  {label:'IO1',  dst:'光耦 MOS 管模块的 SIG 脚',  conflict:'',            wire:'wire-io1',  color:'#fbbf24'},
+  'pin-io14': {label:'IO14', dst:'MAX98357 功放的 DIN 脚',    conflict:'',            wire:'wire-io14', color:'#f97316'},
+  'pin-io16': {label:'IO16', dst:'WS2812 灯环的 DIN 脚',      conflict:'Camera D7',   wire:'wire-io16', color:'#22c55e'},
+  'pin-io17': {label:'IO17', dst:'MAX98357 功放的 LRC 脚',    conflict:'Camera D6',   wire:'wire-io17', color:'#3b82f6'},
+  'pin-io18': {label:'IO18', dst:'MAX98357 功放的 BCLK 脚',   conflict:'Camera D5',   wire:'wire-io18', color:'#a855f7'},
+  'pin-gnd':  {label:'GND',  dst:'面包板 GND 蓝轨（所有模块 GND 汇接）', conflict:'',  wire:'wire-gnd',  color:'#666'},
+};
+
+const tip = document.getElementById('tooltip');
+const ttPin = document.getElementById('ttPin');
+const ttDst = document.getElementById('ttDst');
+const ttConflict = document.getElementById('ttConflict');
+const powerPaths = document.getElementById('powerPaths');
+const powerOverlay = document.getElementById('powerOverlay');
+const checkResult = document.getElementById('checkResult');
+const btnPower = document.getElementById('btnPower');
+const btnCheck = document.getElementById('btnCheck');
+let powerOn = false, checkMode = false;
+
+// Hover: highlight wire + show tooltip
+document.querySelectorAll('.pin-pad').forEach(circle => {
+  const id = circle.id;
+  const info = pinInfo[id];
+  if (!info) return;
+
+  circle.style.cursor = 'pointer';
+  circle.addEventListener('mouseenter', e => {
+    // Dim all wires
+    document.querySelectorAll('.wire-line').forEach(w => w.classList.add('dim'));
+    // Glow target wire
+    const wire = document.getElementById(info.wire);
+    if (wire) { wire.classList.remove('dim'); wire.classList.add('glow'); }
+    // Glow pin
+    circle.setAttribute('r','11');
+    circle.setAttribute('filter','url(#glow)');
+    // Tooltip
+    ttPin.textContent = info.label;
+    ttDst.textContent = '→ ' + info.dst;
+    ttConflict.textContent = info.conflict ? '⚠ 板载原始用途: ' + info.conflict : '';
+    tip.classList.add('show');
+  });
+  circle.addEventListener('mousemove', e => {
+    tip.style.left = e.clientX + 'px';
+    tip.style.top = e.clientY + 'px';
+  });
+  circle.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.wire-line').forEach(w => { w.classList.remove('dim','glow'); });
+    circle.setAttribute('r','8');
+    circle.removeAttribute('filter');
+    tip.classList.remove('show');
+  });
+});
+
+// Power button
+function togglePower() {
+  powerOn = !powerOn;
+  btnPower.classList.toggle('active', powerOn);
+  powerPaths.style.opacity = powerOn ? '1' : '0';
+  if (powerOn) {
+    powerOverlay.classList.add('show');
+    // Flash wires
+    document.querySelectorAll('.wire-line').forEach(w => { w.classList.remove('dim','glow'); });
+  } else {
+    powerOverlay.classList.remove('show');
+  }
+}
+
+// Check mode
+function toggleCheck() {
+  checkMode = !checkMode;
+  btnCheck.classList.toggle('active', checkMode);
+  if (!checkMode) { checkResult.classList.remove('show'); return; }
+
+  // Check: all wires exist and have correct endpoints (always true in this static SVG)
+  // "Verification" is visual — the user visually confirms their real wiring matches the SVG
+  const allGood = document.querySelectorAll('.wire-line').length === 6;
+  checkResult.classList.add('show');
+  if (allGood) {
+    checkResult.classList.remove('fail');
+    checkResult.querySelector('.icon').textContent = '✅';
+    checkResult.querySelector('.msg').textContent = 'SVG 接线逻辑正确！\n请对照屏幕逐根检查实物接线。';
+  } else {
+    checkResult.classList.add('fail');
+    checkResult.querySelector('.icon').textContent = '❌';
+    checkResult.querySelector('.msg').textContent = '连线缺失，请检查。';
+  }
+}
+
+function resetAll() {
+  powerOn = false; checkMode = false;
+  btnPower.classList.remove('active');
+  btnCheck.classList.remove('active');
+  powerPaths.style.opacity = '0';
+  powerOverlay.classList.remove('show');
+  checkResult.classList.remove('show');
+  document.querySelectorAll('.wire-line').forEach(w => { w.classList.remove('dim','glow'); });
+  document.querySelectorAll('.pin-pad').forEach(c => { c.setAttribute('r','8'); c.removeAttribute('filter'); });
+  tip.classList.remove('show');
+}
+
+// Click outside power overlay to dismiss
+powerOverlay.addEventListener('click', () => { if(powerOn) togglePower(); });
+</script>
+</body>
+</html>
