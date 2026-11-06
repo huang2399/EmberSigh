@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberSigh 硬件接线图 & 交互模拟器</title>
+<style>
+/* ============================================================
+   Reset & 主题
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{
+  font-family:'SF Mono','Fira Code','Consolas','PingFang SC','Microsoft YaHei',monospace;
+  background:#0a0a0a;color:#ccc;min-height:100vh;overflow-x:hidden;
+}
+
+/* ============================================================
+   控制栏
+   ============================================================ */
+.control-bar{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:#111118;border-bottom:1px solid rgba(255,255,255,0.06);
+  position:sticky;top:0;z-index:100;flex-wrap:wrap;
+}
+.ctrl-btn{
+  padding:10px 22px;border-radius:8px;font-size:0.82rem;font-weight:700;
+  cursor:pointer;border:none;font-family:inherit;transition:all 0.25s;letter-spacing:0.04em;
+}
+.ctrl-btn.calm{background:#0A0A2E;color:#6699FF;border:1px solid #3366FF}
+.ctrl-btn.calm:hover,.ctrl-btn.calm.active{background:#3366FF;color:#fff;box-shadow:0 0 24px rgba(51,102,255,0.5)}
+.ctrl-btn.noise{background:#3C0A0A;color:#FF5566;border:1px solid #FF3344}
+.ctrl-btn.noise:hover,.ctrl-btn.noise.active{background:#FF3344;color:#fff;box-shadow:0 0 24px rgba(255,51,68,0.5)}
+.ctrl-btn.cooldown{background:#30100A;color:#FF9966;border:1px solid #FF8844}
+.ctrl-btn.cooldown:hover,.ctrl-btn.cooldown.active{background:#FF8844;color:#fff;box-shadow:0 0 24px rgba(255,136,68,0.5)}
+.state-indicator{margin-left:auto;font-size:0.76rem;font-weight:600;padding:6px 14px;border-radius:6px}
+.state-indicator.calm{background:#0A0A2E;color:#6699FF}
+.state-indicator.noise{background:#3C0A0A;color:#FF5566}
+.state-indicator.cooldown{background:#30100A;color:#FF9966}
+
+/* ============================================================
+   两列布局
+   ============================================================ */
+.layout{
+  display:flex;gap:16px;padding:16px;
+  min-width:1280px;
+}
+.left-col{flex:1;min-width:520px}
+.right-col{width:520px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+
+/* ============================================================
+   面包板 + ESP32 组合区（左侧列）
+   ============================================================ */
+.board-area{
+  position:relative;height:580px;
+  background:#111118;border-radius:12px;border:1px solid #2a2a3a;
+}
+
+/* ---- 面包板 ---- */
+.breadboard{
+  position:absolute;left:12px;top:12px;bottom:12px;
+  width:200px;background:#1a1a1a;
+  border-radius:8px;border:2px solid #333;
+  padding:8px 6px;overflow:hidden;
+}
+.bb-label{text-align:center;font-size:0.58rem;color:#777;margin-bottom:4px;letter-spacing:0.05em}
+
+/* 电源轨 */
+.rail-row{
+  display:flex;gap:1px;margin-bottom:2px;
+}
+.rail-dot{
+  width:5px;height:5px;border-radius:50%;border:1px solid #444;
+  flex-shrink:0;
+}
+.rail-dot.r{background:#3a1010;border-color:#5a2020}
+.rail-dot.b{background:#101030;border-color:#202050}
+.rail-dot.r.wired{background:#cc3333;border-color:#ff5555;box-shadow:0 0 4px #cc3333}
+.rail-dot.b.wired{background:#334488;border-color:#5566cc;box-shadow:0 0 4px #334488}
+
+/* 面包板行 */
+.bb-rows{display:flex;flex-direction:column;gap:1px;overflow-y:auto;height:430px}
+.bb-row{display:flex;align-items:center;gap:2px}
+.bb-row-num{width:20px;font-size:0.45rem;color:#444;text-align:right;flex-shrink:0}
+.bb-row-grp{display:flex;gap:1px}
+.bb-hole{
+  width:6px;height:6px;border-radius:50%;
+  background:#2a2a2a;border:1px solid #3a3a3a;flex-shrink:0;
+  transition:all 0.3s;
+}
+.bb-hole.wired-i2s{background:#664422;border-color:#FF8844;box-shadow:0 0 3px #FF8844}
+.bb-hole.wired-mos{background:#441122;border-color:#FF3344;box-shadow:0 0 3px #FF3344}
+.bb-hole.wired-led{background:#113322;border-color:#44CC88;box-shadow:0 0 3px #44CC88}
+.center-gap{width:8px;flex-shrink:0}
+.bottom-rail{margin-top:4px}
+
+/* ---- ESP32 开发板 ---- */
+.esp32-board{
+  position:absolute;left:230px;top:12px;bottom:12px;
+  width:280px;
+}
+.esp32-pcb{
+  position:absolute;inset:8px 10px;
+  background:linear-gradient(165deg,#1a1a2e,#12121a);
+  border:3px solid #2a2a3a;border-radius:8px;
+  box-shadow:0 0 30px rgba(0,0,0,0.5);
+}
+/* 屏幕 */
+.esp32-screen{
+  position:absolute;top:46px;left:50%;transform:translateX(-50%);
+  width:160px;height:160px;
+  border-radius:8px;border:2px solid #1a1a1a;
+  background:#0A0A2E;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:background 0.6s,box-shadow 0.6s;
+  box-shadow:inset 0 0 20px rgba(0,0,0,0.3);z-index:5;
+}
+.screen-label{font-size:0.75rem;font-weight:900;letter-spacing:0.08em;transition:color 0.6s;z-index:2}
+.screen-rms{font-size:1.2rem;font-weight:700;color:#6699FF;margin:2px 0;z-index:2;transition:color 0.6s}
+.screen-bar-bg{width:90px;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;z-index:2}
+.screen-bar-fill{height:100%;border-radius:3px;background:#3366FF;transition:width 0.5s,background 0.5s}
+.pulse-ring{
+  position:absolute;width:40px;height:40px;border-radius:50%;
+  border:2px solid #3366FF;opacity:0.5;
+  animation:ringPulse 3s ease-in-out infinite;z-index:1;
+}
+@keyframes ringPulse{
+  0%,100%{opacity:0.3;transform:scale(0.75)}
+  50%{opacity:0.8;transform:scale(1.2)}
+}
+
+/* 引脚标签 */
+.pin-left{position:absolute;left:18px;top:72px;display:flex;flex-direction:column;gap:7px}
+.pin-right{position:absolute;right:18px;top:72px;display:flex;flex-direction:column;gap:7px}
+.pin-tag{
+  font-size:0.5rem;font-weight:700;color:#aaa;white-space:nowrap;
+  padding:2px 6px;border-radius:3px;background:#111;border:1px solid #2a2a2a;
+  text-align:center;transition:all 0.3s;
+}
+.pin-tag.gnd{color:#556;border-color:#334}
+.pin-tag.pwr{color:#cc8844;border-color:#885522}
+.pin-tag.i2s{color:#FF8844;border-color:#885522}
+.pin-tag.mos{color:#FF5566;border-color:#662233}
+.pin-tag.led{color:#44CC88;border-color:#225533}
+.pin-tag.highlight{color:#fff!important;border-color:#FF3344!important;box-shadow:0 0 8px rgba(255,51,68,0.5)!important}
+
+/* USB 口 */
+.esp32-usb{
+  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  width:30px;height:10px;background:#222;border-radius:0 0 5px 5px;border:1px solid #333;border-top:none;
+}
+
+/* ---- 面包板标注点 ---- */
+.bb-annotation{
+  position:absolute;font-size:0.48rem;font-weight:700;
+  pointer-events:none;z-index:6;transition:all 0.3s;
+}
+
+/* ---- SVG 连线 ---- */
+.wire-svg{
+  position:absolute;inset:0;pointer-events:none;z-index:4;
+}
+
+/* ============================================================
+   右侧列: 模块 + 接线表 + 日志
+   ============================================================ */
+/* 模块卡片 */
+.module-card{
+  background:#151520;border:1px solid #2a2a3a;border-radius:8px;
+  padding:10px 14px;display:flex;align-items:center;gap:12px;
+  transition:all 0.4s;
+}
+.module-icon{
+  width:40px;height:40px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0;
+}
+.module-info{flex:1;min-width:0}
+.module-name{font-size:0.7rem;font-weight:700;margin-bottom:2px}
+.module-pin{font-size:0.56rem;color:#666}
+.module-status{font-size:0.56rem;font-weight:600;padding:3px 8px;border-radius:4px;transition:all 0.4s}
+.module-status.on{background:rgba(68,204,136,0.15);color:#44CC88}
+.module-status.off{background:rgba(255,51,68,0.1);color:#FF3344}
+.module-status.idle{background:rgba(255,136,68,0.1);color:#FF8844}
+/* 模块配色 */
+.mc-amp .module-icon{background:rgba(255,136,68,0.1)} .mc-amp .module-name{color:#FF8844}
+.mc-spk .module-icon{background:rgba(68,204,136,0.1)} .mc-spk .module-name{color:#44CC88}
+.mc-mos .module-icon{background:rgba(255,51,68,0.1)} .mc-mos .module-name{color:#FF3344}
+.mc-humi .module-icon{background:rgba(100,180,255,0.1)} .mc-humi .module-name{color:#64B4FF}
+.mc-led .module-icon{background:rgba(200,100,255,0.1)} .mc-led .module-name{color:#C864FF}
+.mc-pwr .module-icon{background:rgba(255,200,50,0.1)} .mc-pwr .module-name{color:#FFC832}
+
+/* 接线表 */
+.wiring-table{
+  background:#111118;border:1px solid #2a2a3a;border-radius:8px;
+  padding:14px;font-size:0.6rem;
+}
+.wt-title{font-size:0.68rem;font-weight:700;color:#FF8844;margin-bottom:10px;letter-spacing:0.05em}
+.wt-row{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.wt-pin{width:70px;color:#FF8844;font-weight:700}
+.wt-esp{width:80px;color:#6699FF}
+.wt-wire{width:45px;color:#555}
+.wt-bb{width:90px;color:#44CC88}
+.wt-mod{flex:1;color:#ccc}
+
+/* 终端 */
+.terminal{
+  background:#0d0d14;border:1px solid #2a2a3a;border-radius:8px;
+  padding:12px;height:200px;overflow-y:auto;
+  font-size:0.63rem;line-height:1.5;
+}
+.terminal .line{padding:1px 0;white-space:pre-wrap;animation:fadeLine 0.3s}
+@keyframes fadeLine{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.line.info{color:#88aacc}.line.warn{color:#FF8844}.line.error{color:#FF3344}
+.line.ok{color:#44CC88}.line.hal{color:#6699FF}
+.terminal-prompt{color:#559955;margin-right:4px}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media(max-width:1300px){
+  .layout{flex-direction:column;min-width:auto}
+  .right-col{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     控制栏
+     ============================================================ -->
+<div class="control-bar">
+  <span style="font-weight:700;color:#6699FF;margin-right:8px">EmberSigh</span>
+  <button class="ctrl-btn calm active" onclick="setState('calm')">Calm 安静</button>
+  <button class="ctrl-btn noise" onclick="setState('noise')">Noise! 拍手</button>
+  <button class="ctrl-btn cooldown" onclick="setState('cooldown')">Calming... 冷却</button>
+  <span class="state-indicator calm" id="stateIndicator">● Calm</span>
+</div>
+
+<!-- ============================================================
+     主布局
+     ============================================================ -->
+<div class="layout">
+
+  <!-- ========== 左侧：面包板 + ESP32 组合画布 ========== -->
+  <div class="left-col">
+    <div class="board-area" id="boardArea">
+
+      <!-- 面包板 -->
+      <div class="breadboard" id="breadboard">
+        <div class="bb-label">BREADBOARD 830pts</div>
+        <!-- 上部电源轨 -->
+        <div class="rail-row" id="topRedRail"></div>
+        <div class="rail-row" id="topBlueRail"></div>
+        <!-- 面包板行 -->
+        <div class="bb-rows" id="bbRows"></div>
+        <!-- 下部电源轨 -->
+        <div class="rail-row bottom-rail" id="botRedRail"></div>
+        <div class="rail-row" id="botBlueRail"></div>
+        <div class="bb-label" style="margin-top:4px">红色 = +5V · 蓝色 = GND</div>
+      </div>
+
+      <!-- ESP32 开发板 -->
+      <div class="esp32-board" id="esp32Board">
+        <div class="esp32-pcb">
+          <!-- 240x240 屏幕 -->
+          <div class="esp32-screen" id="esp32Screen">
+            <div class="pulse-ring" id="pulseRing"></div>
+            <div class="screen-label" id="screenLabel">Calm</div>
+            <div class="screen-rms" id="screenRMS">42</div>
+            <div class="screen-bar-bg"><div class="screen-bar-fill" id="screenBar" style="width:15%"></div></div>
+          </div>
+          <!-- 引脚 - 左侧 -->
+          <div class="pin-left">
+            <div class="pin-tag gnd">GND ▸</div>
+            <div class="pin-tag pwr">3V3 ▸</div>
+            <div class="pin-tag i2s" id="pin-io18">IO18 BCLK ▸</div>
+            <div class="pin-tag i2s" id="pin-io17">IO17 LRC ▸</div>
+            <div class="pin-tag i2s" id="pin-io14">IO14 DIN ▸</div>
+            <div class="pin-tag led" id="pin-io16">IO16 LED ▸</div>
+            <div class="pin-tag mos" id="pin-io1">IO1 MOS ▸</div>
+            <div class="pin-tag gnd">GND ▸</div>
+          </div>
+          <!-- 引脚 - 右侧 -->
+          <div class="pin-right">
+            <div class="pin-tag pwr">◂ VIN +5V</div>
+            <div class="pin-tag gnd">◂ GND</div>
+            <div class="pin-tag">◂ EN</div>
+            <div class="pin-tag">◂ IO4</div>
+            <div class="pin-tag">◂ IO5</div>
+            <div class="pin-tag">◂ IO6</div>
+            <div class="pin-tag">◂ IO7</div>
+            <div class="pin-tag gnd">◂ GND</div>
+          </div>
+          <div class="esp32-usb"></div>
+        </div>
+      </div>
+
+      <!-- SVG 连线层 -->
+      <svg class="wire-svg" id="wireSvg"></svg>
+
+    </div><!-- board-area -->
+  </div><!-- left-col -->
+
+  <!-- ========== 右侧：模块 + 接线表 + 日志 ========== -->
+  <div class="right-col">
+
+    <!-- 供电模块 -->
+    <div class="module-card mc-pwr">
+      <div class="module-icon">🔋</div>
+      <div class="module-info">
+        <div class="module-name">USB 转杜邦 4芯线（充电宝供电）</div>
+        <div class="module-pin">红线 → 面包板 +轨 · 黑线 → 面包板 −轨</div>
+      </div>
+      <div class="module-status on" id="pwrStatus">ON</div>
+    </div>
+
+    <!-- MAX98357 -->
+    <div class="module-card mc-amp" id="modAmp">
+      <div class="module-icon">🔊</div>
+      <div class="module-info">
+        <div class="module-name">MAX98357 I2S 功放</div>
+        <div class="module-pin">VIN→面包板+轨 · GND→面包板−轨 · BCLK→IO18 · LRC→IO17 · DIN→IO14</div>
+      </div>
+      <div class="module-status on" id="ampStatus">ON</div>
+    </div>
+
+    <!-- 喇叭 -->
+    <div class="module-card mc-spk" id="modSpk">
+      <div class="module-icon">📢</div>
+      <div class="module-info">
+        <div class="module-name">3070 腔体喇叭 8Ω 3W</div>
+        <div class="module-pin">接 MAX98357 输出端 ±</div>
+      </div>
+      <div class="module-status on" id="spkStatus">ON</div>
+    </div>
+
+    <!-- MOS 管 -->
+    <div class="module-card mc-mos" id="modMos">
+      <div class="module-icon">⚡</div>
+      <div class="module-info">
+        <div class="module-name">光耦隔离 MOS 管模块</div>
+        <div class="module-pin">SIG→IO1 · VCC→面包板+轨 · GND→面包板−轨</div>
+      </div>
+      <div class="module-status on" id="mosStatus">ON</div>
+    </div>
+
+    <!-- 加湿器 -->
+    <div class="module-card mc-humi" id="modHumi">
+      <div class="module-icon">💨</div>
+      <div class="module-info">
+        <div class="module-name">USB 迷你加湿器</div>
+        <div class="module-pin">正极→MOS管OUT+ · 负极→MOS管OUT− · 充电宝独立供电</div>
+      </div>
+      <div class="module-status on" id="humiStatus">ON</div>
+    </div>
+
+    <!-- WS2812 -->
+    <div class="module-card mc-led" id="modLed">
+      <div class="module-icon">💡</div>
+      <div class="module-info">
+        <div class="module-name">WS2812 灯环 ×16</div>
+        <div class="module-pin">DIN→IO16 · VCC→面包板+轨 · GND→面包板−轨</div>
+      </div>
+      <div class="module-status on" id="ledStatus">ON</div>
+    </div>
+
+    <!-- 接线对照表 -->
+    <div class="wiring-table">
+      <div class="wt-title">📋 完整接线对照表</div>
+      <div class="wt-row" style="color:#888;font-weight:700">
+        <span class="wt-pin">信号线</span><span class="wt-esp">ESP32 引脚</span><span class="wt-wire">颜色</span><span class="wt-bb">面包板孔位</span><span class="wt-mod">目标模块</span>
+      </div>
+      <div class="wt-row"><span class="wt-pin">BCLK</span><span class="wt-esp">IO18</span><span class="wt-wire" style="color:#FF8844">橙</span><span class="wt-bb">左 a25 列</span><span class="wt-mod">MAX98357 BCLK</span></div>
+      <div class="wt-row"><span class="wt-pin">LRC</span><span class="wt-esp">IO17</span><span class="wt-wire" style="color:#FF8844">橙</span><span class="wt-bb">左 a26 列</span><span class="wt-mod">MAX98357 LRC</span></div>
+      <div class="wt-row"><span class="wt-pin">DIN</span><span class="wt-esp">IO14</span><span class="wt-wire" style="color:#FF8844">橙</span><span class="wt-bb">左 a27 列</span><span class="wt-mod">MAX98357 DIN</span></div>
+      <div class="wt-row"><span class="wt-pin">SIG</span><span class="wt-esp">IO1</span><span class="wt-wire" style="color:#FF3344">红</span><span class="wt-bb">左 a40 列</span><span class="wt-mod">MOS 管 SIG</span></div>
+      <div class="wt-row"><span class="wt-pin">LED DIN</span><span class="wt-esp">IO16</span><span class="wt-wire" style="color:#44CC88">绿</span><span class="wt-bb">左 a38 列</span><span class="wt-mod">WS2812 DIN</span></div>
+      <div class="wt-row"><span class="wt-pin">+5V</span><span class="wt-esp">VIN</span><span class="wt-wire" style="color:#cc3333">红</span><span class="wt-bb">面包板 + 轨</span><span class="wt-mod">充电宝红线 → 面包板 + 轨 → 所有模块 VCC</span></div>
+      <div class="wt-row"><span class="wt-pin">GND</span><span class="wt-esp">GND</span><span class="wt-wire" style="color:#666">黑</span><span class="wt-bb">面包板 − 轨</span><span class="wt-mod">充电宝黑线 → 面包板 − 轨 → 所有模块 GND</span></div>
+    </div>
+
+    <!-- 终端日志 -->
+    <div class="terminal" id="terminal">
+      <div class="line ok"><span class="terminal-prompt">$</span> EmberSigh HAL v3.0 启动就绪</div>
+      <div class="line info"><span class="terminal-prompt">$</span> [I2S] IO18=BCLK IO17=LRC IO14=DIN → MAX98357</div>
+      <div class="line info"><span class="terminal-prompt">$</span> [LED] IO16 → WS2812 RMT 驱动 · 16 LED</div>
+      <div class="line info"><span class="terminal-prompt">$</span> [MOS] IO1 → 光耦隔离 MOS · 加湿器控制</div>
+      <div class="line info"><span class="terminal-prompt">$</span> [PWR] 充电宝 → 面包板 +/− 轨 · 全部模块共电源</div>
+      <div class="line hal"><span class="terminal-prompt">$</span> [HAL] 环境安静 · 森林声景播放中 · 加湿器 ON · 灯环深蓝</div>
+    </div>
+
+  </div>
+
+</div><!-- layout -->
+
+<!-- ============================================================
+     JavaScript
+     ============================================================ -->
+<script>
+(function(){
+  'use strict';
+
+  /* ===== 面包板生成（63行 × 2组 × 5孔 + 电源轨） ===== */
+  var topRed = document.getElementById('topRedRail');
+  var topBlue = document.getElementById('topBlueRail');
+  var botRed = document.getElementById('botRedRail');
+  var botBlue = document.getElementById('botBlueRail');
+  var bbRows = document.getElementById('bbRows');
+
+  // 电源轨：用 50 个点表示连续排孔
+  for(var i=0;i<50;i++){
+    topRed.appendChild(dot('r'));
+    topBlue.appendChild(dot('b'));
+    botRed.appendChild(dot('r'));
+    botBlue.appendChild(dot('b'));
+  }
+
+  // 主体行
+  for(var row=1;row<=63;row++){
+    var rowDiv = document.createElement('div');
+    rowDiv.className = 'bb-row';
+
+    var numSpan = document.createElement('span');
+    numSpan.className = 'bb-row-num';
+    numSpan.textContent = row;
+    rowDiv.appendChild(numSpan);
+
+    // 左侧 5 孔 (a-e)
+    var leftGrp = document.createElement('div');
+    leftGrp.className = 'bb-row-grp';
+    for(var c=0;c<5;c++){
+      var h = document.createElement('div');
+      h.className = 'bb-hole';
+      if(row===25 && c===0) h.className += ' wired-i2s'; // IO18 BCLK → 面包板 a25
+      if(row===26 && c===0) h.className += ' wired-i2s'; // IO17 LRC → a26
+      if(row===27 && c===0) h.className += ' wired-i2s'; // IO14 DIN → a27
+      if(row===40 && c===0) h.className += ' wired-mos';  // IO1 MOS → a40
+      if(row===38 && c===0) h.className += ' wired-led';  // IO16 LED → a38
+      leftGrp.appendChild(h);
+    }
+    rowDiv.appendChild(leftGrp);
+
+    // 中心槽
+    var gap = document.createElement('div');
+    gap.className = 'center-gap';
+    rowDiv.appendChild(gap);
+
+    // 右侧 5 孔 (f-j)
+    var rightGrp = document.createElement('div');
+    rightGrp.className = 'bb-row-grp';
+    for(var d=0;d<5;d++){
+      var h2 = document.createElement('div');
+      h2.className = 'bb-hole';
+      rightGrp.appendChild(h2);
+    }
+    rowDiv.appendChild(rightGrp);
+
+    bbRows.appendChild(rowDiv);
+  }
+
+  function dot(type){
+    var d = document.createElement('div');
+    d.className = 'rail-dot ' + type;
+    return d;
+  }
+
+  /* ===== SVG 连线 ===== */
+  var svg = document.getElementById('wireSvg');
+  var NS = 'http://www.w3.org/2000/svg';
+  var boardRect = document.getElementById('boardArea').getBoundingClientRect();
+
+  function createSvg(){
+    svg.setAttribute('viewBox','0 0 520 580');
+    svg.setAttribute('width','100%');
+    svg.setAttribute('height','100%');
+    var g = document.createElementNS(NS,'g');
+    svg.appendChild(g);
+
+    function line(x1,y1,x2,y2,color,width){
+      var l=document.createElementNS(NS,'line');
+      l.setAttribute('x1',x1);l.setAttribute('y1',y1);
+      l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+      l.setAttribute('stroke',color);l.setAttribute('stroke-width',width||2);
+      l.setAttribute('stroke-linecap','round');
+      l.setAttribute('data-wire','true');
+      g.appendChild(l);
+      return l;
+    }
+    function label(x,y,text,color){
+      var t=document.createElementNS(NS,'text');
+      t.setAttribute('x',x);t.setAttribute('y',y);
+      t.setAttribute('fill',color||'#888');t.setAttribute('font-size','7');
+      t.setAttribute('font-family','sans-serif');t.setAttribute('font-weight','700');
+      t.textContent=text;
+      g.appendChild(t);
+      return t;
+    }
+
+    /* ===== 面包板内坐标（面包板左侧 x=12, 孔起始 x≈30, 左组 a列 x=32-58, 右组 f列 x=82-108) ===== */
+    // 面包板左组 a 列第一孔 ≈ (32, 88+行偏移)
+    var bbLeft = 32;
+    var bbRowBase = 90; // 第1行 Y ≈ 115 (有标题+电源轨+滚动偏移)
+    // 实际计算：标题~12px + 顶部电源轨(5*2+4)~14px + 行高(6+1)*3=21px → 面包板行1从 ~53px偏移开始
+    // 简化：面包板内部坐标 (面包板内部top=0)
+    var bbTop = 44; // 第一行Y
+
+    // ESP32 左侧引脚 Y坐标
+    var espPins = {
+      gnd1:  {y:86,  name:'GND'},
+      v33:   {y:98,  name:'3V3'},
+      io18:  {y:110, name:'IO18'},
+      io17:  {y:122, name:'IO17'},
+      io14:  {y:134, name:'IO14'},
+      io16:  {y:146, name:'IO16'},
+      io1:   {y:158, name:'IO1'},
+      gnd2:  {y:170, name:'GND'}
+    };
+
+    var espX = 244; // ESP32 左侧引脚 X
+
+    // 面包板孔 Y: row * (6+1) + bbTop - 滚动偏移
+    function bbY(row){ return bbTop + (row-1) * 7 - 10; }
+
+    /* ---- I2S 三线：ESP32 → 面包板 a25/a26/a27 ---- */
+    var lineIO18 = line(espX, espPins.io18.y, bbLeft, bbY(25), '#FF8844', 2);
+    var lineIO17 = line(espX, espPins.io17.y, bbLeft, bbY(26), '#FF8844', 2);
+    var lineIO14 = line(espX, espPins.io14.y, bbLeft, bbY(27), '#FF8844', 2);
+
+    label((espX+bbLeft)/2-16, (espPins.io18.y+bbY(25))/2, 'BCLK', '#FF8844');
+    label((espX+bbLeft)/2-16, (espPins.io17.y+bbY(26))/2, 'LRC', '#FF8844');
+    label((espX+bbLeft)/2-16, (espPins.io14.y+bbY(27))/2, 'I2S DIN', '#FF8844');
+
+    /* ---- MOS 线：IO1 → a40 ---- */
+    line(espX, espPins.io1.y, bbLeft, bbY(40), '#FF3344', 2.5);
+    label((espX+bbLeft)/2-14, (espPins.io1.y+bbY(40))/2, 'MOS SIG', '#FF3344');
+
+    /* ---- LED 线：IO16 → a38 ---- */
+    line(espX, espPins.io16.y, bbLeft, bbY(38), '#44CC88', 2.5);
+    label((espX+bbLeft)/2-14, (espPins.io16.y+bbY(38))/2, 'LED DIN', '#44CC88');
+
+    /* ---- 电源：面包板 + 轨 ← 充电宝, 面包板 − 轨 ← 充电宝 ---- */
+    line(45, bbTop-20, 180, bbTop-20, '#cc3333', 2);
+    label(100, bbTop-24, '充电宝 +5V 红线', '#cc3333');
+    line(45, bbTop-10, 180, bbTop-10, '#666', 2);
+    label(100, bbTop-14, '充电宝 GND 黑线', '#888');
+
+    /* ---- 面包板 → ESP32 VIN + GND ---- */
+    line(bbLeft, bbY(1), espX, 80, '#cc3333', 1.5);
+    line(bbLeft, bbY(2), espX, 82, '#666', 1.5);
+    label((espX+bbLeft)/2-10, (bbY(1)+80)/2, '+5V', '#cc3333');
+    label((espX+bbLeft)/2-10, (bbY(2)+82)/2+4, 'GND', '#888');
+
+    // 存储引用
+    window._wires = {
+      i2s: [lineIO18,lineIO17,lineIO14],
+      mos: [],
+      led: []
+    };
+    // 补 MOS 和 LED 的引用
+    window._wires.mos.push(g.lastChild.previousSibling); // 不太好，直接存
+  }
+
+  createSvg();
+
+  /* ===== 重新收集连线引用 ===== */
+  var allLines = svg.querySelectorAll('[data-wire]');
+  var flashLines = {i2s:[],mos:[],led:[]};
+
+  /* ===== 状态管理 ===== */
+  var currentState = 'calm';
+  var cooldownTimer = null;
+
+  var screen      = document.getElementById('esp32Screen');
+  var screenLabel = document.getElementById('screenLabel');
+  var screenRMS   = document.getElementById('screenRMS');
+  var screenBar   = document.getElementById('screenBar');
+  var pulseRing   = document.getElementById('pulseRing');
+  var stateInd    = document.getElementById('stateIndicator');
+  var terminal    = document.getElementById('terminal');
+
+  var btnCalm     = document.querySelector('.ctrl-btn.calm');
+  var btnNoise    = document.querySelector('.ctrl-btn.noise');
+  var btnCooldown = document.querySelector('.ctrl-btn.cooldown');
+
+  function modStatus(id){ return document.getElementById(id); }
+
+  function setModule(state){
+    var labels={on:'ON',off:'OFF',idle:'...'};
+    var cls={on:'on',off:'off',idle:'idle'};
+    ['ampStatus','spkStatus','mosStatus','humiStatus','ledStatus'].forEach(function(id){
+      var el=modStatus(id);
+      if(el){el.textContent=labels[state];el.className='module-status '+cls[state];}
+    });
+  }
+
+  function log(msg,cls){
+    var div=document.createElement('div');
+    div.className='line '+(cls||'info');
+    div.innerHTML='<span class="terminal-prompt">$</span> '+msg;
+    terminal.appendChild(div);
+    terminal.scrollTop=terminal.scrollHeight;
+  }
+
+  function flashWires(){
+    allLines.forEach(function(l){
+      if(l.getAttribute('stroke')==='#FF8844'||l.getAttribute('stroke')==='#FF3344'||l.getAttribute('stroke')==='#44CC88'){
+        l.style.strokeWidth='5';
+        setTimeout(function(){l.style.strokeWidth='2';},200);
+        setTimeout(function(){l.style.strokeWidth='5';},400);
+        setTimeout(function(){l.style.strokeWidth=l.getAttribute('stroke-width')||'2';},600);
+      }
+    });
+  }
+
+  var allPinTags = document.querySelectorAll('.pin-tag.i2s,.pin-tag.mos,.pin-tag.led');
+  function highlightPins(on){
+    allPinTags.forEach(function(p){
+      if(on) p.classList.add('highlight');
+      else p.classList.remove('highlight');
+    });
+  }
+
+  /* ===== 状态切换 ===== */
+  window.setState = function(state){
+    if(currentState===state)return;
+    currentState=state;
+    if(cooldownTimer){clearTimeout(cooldownTimer);cooldownTimer=null;}
+    btnCalm.classList.remove('active');
+    btnNoise.classList.remove('active');
+    btnCooldown.classList.remove('active');
+
+    if(state==='calm') applyCalm();
+    else if(state==='noise') applyNoise();
+    else if(state==='cooldown') applyCooldown();
+  };
+
+  function applyCalm(){
+    btnCalm.classList.add('active');
+    screen.style.background='#0A0A2E';
+    screen.style.boxShadow='inset 0 0 20px rgba(0,0,0,0.3),0 0 16px rgba(51,102,255,0.12)';
+    screenLabel.textContent='Calm';screenLabel.style.color='#6699FF';
+    screenRMS.textContent='42';screenRMS.style.color='#6699FF';
+    screenBar.style.width='15%';screenBar.style.background='#3366FF';
+    pulseRing.style.display='';
+    stateInd.textContent='● Calm';stateInd.className='state-indicator calm';
+    setModule('on');highlightPins(false);
+    log('[HAL] 环境恢复安静 · 森林声景恢复 · 加湿器 ON · 灯环深蓝','hal');
+    log('[Audio] I2S 音量恢复 1.0 · 森林声景循环','info');
+    log('[MOS] 拉高 IO1 · 加湿器电源恢复','ok');
+  }
+
+  function applyNoise(){
+    btnNoise.classList.add('active');
+    screen.style.background='#2E0A14';
+    screen.style.boxShadow='inset 0 0 20px rgba(0,0,0,0.3),0 0 24px rgba(255,51,68,0.18)';
+    screenLabel.textContent='Noise!';screenLabel.style.color='#FF3344';
+    screenRMS.textContent='283';screenRMS.style.color='#FF3344';
+    screenBar.style.width='78%';screenBar.style.background='#FF3344';
+    pulseRing.style.display='none';
+    stateInd.textContent='● Noise!';stateInd.className='state-indicator noise';
+    setModule('off');highlightPins(true);flashWires();
+    log('[HAL] ⚠ 检测到噪音 RMS=283 > 阈值150!','error');
+    log('[Audio] 拉低 I2S DIN (IO14) · 功放静音','warn');
+    log('[MOS] 拉低 IO1 · 光耦关断 · 加湿器停止','warn');
+    log('[LED] WS2812 → 暗红防守色 #3C0A0A','warn');
+    log('[State] 进入 NOISE 状态 · 开始 3s 冷却计时','error');
+  }
+
+  function applyCooldown(){
+    btnCooldown.classList.add('active');
+    screen.style.background='#2E1806';
+    screen.style.boxShadow='inset 0 0 20px rgba(0,0,0,0.3),0 0 16px rgba(255,136,68,0.12)';
+    screenLabel.textContent='Calming...';screenLabel.style.color='#FF8844';
+    screenRMS.textContent='68';screenRMS.style.color='#FF8844';
+    screenBar.style.width='32%';screenBar.style.background='#FF8844';
+    pulseRing.style.display='';
+    stateInd.textContent='● Calming...';stateInd.className='state-indicator cooldown';
+    setModule('idle');highlightPins(false);
+    log('[HAL] 噪音消失 · 进入冷却态 · 持续监测 3 秒...','warn');
+    log('[State] COOLDOWN · 若 3s 内无噪音则恢复 Calm','info');
+    cooldownTimer=setTimeout(function(){
+      cooldownTimer=null;applyCalm();currentState='calm';
+      log('[HAL] ✅ 冷却完成 · 连续 3s 安静 · 恢复 Calm','ok');
+    },3000);
+  }
+
+})();
+</script>
+
+</body>
+</html>
