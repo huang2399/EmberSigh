@@ -21,6 +21,9 @@ monitor_*.txt
 read_serial.py
 check_port.py
 
+# 音频中间产物（仅保留 main/forest_audio.wav）
+main/forest_audio_raw.mp3
+
 # OS
 Thumbs.db
 .DS_Store
