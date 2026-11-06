@@ -68,6 +68,34 @@
 - [ ] 硬件接入：接入外部功放、喇叭、MOS 管与单路香氛雾化器（预计本周完成）
 - [ ] V2.0 研发规划：开发多通道 PWM 香氛动态混合算法，实现"时间-情绪-气味"矩阵联动
 
+## 产品网站
+
+仓库内含完整的静态产品站，零依赖、零后端，单文件即可运行。
+
+| 路径 | 说明 |
+| :--- | :--- |
+| [`website/index-v2.html`](website/index-v2.html) | **最终版**：米白暖调五视图响应式产品站 |
+| [`website/index.html`](website/index.html) | 存档：深色科技风初版单页 |
+| [`hardware-sim/index.html`](hardware-sim/index.html) | 硬件接线模拟器：面包板 + 引脚连线 + 三态联动 |
+| [`网页版/`](网页版/) | 十个历史原型，按创建时间逐个提交 |
+
+最终版包含五个视图，支持锚点直达：
+
+```
+website/index-v2.html#vision     理念
+website/index-v2.html#console    控制台（三级状态机交互）
+website/index-v2.html#lab        嗅觉实验室
+website/index-v2.html#hardware   硬件接线与规格
+website/index-v2.html#dev        开发者
+```
+
+本地预览：
+
+```bash
+cd website && python -m http.server 8080
+# 浏览器打开 http://localhost:8080/index-v2.html
+```
+
 ## 快速开始
 
 ```bash
