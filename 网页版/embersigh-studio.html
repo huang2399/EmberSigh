@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberSigh · 智能香氛策略工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ========== 设计变量：米白极简底色 + 金棕点缀 ========== */
+  :root{
+    --ink:#33291f;          /* 主文字 */
+    --ink-soft:#6f6254;     /* 次级文字 */
+    --ink-faint:#a3937f;    /* 弱化文字 */
+    --gold:#b08d57;         /* 品牌金 */
+    --pine:#7d9471;         /* 松木 */
+    --citrus:#e2a24b;       /* 柑橘 */
+    --lav:#9d8ec7;          /* 薰衣草 */
+    --line:rgba(80,64,46,.14);
+    --card:rgba(255,255,255,.55);
+    --danger:#b0442f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    font-family:'Noto Serif SC','Songti SC',serif;
+    color:var(--ink);
+    /* 三层柔光 + 底层暖米白渐变，营造杂志般的呼吸感 */
+    background:
+      radial-gradient(1100px 700px at 12% -10%, rgba(255,232,205,.85), transparent 60%),
+      radial-gradient(900px 650px at 95% 8%, rgba(214,226,206,.7), transparent 55%),
+      radial-gradient(800px 600px at 60% 115%, rgba(233,215,238,.55), transparent 60%),
+      linear-gradient(160deg,#f7f3ec 0%,#f1ebe0 48%,#ece4d6 100%);
+    position:relative;
+  }
+  /* 胶片颗粒层 */
+  .grain{
+    position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  }
+  /* 漂浮光尘 */
+  .mote{
+    position:fixed;border-radius:50%;pointer-events:none;z-index:1;
+    background:radial-gradient(circle,rgba(255,244,220,.9),rgba(255,244,220,0) 70%);
+    animation:drift ease-in-out infinite alternate;filter:blur(1px);
+  }
+  @keyframes drift{
+    from{transform:translate(0,0) scale(1);opacity:.5;}
+    to{transform:translate(26px,-40px) scale(1.25);opacity:.15;}
+  }
+
+  /* ========== 顶栏 ========== */
+  header{
+    height:84px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 48px 12px;position:relative;z-index:5;
+  }
+  .brand{display:flex;align-items:baseline;gap:15px;}
+  .brand h1{
+    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;
+    font-size:31px;letter-spacing:.04em;
+  }
+  .brand h1 em{color:var(--gold);}
+  .brand .zh{font-size:12px;letter-spacing:.4em;color:var(--ink-soft);}
+  header .tag{font-size:11px;color:var(--ink-faint);letter-spacing:.18em;text-align:right;line-height:1.9;}
+
+  /* ========== 三栏主布局 ========== */
+  main{
+    height:calc(100vh - 84px);
+    display:grid;grid-template-columns:430px 1fr 268px;
+    gap:24px;padding:2px 42px 22px;position:relative;z-index:5;
+  }
+
+  /* ========== 左栏：策略工作台 ========== */
+  .studio{
+    display:flex;flex-direction:column;min-height:0;
+    background:linear-gradient(160deg,rgba(255,255,255,.6),rgba(255,255,255,.3));
+    border:1px solid var(--line);border-radius:24px;
+    padding:18px 22px 16px;
+    box-shadow:0 24px 60px -36px rgba(96,76,48,.35);
+  }
+  /* 标签页导航 */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:0;}
+  .tab{
+    flex:1;cursor:pointer;text-align:center;padding:9px 2px 11px;
+    font-size:12.5px;letter-spacing:.14em;color:var(--ink-faint);font-weight:500;
+    border-bottom:2px solid transparent;transition:color .3s,border-color .3s;
+    user-select:none;position:relative;
+  }
+  .tab small{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+    font-size:10px;letter-spacing:.06em;margin-top:2px;color:var(--ink-faint);opacity:.8;}
+  .tab:hover{color:var(--ink-soft);}
+  .tab.active{color:var(--ink);border-bottom-color:var(--gold);font-weight:600;}
+
+  /* 各策略面板 */
+  .pane{display:none;flex:1;min-height:0;flex-direction:column;padding-top:14px;}
+  .pane.active{display:flex;animation:fadeUp .5s cubic-bezier(.22,1,.36,1);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* —— 策略 1：手动叠喷 —— */
+  .essence{
+    display:flex;align-items:center;gap:13px;cursor:pointer;
+    padding:8px 12px;border-radius:16px;border:1px solid transparent;
+    transition:transform .35s cubic-bezier(.22,1,.36,1),background .35s,border-color .35s,box-shadow .35s;
+    user-select:none;
+  }
+  .essence:hover{
+    background:var(--card);border-color:var(--line);transform:translateX(4px);
+    box-shadow:0 12px 26px -18px rgba(90,70,45,.35);
+  }
+  .essence:active{transform:translateX(4px) scale(.985);}
+  .essence svg{height:74px;width:auto;flex:none;filter:drop-shadow(0 7px 9px rgba(90,70,45,.18));}
+  .essence .name{font-size:15px;font-weight:600;letter-spacing:.13em;display:flex;align-items:baseline;gap:8px;}
+  .essence .name i{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:11px;color:var(--ink-faint);}
+  .essence .note{font-size:10.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.07em;line-height:1.65;}
+  .essence .amt{margin-top:5px;font-size:10.5px;color:var(--ink-faint);display:flex;align-items:center;gap:6px;letter-spacing:.08em;}
+  .essence .amt .dot{width:6px;height:6px;border-radius:50%;}
+  .essence .amt b{font-family:'Cormorant Garamond',Georgia,serif;font-size:13px;color:var(--ink-soft);}
+  .pane-hint{margin-top:auto;font-size:10.5px;color:var(--ink-faint);line-height:2;letter-spacing:.09em;
+    padding:11px 4px 0;border-top:1px dashed var(--line);}
+
+  /* —— 策略 2：分时预设（时间轴） —— */
+  .tl-clock{display:flex;align-items:baseline;gap:12px;margin:4px 2px 2px;}
+  .tl-clock .big{font-family:'Cormorant Garamond',Georgia,serif;font-size:52px;font-weight:600;letter-spacing:.03em;line-height:1;}
+  .tl-clock .node{font-size:14px;font-weight:600;letter-spacing:.2em;color:var(--gold);transition:color .4s;}
+  .tl-clock .node.blending{color:var(--ink-faint);}
+  .tl-desc{font-size:11.5px;color:var(--ink-soft);letter-spacing:.08em;margin:8px 2px 20px;min-height:18px;transition:opacity .3s;}
+  .tl-wrap{position:relative;padding:6px 2px 0;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:99px;
+    background:linear-gradient(90deg,#dcd2bd,#c9bda2);outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:21px;height:21px;border-radius:50%;
+    background:radial-gradient(circle at 35% 32%,#fdf8ee 0%,#d8c6a2 55%,#b08d57 100%);
+    border:2px solid #fff;box-shadow:0 3px 10px rgba(120,95,60,.45);cursor:grab;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:19px;height:19px;border-radius:50%;background:#c9a86f;border:2px solid #fff;
+    box-shadow:0 3px 10px rgba(120,95,60,.45);cursor:grab;
+  }
+  .tl-nodes{position:relative;height:56px;margin-top:6px;}
+  .tl-node{
+    position:absolute;transform:translateX(-50%);text-align:center;cursor:pointer;
+    transition:opacity .3s;opacity:.55;
+  }
+  .tl-node.hot{opacity:1;}
+  .tl-node .nd{width:8px;height:8px;border-radius:50%;background:var(--gold);margin:0 auto 5px;
+    box-shadow:0 0 0 4px rgba(176,141,87,.18);}
+  .tl-node .nn{font-size:11px;letter-spacing:.1em;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+  .tl-node .nt{font-family:'Cormorant Garamond',Georgia,serif;font-size:10px;color:var(--ink-faint);}
+  .tl-curve{
+    margin-top:8px;font-size:10.5px;color:var(--ink-faint);letter-spacing:.09em;line-height:1.9;
+    padding:10px 4px 0;border-top:1px dashed var(--line);
+  }
+
+  /* —— 策略 3：智能语义生成 —— */
+  .ai-input{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+    background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:14px;
+    padding:12px 15px;letter-spacing:.05em;outline:none;transition:border-color .3s,box-shadow .3s;
+  }
+  .ai-input:focus{border-color:rgba(176,141,87,.6);box-shadow:0 0 0 4px rgba(176,141,87,.1);}
+  .ai-input::placeholder{color:var(--ink-faint);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .chip{
+    cursor:pointer;font-size:11.5px;letter-spacing:.1em;color:var(--ink-soft);
+    border:1px solid var(--line);border-radius:99px;padding:6px 13px;
+    background:rgba(255,255,255,.5);transition:all .3s;user-select:none;
+  }
+  .chip:hover{border-color:rgba(176,141,87,.6);color:var(--ink);transform:translateY(-2px);}
+  .chip.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .btn-gold{
+    margin-top:14px;width:100%;cursor:pointer;font-family:inherit;
+    border:1px solid rgba(176,141,87,.55);border-radius:15px;padding:13px;
+    font-size:13.5px;font-weight:600;letter-spacing:.3em;color:#fff;
+    background:linear-gradient(140deg,#c9a86f,#a8834e);
+    box-shadow:0 14px 28px -16px rgba(168,131,78,.65);
+    transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,filter .3s;
+  }
+  .btn-gold:hover{transform:translateY(-2px);filter:brightness(1.06);}
+  .btn-gold:active{transform:translateY(0) scale(.985);}
+  .btn-gold:disabled{opacity:.55;cursor:wait;transform:none;}
+  .ai-result{margin-top:14px;flex:1;min-height:0;}
+  .ai-line{
+    opacity:0;transform:translateY(8px);font-size:12px;color:var(--ink-soft);
+    letter-spacing:.08em;line-height:2.1;transition:opacity .6s,transform .6s;
+  }
+  .ai-line.in{opacity:1;transform:translateY(0);}
+  .ai-line.title{font-size:13.5px;font-weight:600;color:var(--gold);letter-spacing:.18em;}
+  .ai-line .rr{display:inline-flex;align-items:center;gap:6px;margin-right:14px;}
+  .ai-line .rr .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+
+  /* —— 策略 4：响应式闭环 —— */
+  .sensors{display:flex;flex-direction:column;gap:9px;}
+  .sensor{
+    display:flex;align-items:center;gap:11px;padding:9px 13px;
+    background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:14px;
+    transition:border-color .4s,background .4s;
+  }
+  .sensor.warn{border-color:rgba(176,68,47,.45);background:rgba(255,241,236,.7);}
+  .sensor .sl{font-size:11.5px;letter-spacing:.1em;color:var(--ink-soft);width:86px;flex:none;}
+  .sensor .sl i{display:block;font-style:normal;font-family:'Cormorant Garamond',Georgia,serif;font-size:9.5px;color:var(--ink-faint);letter-spacing:.05em;}
+  .sensor .sv{font-family:'Cormorant Garamond',Georgia,serif;font-size:21px;font-weight:600;width:74px;text-align:right;transition:color .4s;}
+  .sensor.warn .sv{color:var(--danger);}
+  .sensor .sv small{font-size:10px;color:var(--ink-faint);font-family:'Noto Serif SC',serif;margin-left:2px;}
+  .sensor .sb{flex:1;height:4px;border-radius:99px;background:rgba(90,74,54,.12);overflow:hidden;}
+  .sensor .sb i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#c9b48c,#a8834e);transition:width .9s cubic-bezier(.22,1,.36,1),background .5s;}
+  .sensor.warn .sb i{background:linear-gradient(90deg,#d98a75,#b0442f);}
+  .loop-status{
+    margin-top:12px;display:flex;align-items:center;gap:9px;
+    font-size:12px;letter-spacing:.12em;color:var(--ink-soft);padding:0 3px;min-height:20px;
+  }
+  .loop-badge{
+    display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.1em;
+    border-radius:99px;padding:4px 12px;border:1px solid rgba(125,148,113,.5);
+    color:#5c7d5c;background:rgba(232,240,226,.7);transition:all .4s;
+  }
+  .loop-badge .bd{width:6px;height:6px;border-radius:50%;background:#7d9471;}
+  .loop-badge.tuning{border-color:rgba(176,141,87,.6);color:#96703c;background:rgba(250,240,222,.8);}
+  .loop-badge.tuning .bd{background:var(--gold);animation:blink 1s ease-in-out infinite;}
+  .loop-badge.alert{border-color:rgba(176,68,47,.55);color:var(--danger);background:rgba(255,240,235,.8);}
+  .loop-badge.alert .bd{background:var(--danger);animation:blink .6s ease-in-out infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+  .loop-log{
+    margin-top:10px;font-size:10.5px;color:var(--ink-faint);letter-spacing:.05em;
+    line-height:1.9;min-height:64px;
+  }
+  .loop-log div{opacity:0;animation:logIn .5s forwards;}
+  .loop-log div:last-child{color:var(--ink-soft);}
+  @keyframes logIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:none;}}
+
+  /* ========== 中栏：主瓶舞台 ========== */
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:0;}
+  .mode-tag{
+    font-size:10.5px;letter-spacing:.32em;color:var(--gold);
+    border:1px solid rgba(176,141,87,.4);border-radius:99px;padding:4px 15px;
+    background:rgba(255,255,255,.5);margin-bottom:8px;transition:all .4s;
+  }
+  .readout{text-align:center;}
+  .readout .blend{
+    font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;
+    font-size:26px;letter-spacing:.05em;transition:color .8s;
+  }
+  .readout .sub{font-size:11.5px;color:var(--ink-soft);letter-spacing:.3em;margin-top:5px;}
+  .bottle-wrap{transition:filter .6s;}
+  .bottle-wrap svg{height:min(50vh,430px);width:auto;display:block;filter:drop-shadow(0 28px 32px rgba(96,76,48,.22));}
+  .bottle-wrap.shake{animation:shake .48s linear infinite;}
+  @keyframes shake{
+    10%,90%{transform:translate(-2px,0) rotate(-.4deg);}
+    20%,80%{transform:translate(4px,1px) rotate(.5deg);}
+    30%,50%,70%{transform:translate(-7px,-1px) rotate(-.9deg);}
+    40%,60%{transform:translate(7px,1px) rotate(.9deg);}
+  }
+  .compose{width:min(340px,26vw);margin-top:6px;}
+  .bar{height:7px;border-radius:99px;background:rgba(255,255,255,.6);border:1px solid var(--line);overflow:hidden;display:flex;}
+  .bar i{display:block;height:100%;transition:width .9s cubic-bezier(.22,1,.36,1),background .9s;}
+  .legend{display:flex;justify-content:space-between;margin-top:8px;font-size:10.5px;color:var(--ink-soft);letter-spacing:.07em;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend b{font-family:'Cormorant Garamond',Georgia,serif;font-size:12.5px;color:var(--ink);}
+  .legend .dot{width:6px;height:6px;border-radius:50%;}
+  .total{text-align:center;margin-top:7px;font-size:10.5px;color:var(--ink-faint);letter-spacing:.2em;}
+  .total b{font-family:'Cormorant Garamond',Georgia,serif;font-size:14px;color:var(--ink-soft);}
+
+  /* ========== 右栏：实时情绪预测 ========== */
+  .oracle{
+    display:flex;flex-direction:column;min-height:0;
+    background:linear-gradient(165deg,rgba(255,255,255,.62),rgba(255,255,255,.3));
+    border:1px solid var(--line);border-radius:24px;padding:18px 20px 16px;
+    box-shadow:0 24px 60px -36px rgba(96,76,48,.35);
+  }
+  .oracle h2{font-size:12.5px;font-weight:600;letter-spacing:.3em;display:flex;align-items:baseline;gap:8px;
+    padding-bottom:11px;border-bottom:1px solid var(--line);}
+  .oracle h2 small{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:10.5px;
+    font-weight:500;color:var(--ink-faint);letter-spacing:.12em;}
+  .pred{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
+  .pred-item .pt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+  .pred-item .pl{font-size:12px;letter-spacing:.18em;color:var(--ink-soft);}
+  .pred-item .pl i{font-style:normal;font-family:'Cormorant Garamond',Georgia,serif;font-size:9.5px;color:var(--ink-faint);letter-spacing:.06em;margin-left:6px;}
+  .pred-item .pv{font-family:'Cormorant Garamond',Georgia,serif;font-size:23px;font-weight:600;}
+  .pred-item .pv small{font-size:11px;color:var(--ink-faint);font-family:'Noto Serif SC',serif;}
+  .pred-item .pb{height:5px;border-radius:99px;background:rgba(90,74,54,.1);overflow:hidden;}
+  .pred-item .pb i{display:block;height:100%;width:0%;border-radius:99px;
+    transition:width 1.1s cubic-bezier(.22,1,.36,1),background 1.1s;}
+  .poem{
+    margin-top:auto;padding-top:14px;border-top:1px dashed var(--line);
+    font-size:11px;color:var(--ink-soft);line-height:2.1;letter-spacing:.1em;min-height:58px;
+    transition:opacity .5s;
+  }
+  .poem::before{content:'✦';color:var(--gold);margin-right:8px;}
+
+  /* ========== 液体与水滴 ========== */
+  #liquidG{transition:transform 1.15s cubic-bezier(.22,1,.36,1);}
+  .wave{transition:fill 1.35s ease;}
+  .wave.front{animation:wx 4.4s linear infinite;}
+  .wave.back{animation:wx 6.8s linear infinite reverse;opacity:.42;}
+  svg.agitated .wave.front{animation-duration:1.15s;}
+  svg.agitated .wave.back{animation-duration:1.8s;}
+  @keyframes wx{from{transform:translateX(0);}to{transform:translateX(-100px);}}
+  .drop{
+    position:fixed;z-index:60;width:13px;height:17px;pointer-events:none;
+    border-radius:52% 52% 50% 50% / 62% 62% 40% 40%;
+    box-shadow:inset -2px -2px 4px rgba(255,255,255,.55),0 4px 8px rgba(90,70,45,.25);
+  }
+
+  /* ========== 提示浮层 ========== */
+  .toast{
+    position:fixed;top:22px;left:50%;transform:translate(-50%,-24px);z-index:70;
+    padding:12px 25px;border-radius:99px;font-size:12.5px;letter-spacing:.13em;
+    background:rgba(255,255,255,.78);backdrop-filter:blur(14px);
+    border:1px solid var(--line);color:var(--ink-soft);
+    box-shadow:0 18px 44px -18px rgba(90,70,45,.4);
+    opacity:0;pointer-events:none;transition:opacity .5s,transform .5s cubic-bezier(.22,1,.36,1);
+    display:flex;align-items:center;gap:9px;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .toast.warn{border-color:rgba(176,68,47,.5);color:var(--danger);background:rgba(255,243,238,.9);}
+  .toast.gentle{border-color:rgba(125,148,113,.5);}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="mote" style="width:90px;height:90px;left:15%;top:22%;animation-duration:9s;"></div>
+<div class="mote" style="width:60px;height:60px;left:57%;top:10%;animation-duration:11s;animation-delay:-4s;"></div>
+<div class="mote" style="width:120px;height:120px;right:8%;bottom:14%;animation-duration:13s;animation-delay:-7s;"></div>
+<div class="mote" style="width:46px;height:46px;left:44%;bottom:8%;animation-duration:10s;animation-delay:-2s;"></div>
+
+<header>
+  <div class="brand">
+    <h1>Ember<em>Sigh</em></h1>
+    <span class="zh">智 能 香 氛 策 略 工 作 台</span>
+  </div>
+  <div class="tag">SMART SCENT STRATEGY STUDIO<br>四种策略 · 一瓶气象</div>
+</header>
+
+<main>
+  <!-- ═══════════ 左栏：四种策略 ═══════════ -->
+  <section class="studio">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-mode="manual">手动叠喷<small>Manual</small></div>
+      <div class="tab" data-mode="time">分时预设<small>Timeline</small></div>
+      <div class="tab" data-mode="ai">语义生成<small>AI Blend</small></div>
+      <div class="tab" data-mode="loop">响应闭环<small>Closed-Loop</small></div>
+    </div>
+
+    <!-- 策略 1：人工叠喷 -->
+    <div class="pane active" data-pane="manual">
+      <div class="essence" data-es="pine">
+        <svg viewBox="0 0 64 118">
+          <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+          <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                fill="rgba(255,255,255,.55)" stroke="rgba(90,74,54,.4)" stroke-width="1.6"/>
+          <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#7d9471" opacity=".9"/>
+          <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <div>
+          <div class="name">松木 <i>Pine Forest</i></div>
+          <div class="note">冷冽木质 · 针叶与晨雾</div>
+          <div class="amt"><span class="dot" style="background:var(--pine)"></span>已滴入 <b class="ml">0</b> ml</div>
+        </div>
+      </div>
+      <div class="essence" data-es="citrus">
+        <svg viewBox="0 0 64 118">
+          <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+          <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                fill="rgba(255,255,255,.55)" stroke="rgba(90,74,54,.4)" stroke-width="1.6"/>
+          <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#e2a24b" opacity=".9"/>
+          <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <div>
+          <div class="name">柑橘 <i>Sun Citrus</i></div>
+          <div class="note">明亮果皮 · 微苦回甘</div>
+          <div class="amt"><span class="dot" style="background:var(--citrus)"></span>已滴入 <b class="ml">0</b> ml</div>
+        </div>
+      </div>
+      <div class="essence" data-es="lav">
+        <svg viewBox="0 0 64 118">
+          <rect x="22" y="2" width="20" height="14" rx="4" fill="#8a6b4a"/>
+          <path d="M20 16 L44 16 L44 30 C44 36 54 40 54 52 L54 102 C54 110 48 116 40 116 L24 116 C16 116 10 110 10 102 L10 52 C10 40 20 36 20 30 Z"
+                fill="rgba(255,255,255,.55)" stroke="rgba(90,74,54,.4)" stroke-width="1.6"/>
+          <path d="M13 58 L13 100 C13 107 18 112 25 112 L39 112 C46 112 51 107 51 100 L51 58 Z" fill="#9d8ec7" opacity=".9"/>
+          <rect x="15" y="42" width="4" height="52" rx="2" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <div>
+          <div class="name">薰衣草 <i>Night Lavender</i></div>
+          <div class="note">草本安眠 · 柔软的紫</div>
+          <div class="amt"><span class="dot" style="background:var(--lav)"></span>已滴入 <b class="ml">0</b> ml</div>
+        </div>
+      </div>
+      <div class="pane-hint">点击精油瓶，一滴香精落入主瓶，液面与颜色随配比呼吸。<br>你的手动配方会被记住，切换策略后再回来依然还在。</div>
+    </div>
+
+    <!-- 策略 2：分时预设 -->
+    <div class="pane" data-pane="time">
+      <div class="tl-clock">
+        <span class="big" id="tlTime">08:00</span>
+        <span class="node" id="tlNode">清晨山坡</span>
+      </div>
+      <div class="tl-desc" id="tlDesc">晨雾未散，柑橘先醒。</div>
+      <div class="tl-wrap">
+        <input type="range" id="tlSlider" min="360" max="1440" step="5" value="480">
+        <div class="tl-nodes" id="tlNodes"></div>
+      </div>
+      <div class="tl-curve">拖动滑块，主瓶沿「山坡 → 密林 → 暖室 → 安眠」的<br>预设曲线平滑演化，颜色与配比逐帧过渡。</div>
+    </div>
+
+    <!-- 策略 3：智能语义生成 -->
+    <div class="pane" data-pane="ai">
+      <input class="ai-input" id="aiInput" placeholder="描述一种情绪或场景，如：雨后森林" maxlength="24">
+      <div class="chips" id="chips">
+        <span class="chip" data-q="清冷木质调">清冷木质调</span>
+        <span class="chip" data-q="雨后森林">雨后森林</span>
+        <span class="chip" data-q="安抚情绪">安抚情绪</span>
+        <span class="chip" data-q="晨间专注">晨间专注</span>
+        <span class="chip" data-q="冥想深呼吸">冥想深呼吸</span>
+      </div>
+      <button class="btn-gold" id="aiBtn">生 成 专 属 配 方</button>
+      <div class="ai-result" id="aiResult"></div>
+    </div>
+
+    <!-- 策略 4：响应式闭环 -->
+    <div class="pane" data-pane="loop">
+      <div class="sensors">
+        <div class="sensor" id="senHr">
+          <div class="sl">心率<i>Heart Rate</i></div>
+          <div class="sv" id="svHr">62<small>bpm</small></div>
+          <div class="sb"><i id="sbHr" style="width:52%"></i></div>
+        </div>
+        <div class="sensor" id="senNoise">
+          <div class="sl">环境噪音<i>Noise</i></div>
+          <div class="sv" id="svNoise">34<small>dB</small></div>
+          <div class="sb"><i id="sbNoise" style="width:34%"></i></div>
+        </div>
+        <div class="sensor" id="senEeg">
+          <div class="sl">脑电 α 波<i>EEG Alpha</i></div>
+          <div class="sv" id="svEeg">78<small>%</small></div>
+          <div class="sb"><i id="sbEeg" style="width:78%"></i></div>
+        </div>
+      </div>
+      <button class="btn-gold" id="loopBtn" style="margin-top:13px;letter-spacing:.2em;">模拟压力 / 噪音干扰</button>
+      <div class="loop-status">
+        <span class="loop-badge" id="loopBadge"><span class="bd"></span><span id="loopBadgeTxt">闭环运行中</span></span>
+        <span id="loopHint" style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.06em;">多模态感知已接入</span>
+      </div>
+      <div class="loop-log" id="loopLog"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 中栏：主瓶 ═══════════ -->
+  <section class="stage">
+    <div class="mode-tag" id="modeTag">策略 · 手动叠喷 MANUAL</div>
+    <div class="readout">
+      <div class="blend" id="blendName">空瓶待调 · <span style="font-size:19px">Blank</span></div>
+      <div class="sub" id="blendSub">比 例 随 心 · 气 味 即 情 绪</div>
+    </div>
+
+    <div class="bottle-wrap" id="bottleWrap">
+      <svg id="mainSvg" viewBox="0 0 320 440">
+        <defs>
+          <clipPath id="inner">
+            <path d="M143 48 L143 108 C143 128 84 138 84 190 L84 352 C84 366 96 378 110 378 L210 378 C224 378 236 366 236 352 L236 190 C236 138 177 128 177 108 L177 48 Z"/>
+          </clipPath>
+          <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity=".55"/>
+            <stop offset=".28" stop-color="#fff" stop-opacity=".06"/>
+            <stop offset=".72" stop-color="#fff" stop-opacity=".04"/>
+            <stop offset="1" stop-color="#fff" stop-opacity=".38"/>
+          </linearGradient>
+          <linearGradient id="capg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#b29064"/><stop offset="1" stop-color="#8a6b47"/>
+          </linearGradient>
+          <radialGradient id="floor" cx=".5" cy=".5" r=".5">
+            <stop offset="0" stop-color="rgba(96,76,48,.3)"/><stop offset="1" stop-color="rgba(96,76,48,0)"/>
+          </radialGradient>
+        </defs>
+
+        <ellipse cx="160" cy="416" rx="118" ry="16" fill="url(#floor)"/>
+
+        <!-- 液体：裁剪于瓶内，双层波浪，颜色/液面由 JS 驱动 -->
+        <g clip-path="url(#inner)">
+          <g id="liquidG">
+            <path class="wave back" id="waveBack"/>
+            <path class="wave front" id="waveFront"/>
+          </g>
+          <ellipse id="ripple" cx="160" cy="0" rx="0" ry="0" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2.5" opacity="0"/>
+        </g>
+
+        <path d="M137 42 L137 108 C137 128 78 138 78 190 L78 356 C78 372 92 384 108 384 L212 384 C228 384 242 372 242 356 L242 190 C242 138 183 128 183 108 L183 42"
+              fill="url(#shine)" stroke="rgba(96,80,58,.45)" stroke-width="2.4"/>
+        <rect x="97" y="168" width="13" height="178" rx="6.5" fill="rgba(255,255,255,.5)"/>
+        <rect x="228" y="180" width="4" height="150" rx="2" fill="rgba(255,255,255,.45)"/>
+        <path d="M141 50 L141 106" stroke="rgba(255,255,255,.6)" stroke-width="3" stroke-linecap="round"/>
+        <rect x="129" y="34" width="62" height="10" rx="5" fill="rgba(120,100,72,.55)"/>
+        <rect x="127" y="12" width="66" height="26" rx="9" fill="url(#capg)"/>
+        <rect x="127" y="12" width="66" height="9" rx="4.5" fill="rgba(255,255,255,.28)"/>
+        <text x="160" y="248" text-anchor="middle" font-family="Cormorant Garamond,Georgia,serif" font-style="italic" font-size="21" fill="rgba(52,40,28,.42)" letter-spacing="1">EmberSigh</text>
+        <text x="160" y="270" text-anchor="middle" font-family="Noto Serif SC,serif" font-size="9.5" fill="rgba(52,40,28,.32)" letter-spacing="5">SMART STUDIO</text>
+      </svg>
+    </div>
+
+    <div class="compose">
+      <div class="bar">
+        <i id="barPine" style="background:var(--pine);width:0%"></i>
+        <i id="barCitrus" style="background:var(--citrus);width:0%"></i>
+        <i id="barLav" style="background:var(--lav);width:0%"></i>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--pine)"></i>松木 <b id="pctPine">0%</b></span>
+        <span><i class="dot" style="background:var(--citrus)"></i>柑橘 <b id="pctCitrus">0%</b></span>
+        <span><i class="dot" style="background:var(--lav)"></i>薰衣草 <b id="pctLav">0%</b></span>
+      </div>
+      <div class="total">净含量 <b id="totalMl">0</b> ml ／ 120 ml</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 右栏：实时情绪预测 ═══════════ -->
+  <aside class="oracle">
+    <h2>实时情绪预测 <small>Mood Forecast</small></h2>
+    <div class="pred">
+      <div class="pred-item">
+        <div class="pt"><span class="pl">放松度<i>Relax</i></span><span class="pv" id="pvRelax">—<small>%</small></span></div>
+        <div class="pb"><i id="pbRelax" style="background:linear-gradient(90deg,#a9c09c,#7d9471)"></i></div>
+      </div>
+      <div class="pred-item">
+        <div class="pt"><span class="pl">专注度<i>Focus</i></span><span class="pv" id="pvFocus">—<small>%</small></span></div>
+        <div class="pb"><i id="pbFocus" style="background:linear-gradient(90deg,#eec27f,#e2a24b)"></i></div>
+      </div>
+      <div class="pred-item">
+        <div class="pt"><span class="pl">安定度<i>Calm</i></span><span class="pv" id="pvCalm">—<small>%</small></span></div>
+        <div class="pb"><i id="pbCalm" style="background:linear-gradient(90deg,#b8abd8,#9d8ec7)"></i></div>
+      </div>
+      <div class="pred-item">
+        <div class="pt"><span class="pl">愉悦度<i>Joy</i></span><span class="pv" id="pvJoy">—<small>%</small></span></div>
+        <div class="pb"><i id="pbJoy" style="background:linear-gradient(90deg,#f0b8a0,#dd8660)"></i></div>
+      </div>
+    </div>
+    <div class="poem" id="poem">滴入第一滴香精，预测开始工作。</div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"><span id="toastIco">✦</span><span id="toastMsg"></span></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ══════════════ 基础数据 ══════════════ */
+var CAP = 120, DROP = 8;              // 主瓶容量 / 每滴毫升
+var ES = {                             // 三种香精
+  pine:  { zh:'松木',   rgb:[125,148,113], hex:'#7d9471', ml:0 },
+  citrus:{ zh:'柑橘',   rgb:[226,162,75],  hex:'#e2a24b', ml:0 },
+  lav:   { zh:'薰衣草', rgb:[157,142,199], hex:'#9d8ec7', ml:0 }
+};
+var KEYS = ['pine','citrus','lav'];
+var GRAY = [118,116,120];              // 应激时的灰调
+
+/* 每种策略各自保存配方，切换标签互不覆盖 */
+var MODES = {
+  manual: { pine:0,  citrus:0,  lav:0  },
+  time:   { pine:36, citrus:39, lav:7  },   // 默认 08:00 时刻
+  ai:     { pine:50, citrus:20, lav:30 },   // 默认示例：雨后森林
+  loop:   { pine:14, citrus:10, lav:66 }    // 默认安眠基线
+};
+var activeMode = 'manual';
+var shown = { pine:0, citrus:0, lav:0 };    // 当前主瓶实际显示的配方
+
+var $ = function(id){ return document.getElementById(id); };
+var liquidG=$('liquidG'), waveFront=$('waveFront'), waveBack=$('waveBack'),
+    ripple=$('ripple'), mainSvg=$('mainSvg'), bottleWrap=$('bottleWrap'),
+    toast=$('toast'), toastMsg=$('toastMsg'), toastIco=$('toastIco');
+
+/* ══════════════ 液面波浪路径（周期 100px，可无缝循环） ══════════════ */
+function wavePath(amp){
+  var d='M0 12';
+  for(var x=0;x<600;x+=50){
+    var up=(x/50)%2===0;
+    d+=' Q '+(x+25)+' '+(up?12-amp:12+amp)+' '+(x+50)+' 12';
+  }
+  return d+' V 430 H 0 Z';
+}
+waveFront.setAttribute('d', wavePath(7));
+waveBack.setAttribute('d', wavePath(5));
+
+/* ══════════════ 颜色混合 ══════════════ */
+function lerp(a,b,t){ return a+(b-a)*t; }
+function blendRGB(r){
+  var total=r.pine+r.citrus+r.lav;
+  if(total<=0) return null;
+  var c=[0,0,0];
+  KEYS.forEach(function(k,i){
+    var w=r[k]/total;
+    c[0]+=ES[k].rgb[0]*w; c[1]+=ES[k].rgb[1]*w; c[2]+=ES[k].rgb[2]*w;
+  });
+  return c.map(Math.round);
+}
+function css(c){ return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
+
+/* ══════════════ 主渲染：一瓶联动所有策略 ══════════════ */
+var grayFlash=false;   // 闭环干预时的短暂灰调
+function render(){
+  var total=shown.pine+shown.citrus+shown.lav;
+  var frac=Math.min(total/CAP,1);
+  var topY=378-frac*(378-150);
+  liquidG.style.transform='translate(84px,'+(topY-12).toFixed(2)+'px)';
+
+  var c=blendRGB(shown);
+  if(c && grayFlash){ c=[Math.round(lerp(c[0],GRAY[0],.86)),Math.round(lerp(c[1],GRAY[1],.86)),Math.round(lerp(c[2],GRAY[2],.86))]; }
+  var fill=c?css(c):'rgba(190,182,168,.35)';
+  waveFront.style.fill=fill; waveBack.style.fill=fill;
+
+  // 成分条 + 百分比
+  $('barPine').style.width  =(total>0?shown.pine/total*100:0)+'%';
+  $('barCitrus').style.width=(total>0?shown.citrus/total*100:0)+'%';
+  $('barLav').style.width   =(total>0?shown.lav/total*100:0)+'%';
+  $('pctPine').textContent  =(total>0?Math.round(shown.pine/total*100):0)+'%';
+  $('pctCitrus').textContent=(total>0?Math.round(shown.citrus/total*100):0)+'%';
+  $('pctLav').textContent   =(total>0?Math.round(shown.lav/total*100):0)+'%';
+  $('totalMl').textContent=Math.round(total);
+
+  // 手动模式滴入量
+  document.querySelectorAll('.essence').forEach(function(el){
+    el.querySelector('.ml').textContent=Math.round(MODES.manual[el.dataset.es]);
+  });
+
+  // 香气命名（随主调变化）
+  if(total<=0){
+    $('blendName').innerHTML='空瓶待调 · <span style="font-size:19px">Blank</span>';
+    $('blendSub').textContent='比 例 随 心 · 气 味 即 情 绪';
+  }else{
+    var dom=KEYS.reduce(function(a,b){return shown[a]>=shown[b]?a:b;});
+    var share=shown[dom]/total;
+    var names={
+      pine:  ['松林漫步 · Pine Walk',  '针 叶 与 雾 · 冷 冽 而 清 深'],
+      citrus:['晨光柑橘 · Citrus Dawn','果 皮 爆 开 · 明 亮 微 苦'],
+      lav:   ['薰衣草夜曲 · Nocturne', '黄 昏 紫 意 · 呼 吸 缓 下 来']
+    };
+    if(share>=.5){ $('blendName').textContent=names[dom][0]; $('blendSub').textContent=names[dom][1]; }
+    else{ $('blendName').innerHTML='私人定制 · <span style="font-size:19px">Bespoke</span>';
+          $('blendSub').textContent='三 种 情 绪 · 一 瓶 之 内'; }
+  }
+  renderPredict();
+}
+
+/* ══════════════ 实时情绪预测条 ══════════════ */
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function renderPredict(){
+  var total=shown.pine+shown.citrus+shown.lav;
+  var sP=total>0?shown.pine/total*100:0, sC=total>0?shown.citrus/total*100:0, sL=total>0?shown.lav/total*100:0;
+  var vals;
+  if(total<=0){ vals=null; }
+  else{
+    vals={ // 简化的启发式情绪模型：由三种香精占比推导
+      relax:Math.round(clamp(18+sL*.52+sP*.30,0,98)),
+      focus:Math.round(clamp(14+sC*.55+sP*.38,0,98)),
+      calm: Math.round(clamp(10+sL*.62+sP*.18,0,98)),
+      joy:  Math.round(clamp(12+sC*.60+sL*.18,0,98))
+    };
+  }
+  var map={relax:'Relax',focus:'Focus',calm:'Calm',joy:'Joy'};
+  Object.keys(map).forEach(function(k){
+    $('pv'+map[k]).innerHTML=(vals?vals[k]:'—')+'<small>%</small>';
+    $('pb'+map[k]).style.width=(vals?vals[k]:0)+'%';
+  });
+  // 气味小诗：随主调更换
+  var poem=$('poem');
+  if(!vals){ poem.textContent='滴入第一滴香精，预测开始工作。'; }
+  else{
+    var dom=KEYS.reduce(function(a,b){return shown[a]>=shown[b]?a:b;});
+    poem.textContent={
+      pine:'木质撑起骨架，空气里有整片清晨的针叶林。',
+      citrus:'果皮的明亮正在把情绪擦干净，光线变轻。',
+      lav:'紫色的重量落下来，呼吸一寸一寸慢了。'
+    }[dom];
+  }
+}
+
+/* ══════════════ 平滑过渡：shown → 目标配方 ══════════════ */
+var animToken=0;
+function easeInOut(t){ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
+function goTo(target,dur){
+  var token=++animToken;
+  var from={pine:shown.pine,citrus:shown.citrus,lav:shown.lav};
+  var t0=performance.now();
+  (function step(t){
+    if(token!==animToken) return;             // 新的过渡接管
+    var p=Math.min((t-t0)/dur,1), e=easeInOut(p);
+    KEYS.forEach(function(k){ shown[k]=from[k]+(target[k]-from[k])*e; });
+    render();
+    if(p<1) requestAnimationFrame(step);
+  })(t0);
+}
+
+/* ══════════════ 涟漪与水滴 ══════════════ */
+function rippleAt(y){
+  var t0=performance.now(),DUR=900;
+  ripple.setAttribute('cy',y);
+  (function step(t){
+    var p=Math.min((t-t0)/DUR,1), e=1-Math.pow(1-p,3);
+    ripple.setAttribute('rx',(6+44*e).toFixed(1));
+    ripple.setAttribute('ry',(1.6+5*e).toFixed(1));
+    ripple.setAttribute('opacity',(0.9*(1-p)).toFixed(2));
+    if(p<1) requestAnimationFrame(step); else ripple.setAttribute('opacity',0);
+  })(t0);
+}
+function spawnDrop(key,ghost){
+  var vial=document.querySelector('.essence[data-es="'+key+'"] svg');
+  var vr=vial.getBoundingClientRect();
+  if(vr.width===0) return;                    // 面板隐藏时跳过
+  var br=mainSvg.getBoundingClientRect();
+  var sx=vr.left+vr.width*.5, sy=vr.top+vr.height*.1;
+  var ex=br.left+br.width*.5, ey=br.top+br.height*.09;
+  var d=document.createElement('div');
+  d.className='drop';
+  d.style.left=(sx-6.5)+'px'; d.style.top=(sy-8.5)+'px';
+  d.style.background='radial-gradient(circle at 35% 30%, rgba(255,255,255,.75), '+ES[key].hex+' 62%)';
+  document.body.appendChild(d);
+  var dx=ex-sx, dy=ey-sy;
+  var anim=d.animate([
+    {transform:'translate(0,0) scale(1)',opacity:1},
+    {transform:'translate('+dx*.45+'px,'+dy*.5+'px) scale(.92)',offset:.5},
+    {transform:'translate('+dx+'px,'+dy+'px) scale(.72)',opacity:.85}
+  ],{duration:640,easing:'cubic-bezier(.5,.05,.85,.5)'});
+  anim.onfinish=function(){
+    d.remove();
+    if(ghost) return;
+    var total=MODES.manual.pine+MODES.manual.citrus+MODES.manual.lav;
+    var add=Math.min(DROP,CAP-total);
+    if(add<=0){ showToast('主瓶已满 · 手动配方已达容量','✦'); return; }
+    MODES.manual[key]+=add;
+    goTo(MODES.manual,750);
+    rippleAt(378-Math.min(total+add,CAP)/CAP*(378-150)+4);
+    mainSvg.classList.add('agitated');
+    setTimeout(function(){mainSvg.classList.remove('agitated');},1600);
+  };
+}
+
+/* ══════════════ 提示浮层 ══════════════ */
+var toastTimer=null;
+function showToast(msg,ico,type){
+  toastMsg.textContent=msg; toastIco.textContent=ico||'✦';
+  toast.className='toast show'+(type?' '+type:'');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){toast.classList.remove('show');},2600);
+}
+
+/* ══════════════ 标签页切换（全局联动核心） ══════════════ */
+var MODE_LABEL={
+  manual:'策略 · 手动叠喷 MANUAL', time:'策略 · 分时预设 TIMELINE',
+  ai:'策略 · 语义生成 AI BLEND', loop:'策略 · 响应闭环 CLOSED-LOOP'
+};
+document.querySelectorAll('.tab').forEach(function(tab){
+  tab.addEventListener('click',function(){
+    var m=tab.dataset.mode;
+    if(m===activeMode) return;
+    activeMode=m;
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t===tab);});
+    document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('active',p.dataset.pane===m);});
+    $('modeTag').textContent=MODE_LABEL[m];
+    // 主瓶平滑过渡到该策略记住的配方
+    goTo({pine:MODES[m].pine,citrus:MODES[m].citrus,lav:MODES[m].lav},1300);
+  });
+});
+
+/* ══════════════ 策略 1：手动叠喷 ══════════════ */
+document.querySelectorAll('.essence').forEach(function(el){
+  el.addEventListener('click',function(){ spawnDrop(el.dataset.es,false); });
+});
+
+/* ══════════════ 策略 2：分时预设（时间轴曲线） ══════════════ */
+var TL_NODES=[
+  {t:360, name:'清晨山坡', desc:'晨雾未散，柑橘先醒。',           r:{pine:22,citrus:48,lav:6}},
+  {t:720, name:'正午密林', desc:'日光穿透针叶，木质撑起脊梁。',   r:{pine:64,citrus:22,lav:8}},
+  {t:1080,name:'黄昏暖室', desc:'暖光斜照，果皮与草本互相依偎。', r:{pine:26,citrus:44,lav:26}},
+  {t:1320,name:'深夜安眠', desc:'薰衣草沉底，万物减速。',         r:{pine:8, citrus:4, lav:78}}
+];
+var TL_MIN=360, TL_MAX=1440;
+// 生成四个节点刻度（立即执行函数）
+(function(){
+  var box=$('tlNodes');
+  TL_NODES.forEach(function(n){
+    var el=document.createElement('div');
+    el.className='tl-node';
+    el.style.left=((n.t-TL_MIN)/(TL_MAX-TL_MIN)*100)+'%';
+    el.innerHTML='<div class="nd"></div><div class="nn">'+n.name+'</div><div class="nt">'+
+      String(Math.floor(n.t/60)).padStart(2,'0')+':00</div>';
+    el.addEventListener('click',function(){ $('tlSlider').value=n.t; setTimeline(n.t); });
+    box.appendChild(el);
+  });
+})();
+// 时间轴插值：两节点之间线性过渡，超出末节点则保持
+function tlRecipe(t){
+  for(var i=0;i<TL_NODES.length-1;i++){
+    var a=TL_NODES[i],b=TL_NODES[i+1];
+    if(t>=a.t&&t<=b.t){
+      var f=(t-a.t)/(b.t-a.t);
+      return {
+        pine:  a.r.pine  +(b.r.pine  -a.r.pine)  *f,
+        citrus:a.r.citrus+(b.r.citrus-a.r.citrus)*f,
+        lav:   a.r.lav   +(b.r.lav   -a.r.lav)   *f,
+        near:a, blending:(t-a.t)>40&&(b.t-t)>40
+      };
+    }
+  }
+  var last=TL_NODES[TL_NODES.length-1];
+  return {pine:last.r.pine,citrus:last.r.citrus,lav:last.r.lav,near:last,blending:false};
+}
+function setTimeline(t){
+  var h=Math.floor(t/60),m=t%60;
+  $('tlTime').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+  var rec=tlRecipe(t);
+  var nodeEl=$('tlNode');
+  nodeEl.textContent=rec.blending?'过渡中 · Blending':rec.near.name;
+  nodeEl.classList.toggle('blending',!!rec.blending);
+  $('tlDesc').textContent=rec.blending?'香气正沿着曲线，从一个时刻流向下一个时刻。':rec.near.desc;
+  document.querySelectorAll('.tl-node').forEach(function(el,i){
+    el.classList.toggle('hot',TL_NODES[i]===rec.near);
+  });
+  MODES.time={pine:rec.pine,citrus:rec.citrus,lav:rec.lav};
+  goTo(MODES.time,420); // 拖动时液体如丝般跟随
+}
+$('tlSlider').addEventListener('input',function(){ setTimeline(+this.value); });
+setTimeline(480);
+
+/* ══════════════ 策略 3：智能语义生成 ══════════════ */
+// 关键词 → 配方 的轻量语义引擎
+var AI_RULES=[
+  {re:/雨|森林|苔|潮湿/,        name:'雨后松林 · After Rain', r:{pine:52,citrus:18,lav:30}},
+  {re:/木|雪松|冷冽|清冷/,      name:'清冷木质 · Cold Wood',  r:{pine:58,citrus:16,lav:26}},
+  {re:/安|眠|睡|抚|静|减压/,    name:'安眠夜曲 · Lullaby',    r:{pine:12,citrus:8, lav:80}},
+  {re:/晨|醒|专注|工作|效率/,    name:'晨间专注 · Morning Focus',r:{pine:30,citrus:56,lav:14}},
+  {re:/橙|柑|橘|果/,            name:'果园正午 · Orchard',    r:{pine:18,citrus:68,lav:14}},
+  {re:/冥想|呼吸|瑜伽/,          name:'深呼吸 · Deep Breath',  r:{pine:40,citrus:14,lav:46}}
+];
+function aiGenerate(q){
+  var hit=null;
+  for(var i=0;i<AI_RULES.length;i++){ if(AI_RULES[i].re.test(q)){ hit=AI_RULES[i]; break; } }
+  var base=hit?hit.r:{pine:28+Math.random()*20,citrus:18+Math.random()*22,lav:22+Math.random()*30};
+  // 加一点随机扰动，让每次生成都有细微个性
+  var j=function(v){ return Math.max(0,Math.min(CAP,v+ (Math.random()*10-5))); };
+  var r={pine:j(base.pine),citrus:j(base.citrus),lav:j(base.lav)};
+  var total=r.pine+r.citrus+r.lav, k=Math.min(1.6*CAP/3,total)>0?Math.min(96,total)/total:1;
+  KEYS.forEach(function(key){ r[key]=Math.round(r[key]*Math.min(1,96/total)*10)/10; });
+  return {r:r, name:hit?hit.name:'灵感即兴 · Improvised'};
+}
+var aiBusy=false;
+$('aiBtn').addEventListener('click',function(){
+  if(aiBusy) return;
+  var q=$('aiInput').value.trim();
+  if(!q){ showToast('先描述一种情绪或场景吧','✦'); return; }
+  aiBusy=true; this.disabled=true; this.textContent='AI 正在嗅探语义 …';
+  var box=$('aiResult'); box.innerHTML='';
+  setTimeout(function(){
+    var res=aiGenerate(q), total=res.r.pine+res.r.citrus+res.r.lav;
+    var lines=[
+      {cls:'title',txt:'✦ AI 已为您生成专属配方'},
+      {cls:'',html:'「'+res.name+'」'},
+      {cls:'',html:'<span class="rr"><span class="dot" style="background:var(--pine)"></span>松木 '+Math.round(res.r.pine/total*100)+'%</span>'+
+                   '<span class="rr"><span class="dot" style="background:var(--citrus)"></span>柑橘 '+Math.round(res.r.citrus/total*100)+'%</span>'+
+                   '<span class="rr"><span class="dot" style="background:var(--lav)"></span>薰衣草 '+Math.round(res.r.lav/total*100)+'%</span>'}
+    ];
+    lines.forEach(function(L,i){
+      var el=document.createElement('div');
+      el.className='ai-line'+(L.cls?' '+L.cls:'');
+      if(L.html) el.innerHTML=L.html; else el.textContent=L.txt;
+      box.appendChild(el);
+      setTimeout(function(){ el.classList.add('in'); },150+i*260);
+    });
+    MODES.ai={pine:res.r.pine,citrus:res.r.citrus,lav:res.r.lav};
+    goTo(MODES.ai,1700);
+    showToast('AI 已为您生成专属配方','✧','gentle');
+    $('aiBtn').disabled=false; $('aiBtn').textContent='生 成 专 属 配 方'; aiBusy=false;
+  },900);
+});
+// 语义标签：点击填入输入框
+document.querySelectorAll('.chip').forEach(function(chip){
+  chip.addEventListener('click',function(){
+    document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on');});
+    chip.classList.add('on');
+    $('aiInput').value=chip.dataset.q;
+  });
+});
+
+/* ══════════════ 策略 4：响应式闭环（多模态感知 + 强化学习式调节） ══════════════ */
+var SENSE_CALM={hr:62,noise:34,eeg:78}, SENSE_STRESS={hr:98,noise:72,eeg:41};
+var sensorVals={hr:62,noise:34,eeg:78}, loopBusy=false;
+function renderSensors(){
+  $('svHr').innerHTML=Math.round(sensorVals.hr)+'<small>bpm</small>';
+  $('svNoise').innerHTML=Math.round(sensorVals.noise)+'<small>dB</small>';
+  $('svEeg').innerHTML=Math.round(sensorVals.eeg)+'<small>%</small>';
+  $('sbHr').style.width=(sensorVals.hr/120*100)+'%';
+  $('sbNoise').style.width=sensorVals.noise+'%';
+  $('sbEeg').style.width=sensorVals.eeg+'%';
+  $('senHr').classList.toggle('warn',sensorVals.hr>85);
+  $('senNoise').classList.toggle('warn',sensorVals.noise>60);
+  $('senEeg').classList.toggle('warn',sensorVals.eeg<55);
+}
+function animSensors(target,dur){
+  var from={hr:sensorVals.hr,noise:sensorVals.noise,eeg:sensorVals.eeg};
+  var t0=performance.now();
+  (function step(t){
+    var p=Math.min((t-t0)/dur,1),e=easeInOut(p);
+    sensorVals.hr=lerp(from.hr,target.hr,e);
+    sensorVals.noise=lerp(from.noise,target.noise,e);
+    sensorVals.eeg=lerp(from.eeg,target.eeg,e);
+    renderSensors();
+    if(p<1) requestAnimationFrame(step);
+  })(t0);
+}
+function logLine(txt,cls){
+  var box=$('loopLog'), el=document.createElement('div');
+  var now=new Date();
+  var ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  el.textContent='['+ts+'] '+txt;
+  if(cls) el.style.color=cls;
+  box.appendChild(el);
+  while(box.children.length>4) box.removeChild(box.firstChild); // 只保留最近 4 条
+}
+function setBadge(txt,cls){
+  var b=$('loopBadge');
+  b.className='loop-badge'+(cls?' '+cls:'');
+  $('loopBadgeTxt').textContent=txt;
+}
+$('loopBtn').addEventListener('click',function(){
+  if(loopBusy) return;
+  loopBusy=true;
+  logLine('多模态感知：检测到压力 / 噪音峰值');
+  setBadge('应激波动 · STRESSED','alert');
+  animSensors(SENSE_STRESS,900);
+  bottleWrap.classList.add('shake');
+  grayFlash=true; render();                                   // 瞬间褪灰：紧急切断
+  showToast('检测到状态波动 · 闭环策略介入','⚠','warn');
+  setTimeout(function(){
+    grayFlash=false;
+    bottleWrap.classList.remove('shake');
+    setBadge('闭环反馈调节中 · TUNING','tuning');              // RL 式策略切换
+    var prev={pine:MODES.loop.pine,citrus:MODES.loop.citrus,lav:MODES.loop.lav};
+    MODES.loop={pine:16,citrus:10,lav:74};                    // 自动切换到「镇静」策略
+    goTo(MODES.loop,1900);
+    logLine('策略切换：安眠基线 → 镇静策略（强化学习决策）');
+    animSensors({hr:78,noise:52,eeg:60},1600);
+    setTimeout(function(){
+      animSensors(SENSE_CALM,1400);                           // 环境恢复，感知回落
+      logLine('生理指标回落 · 状态趋于平稳');
+      setTimeout(function(){
+        MODES.loop=prev;                                      // 恢复用户原有基线配方
+        goTo(MODES.loop,1600);
+        setBadge('闭环运行中 · ACTIVE','');
+        logLine('恢复基线配方 · 闭环持续守护');
+        loopBusy=false;
+      },1600);
+    },2600);
+  },700);
+});
+renderSensors();
+
+/* 初始渲染 */
+render();
+showToast('欢迎回到 EmberSigh 工作台 · 四种策略已就绪','✦','gentle');
+})();
+</script>
+</body>
+</html>
