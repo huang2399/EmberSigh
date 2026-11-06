@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EmberSigh · 硬件接线模拟器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI','PingFang SC',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+/* Toolbar */
+#toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#161b22;border-bottom:1px solid #30363d;z-index:10;flex-shrink:0}
+#toolbar button{padding:6px 16px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font-size:.78rem;transition:all .15s;white-space:nowrap}
+#toolbar button:hover{background:#30363d;border-color:#58a6ff}
+#toolbar button.danger:hover{background:#490202;border-color:#f85149}
+#toolbar button.active{background:#1f3a5f;border-color:#58a6ff;color:#58a6ff}
+#toolbar .sep{width:1px;height:22px;background:#30363d;margin:0 4px}
+#toolbar .info{font-size:.72rem;color:#8b949e;margin-left:auto}
+/* Main area */
+#main{display:flex;flex:1;overflow:hidden}
+#canvasWrap{flex:1;position:relative;overflow:hidden;background:#0d1117}
+#canvasWrap svg{display:block;width:100%;height:100%}
+/* Log panel */
+#logPanel{width:260px;background:#161b22;border-left:1px solid #30363d;display:flex;flex-direction:column;flex-shrink:0}
+#logPanel h3{font-size:.8rem;padding:8px 12px;border-bottom:1px solid #30363d;color:#58a6ff;margin:0}
+#logList{flex:1;overflow-y:auto;padding:6px 10px;font-size:.7rem;font-family:'Cascadia Code',monospace;line-height:1.6}
+#logList div{border-bottom:1px solid #21262d;padding:3px 0}
+#logList .ok{color:#3fb950}
+#logList .err{color:#f85149}
+#logList .warn{color:#d2991d}
+/* Result overlay */
+#resultOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:999;display:none;align-items:center;justify-content:center;flex-direction:column}
+#resultOverlay.show{display:flex}
+#resultOverlay .box{background:#161b22;border:2px solid #3fb950;border-radius:16px;padding:32px 48px;text-align:center;max-width:500px}
+#resultOverlay .box.fail{border-color:#f85149}
+#resultOverlay .icon{font-size:4rem}
+#resultOverlay h2{font-size:1.5rem;margin:12px 0 4px}
+#resultOverlay p{font-size:.8rem;color:#8b949e;line-height:1.6}
+/* Pin glow */
+.pin-connector{cursor:pointer;transition:r .15s,filter .15s}
+.pin-connector:hover{filter:url(#glow)}
+.pin-connector.selected{filter:url(#glow);stroke:#fff;stroke-width:2}
+/* Canvas grid */
+.grid-bg{stroke:#21262d;stroke-width:.5}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="btnZoomIn" title="放大">🔍+</button>
+  <button id="btnZoomOut" title="缩小">🔍−</button>
+  <button id="btnFit" title="适应窗口">⊞ 适应</button>
+  <span class="sep"></span>
+  <button id="btnUndo" title="撤销最后一条连线">↩ 撤销</button>
+  <button id="btnClear" title="清除所有连线" class="danger">✕ 清空</button>
+  <span class="sep"></span>
+  <button id="btnCheck" title="检查接线正确性">✅ 检查接线</button>
+  <span class="info" id="wireCount">连线: 0</span>
+</div>
+
+<div id="main">
+  <div id="canvasWrap">
+    <svg xmlns="http://www.w3.org/2000/svg" id="svgRoot">
+      <defs>
+        <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="shadow"><feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".6"/></filter>
+        <filter id="metallic"><feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#1a1a2e" flood-opacity=".5"/></filter>
+        <marker id="arrowG" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><circle cx="4" cy="4" r="3" fill="#3fb950"/></marker>
+      </defs>
+      <!-- Grid background -->
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" class="grid-bg"/></pattern>
+      <rect x="-2000" y="-2000" width="4000" height="4000" fill="url(#grid)"/>
+
+      <!-- Main transform group for pan/zoom -->
+      <g id="world">
+        <!-- ====== ESP32-S3-EYE (Left) ====== -->
+        <g id="esp32" filter="url(#metallic)">
+          <rect x="30" y="50" width="310" height="520" rx="8" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+          <text x="185" y="75" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="700">ESP32-S3-EYE 开发板</text>
+          <text x="185" y="93" text-anchor="middle" fill="#484f58" font-size="9">邮票孔测试点 · 无排针</text>
+          <!-- Chip body -->
+          <rect x="80" y="110" width="210" height="180" rx="6" fill="#0d1117" stroke="#21262d" stroke-width="1.5"/>
+          <text x="185" y="200" text-anchor="middle" fill="#30363d" font-size="14" font-weight="700">ESP32-S3</text>
+          <text x="185" y="218" text-anchor="middle" fill="#484f58" font-size="9">QFN56 · 240MHz</text>
+          <!-- USB port -->
+          <rect x="120" y="305" width="130" height="22" rx="4" fill="#0d1117" stroke="#484f58"/>
+          <text x="185" y="319" text-anchor="middle" fill="#484f58" font-size="8">USB-C (供电 + 烧录)</text>
+          <!-- Camera connector -->
+          <rect x="100" y="340" width="170" height="28" rx="4" fill="#1a0000" stroke="#490202" stroke-width="1" stroke-dasharray="4"/>
+          <text x="185" y="352" text-anchor="middle" fill="#f85149" font-size="8">⚠ 摄像头 FPC 座 (建议拔掉)</text>
+          <text x="185" y="363" text-anchor="middle" fill="#da3633" font-size="7">释放 IO16/IO17/IO18</text>
+
+          <!-- LEFT edge pins -->
+          <g>
+            <circle cx="30" cy="420" r="11" class="pin-connector" id="pin-esp32-io1" fill="#fbbf24" stroke="#b45309"/>
+            <text x="12" y="425" text-anchor="end" fill="#fbbf24" font-size="10" font-weight="700">IO1</text>
+            <text x="12" y="437" text-anchor="end" fill="#484f58" font-size="7">MOS</text>
+
+            <circle cx="30" cy="470" r="11" class="pin-connector" id="pin-esp32-io16" fill="#22c55e" stroke="#15803d"/>
+            <text x="12" y="475" text-anchor="end" fill="#22c55e" font-size="10" font-weight="700">IO16</text>
+            <text x="12" y="487" text-anchor="end" fill="#f85149" font-size="6">Cam D7</text>
+
+            <circle cx="30" cy="520" r="11" class="pin-connector" id="pin-esp32-gnd" fill="#6e7681" stroke="#484f58"/>
+            <text x="12" y="525" text-anchor="end" fill="#8b949e" font-size="10" font-weight="700">GND</text>
+          </g>
+
+          <!-- RIGHT edge pins -->
+          <g>
+            <circle cx="340" cy="400" r="11" class="pin-connector" id="pin-esp32-io14" fill="#f97316" stroke="#c2410c"/>
+            <text x="358" y="405" fill="#f97316" font-size="10" font-weight="700">IO14</text>
+            <text x="358" y="417" fill="#484f58" font-size="7">DIN</text>
+
+            <circle cx="340" cy="450" r="11" class="pin-connector" id="pin-esp32-io17" fill="#3b82f6" stroke="#1d4ed8"/>
+            <text x="358" y="455" fill="#3b82f6" font-size="10" font-weight="700">IO17</text>
+            <text x="358" y="467" fill="#f85149" font-size="6">Cam D6</text>
+
+            <circle cx="340" cy="500" r="11" class="pin-connector" id="pin-esp32-io18" fill="#a855f7" stroke="#7c3aed"/>
+            <text x="358" y="505" fill="#a855f7" font-size="10" font-weight="700">IO18</text>
+            <text x="358" y="517" fill="#f85149" font-size="6">Cam D5</text>
+          </g>
+        </g>
+
+        <!-- ====== 830 Breadboard (Center) ====== -->
+        <g id="breadboard" filter="url(#metallic)">
+          <rect x="380" y="50" width="360" height="520" rx="8" fill="#e8dcc8" stroke="#a08c6e" stroke-width="2"/>
+          <text x="560" y="42" text-anchor="middle" fill="#8b7355" font-size="11" font-weight="700">830 孔面包板</text>
+
+          <!-- Left half power rails -->
+          <rect x="392" y="60" width="60" height="210" rx="4" fill="#7f1d1d" opacity=".8"/>
+          <text x="422" y="168" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="700" transform="rotate(-90,422,168)">红 V+</text>
+          <rect x="392" y="280" width="60" height="210" rx="4" fill="#1e3a5f" opacity=".8"/>
+          <text x="422" y="388" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="700" transform="rotate(-90,422,388)">蓝 GND</text>
+
+          <!-- Right half power rails -->
+          <rect x="668" y="60" width="60" height="210" rx="4" fill="#7f1d1d" opacity=".8"/>
+          <text x="698" y="168" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="700" transform="rotate(-90,698,168)">红 V+</text>
+          <rect x="668" y="280" width="60" height="210" rx="4" fill="#1e3a5f" opacity=".8"/>
+          <text x="698" y="388" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="700" transform="rotate(-90,698,388)">蓝 GND</text>
+
+          <!-- Center groove -->
+          <rect x="460" y="58" width="200" height="504" rx="3" fill="#c4b896" opacity=".5"/>
+          <text x="560" y="310" text-anchor="middle" fill="#8b7355" font-size="9" transform="rotate(-90,560,310)">──── 中间凹槽 ────</text>
+
+          <!-- Breadboard pin targets -->
+          <circle cx="422" cy="260" r="10" class="pin-connector" id="pin-bb-vcc" fill="#ef4444" stroke="#991b1b" opacity=".9"/>
+          <circle cx="422" cy="300" r="10" class="pin-connector" id="pin-bb-gnd" fill="#6e7681" stroke="#484f58" opacity=".9"/>
+
+          <!-- Row holes (decorative) -->
+          <g fill="#b8a88a" opacity=".4">
+            <circle cx="480" cy="80" r="2"/><circle cx="510" cy="80" r="2"/><circle cx="540" cy="80" r="2"/><circle cx="570" cy="80" r="2"/><circle cx="600" cy="80" r="2"/><circle cx="630" cy="80" r="2"/>
+            <circle cx="480" cy="110" r="2"/><circle cx="510" cy="110" r="2"/><circle cx="540" cy="110" r="2"/><circle cx="570" cy="110" r="2"/><circle cx="600" cy="110" r="2"/><circle cx="630" cy="110" r="2"/>
+            <circle cx="480" cy="140" r="2"/><circle cx="510" cy="140" r="2"/><circle cx="540" cy="140" r="2"/><circle cx="570" cy="140" r="2"/><circle cx="600" cy="140" r="2"/><circle cx="630" cy="140" r="2"/>
+            <circle cx="480" cy="440" r="2"/><circle cx="510" cy="440" r="2"/><circle cx="540" cy="440" r="2"/><circle cx="570" cy="440" r="2"/><circle cx="600" cy="440" r="2"/><circle cx="630" cy="440" r="2"/>
+            <circle cx="480" cy="470" r="2"/><circle cx="510" cy="470" r="2"/><circle cx="540" cy="470" r="2"/><circle cx="570" cy="470" r="2"/><circle cx="600" cy="470" r="2"/><circle cx="630" cy="470" r="2"/>
+          </g>
+        </g>
+
+        <!-- ====== MAX98357 (Right-top) ====== -->
+        <g id="max98357" filter="url(#metallic)">
+          <rect x="790" y="50" width="200" height="200" rx="8" fill="#161b22" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="890" y="72" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="700">MAX98357 I2S 功放</text>
+          <text x="890" y="88" text-anchor="middle" fill="#484f58" font-size="8">驱动 8Ω/3W 喇叭</text>
+          <rect x="810" y="100" width="160" height="30" rx="4" fill="#0d1117" stroke="#21262d"/>
+          <text x="890" y="119" text-anchor="middle" fill="#8b949e" font-size="8">VIN · GND · LRC · BCLK · DIN</text>
+
+          <circle cx="830" cy="150" r="10" class="pin-connector" id="pin-max-vin" fill="#ef4444" stroke="#991b1b"/>
+          <text x="830" y="172" text-anchor="middle" fill="#ef4444" font-size="7">VIN</text>
+
+          <circle cx="890" cy="150" r="10" class="pin-connector" id="pin-max-gnd" fill="#6e7681" stroke="#484f58"/>
+          <text x="890" y="172" text-anchor="middle" fill="#8b949e" font-size="7">GND</text>
+
+          <circle cx="950" cy="150" r="10" class="pin-connector" id="pin-max-bclk" fill="#a855f7" stroke="#7c3aed"/>
+          <text x="950" y="172" text-anchor="middle" fill="#a855f7" font-size="7">BCLK</text>
+
+          <circle cx="830" cy="200" r="10" class="pin-connector" id="pin-max-lrc" fill="#3b82f6" stroke="#1d4ed8"/>
+          <text x="830" y="222" text-anchor="middle" fill="#3b82f6" font-size="7">LRC</text>
+
+          <circle cx="890" cy="200" r="10" class="pin-connector" id="pin-max-din" fill="#f97316" stroke="#c2410c"/>
+          <text x="890" y="222" text-anchor="middle" fill="#f97316" font-size="7">DIN</text>
+
+          <rect x="940" y="186" width="40" height="24" rx="3" fill="#1a1000" stroke="#fbbf24" stroke-width="1"/>
+          <text x="960" y="202" text-anchor="middle" fill="#fbbf24" font-size="6">SPK</text>
+        </g>
+
+        <!-- ====== MOS Module (Right-mid) ====== -->
+        <g id="mosModule" filter="url(#metallic)">
+          <rect x="790" y="270" width="200" height="150" rx="8" fill="#161b22" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="890" y="292" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">光耦 MOS 管模块</text>
+          <text x="890" y="308" text-anchor="middle" fill="#484f58" font-size="8">电子开关 · 控制加湿器</text>
+
+          <circle cx="830" cy="335" r="10" class="pin-connector" id="pin-mos-sig" fill="#fbbf24" stroke="#b45309"/>
+          <text x="830" y="358" text-anchor="middle" fill="#fbbf24" font-size="7">SIG</text>
+
+          <circle cx="890" cy="335" r="10" class="pin-connector" id="pin-mos-dc-plus" fill="#ef4444" stroke="#991b1b"/>
+          <text x="890" y="358" text-anchor="middle" fill="#ef4444" font-size="7">DC+</text>
+
+          <circle cx="950" cy="335" r="10" class="pin-connector" id="pin-mos-dc-minus" fill="#6e7681" stroke="#484f58"/>
+          <text x="950" y="358" text-anchor="middle" fill="#8b949e" font-size="7">DC-</text>
+
+          <circle cx="860" cy="385" r="10" class="pin-connector" id="pin-mos-out-plus" fill="#f97316" stroke="#c2410c"/>
+          <text x="860" y="408" text-anchor="middle" fill="#f97316" font-size="6">OUT+</text>
+
+          <circle cx="920" cy="385" r="10" class="pin-connector" id="pin-mos-out-minus" fill="#6e7681" stroke="#484f58"/>
+          <text x="920" y="408" text-anchor="middle" fill="#8b949e" font-size="6">OUT-</text>
+        </g>
+
+        <!-- ====== WS2812 Ring (Right-bottom) ====== -->
+        <g id="ws2812" filter="url(#metallic)">
+          <rect x="790" y="440" width="200" height="130" rx="8" fill="#161b22" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="890" y="462" text-anchor="middle" fill="#22c55e" font-size="11" font-weight="700">WS2812 16位灯环</text>
+          <text x="890" y="478" text-anchor="middle" fill="#484f58" font-size="8">RMT 驱动 · 全彩氛围灯</text>
+
+          <circle cx="830" cy="505" r="10" class="pin-connector" id="pin-led-vcc" fill="#ef4444" stroke="#991b1b"/>
+          <text x="830" y="528" text-anchor="middle" fill="#ef4444" font-size="7">VCC</text>
+
+          <circle cx="890" cy="505" r="10" class="pin-connector" id="pin-led-gnd" fill="#6e7681" stroke="#484f58"/>
+          <text x="890" y="528" text-anchor="middle" fill="#8b949e" font-size="7">GND</text>
+
+          <circle cx="950" cy="505" r="10" class="pin-connector" id="pin-led-din" fill="#22c55e" stroke="#15803d"/>
+          <text x="950" y="528" text-anchor="middle" fill="#22c55e" font-size="7">DIN</text>
+        </g>
+
+        <!-- ====== Power Bank (far right) ====== -->
+        <g id="powerbank" filter="url(#metallic)">
+          <rect x="1040" y="50" width="160" height="90" rx="8" fill="#161b22" stroke="#f97316" stroke-width="1.5"/>
+          <text x="1120" y="72" text-anchor="middle" fill="#f97316" font-size="10" font-weight="700">🔋 充电宝</text>
+          <text x="1120" y="87" text-anchor="middle" fill="#484f58" font-size="7">独立供电 · 5V/2A</text>
+          <rect x="1060" y="98" width="120" height="18" rx="4" fill="#1a1000" stroke="#f97316"/>
+          <text x="1120" y="111" text-anchor="middle" fill="#f97316" font-size="7">USB 输出 → 杜邦线</text>
+          <circle cx="1120" cy="135" r="10" class="pin-connector" id="pin-pb-5v" fill="#ef4444" stroke="#991b1b"/>
+          <text x="1120" y="158" text-anchor="middle" fill="#ef4444" font-size="7">5V+</text>
+        </g>
+
+        <!-- ====== USB-Dupont Cable ====== -->
+        <g id="usbDupont" filter="url(#metallic)">
+          <rect x="1040" y="170" width="160" height="65" rx="8" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/>
+          <text x="1120" y="190" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="700">USB公→杜邦4芯</text>
+          <circle cx="1080" cy="215" r="8" class="pin-connector" id="pin-usb-5v" fill="#ef4444" stroke="#991b1b"/>
+          <text x="1080" y="228" text-anchor="middle" fill="#ef4444" font-size="6">红5V</text>
+          <circle cx="1120" cy="215" r="8" class="pin-connector" id="pin-usb-gnd" fill="#6e7681" stroke="#484f58"/>
+          <text x="1120" y="228" text-anchor="middle" fill="#8b949e" font-size="6">黑GND</text>
+          <text x="1160" y="218" fill="#484f58" font-size="6">白D- 绿D+<br>(不接)</text>
+        </g>
+
+        <!-- ====== Humidifier ====== -->
+        <g id="humidifier" filter="url(#metallic)">
+          <rect x="1040" y="260" width="160" height="130" rx="8" fill="#161b22" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="1120" y="282" text-anchor="middle" fill="#06b6d4" font-size="10" font-weight="700">💧 USB 加湿器</text>
+          <text x="1120" y="298" text-anchor="middle" fill="#484f58" font-size="7">香氛雾化 · 剪线接入</text>
+          <circle cx="1120" cy="325" r="10" class="pin-connector" id="pin-humid-plus" fill="#ef4444" stroke="#991b1b"/>
+          <text x="1120" y="348" text-anchor="middle" fill="#ef4444" font-size="7">正极(+5V)</text>
+          <text x="1120" y="380" text-anchor="middle" fill="#484f58" font-size="6">(通过MOS OUT+控制)</text>
+        </g>
+
+        <!-- ====== Dynamic wires rendered here ====== -->
+        <g id="wiresGroup"></g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Log panel -->
+  <div id="logPanel">
+    <h3>📋 实时接线日志</h3>
+    <div id="logList">
+      <div style="color:#484f58">等待连线操作…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Result overlay -->
+<div id="resultOverlay">
+  <div class="box" id="resultBox">
+    <div class="icon" id="resultIcon"></div>
+    <h2 id="resultTitle"></h2>
+    <p id="resultMsg"></p>
+    <button style="margin-top:16px;padding:8px 24px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;cursor:pointer;font-size:.8rem" onclick="document.getElementById('resultOverlay').classList.remove('show')">关闭</button>
+  </div>
+</div>
+
+<script>
+// ── State ──
+const wires = [];
+let selectedPin = null;
+let svg, world, wiresGroup;
+let scale = 1, tx = 0, ty = 0;
+let isPanning = false, panStart = { x: 0, y: 0 };
+
+// ── Pin definitions ──
+const pins = {
+  'pin-esp32-io1':  { cx: 30,  cy: 420, label: 'IO1',   comp: 'ESP32',        color: '#fbbf24' },
+  'pin-esp32-io16': { cx: 30,  cy: 470, label: 'IO16',  comp: 'ESP32',        color: '#22c55e' },
+  'pin-esp32-gnd':  { cx: 30,  cy: 520, label: 'GND',   comp: 'ESP32',        color: '#6e7681' },
+  'pin-esp32-io14': { cx: 340, cy: 400, label: 'IO14',  comp: 'ESP32',        color: '#f97316' },
+  'pin-esp32-io17': { cx: 340, cy: 450, label: 'IO17',  comp: 'ESP32',        color: '#3b82f6' },
+  'pin-esp32-io18': { cx: 340, cy: 500, label: 'IO18',  comp: 'ESP32',        color: '#a855f7' },
+  'pin-bb-vcc':     { cx: 422, cy: 260, label: 'VCC轨', comp: '面包板',       color: '#ef4444' },
+  'pin-bb-gnd':     { cx: 422, cy: 300, label: 'GND轨', comp: '面包板',       color: '#6e7681' },
+  'pin-max-vin':    { cx: 830, cy: 150, label: 'VIN',   comp: 'MAX98357',     color: '#ef4444' },
+  'pin-max-gnd':    { cx: 890, cy: 150, label: 'GND',   comp: 'MAX98357',     color: '#6e7681' },
+  'pin-max-bclk':   { cx: 950, cy: 150, label: 'BCLK',  comp: 'MAX98357',     color: '#a855f7' },
+  'pin-max-lrc':    { cx: 830, cy: 200, label: 'LRC',   comp: 'MAX98357',     color: '#3b82f6' },
+  'pin-max-din':    { cx: 890, cy: 200, label: 'DIN',   comp: 'MAX98357',     color: '#f97316' },
+  'pin-mos-sig':    { cx: 830, cy: 335, label: 'SIG',   comp: 'MOS管',        color: '#fbbf24' },
+  'pin-mos-dc-plus':{ cx: 890, cy: 335, label: 'DC+',   comp: 'MOS管',        color: '#ef4444' },
+  'pin-mos-dc-minus':{cx: 950, cy: 335, label: 'DC-',   comp: 'MOS管',        color: '#6e7681' },
+  'pin-mos-out-plus':{cx: 860, cy: 385, label: 'OUT+',  comp: 'MOS管',        color: '#f97316' },
+  'pin-mos-out-minus':{cx:920,cy: 385, label: 'OUT-',   comp: 'MOS管',        color: '#6e7681' },
+  'pin-led-vcc':    { cx: 830, cy: 505, label: 'VCC',   comp: 'WS2812灯环',   color: '#ef4444' },
+  'pin-led-gnd':    { cx: 890, cy: 505, label: 'GND',   comp: 'WS2812灯环',   color: '#6e7681' },
+  'pin-led-din':    { cx: 950, cy: 505, label: 'DIN',   comp: 'WS2812灯环',   color: '#22c55e' },
+  'pin-pb-5v':      { cx: 1120,cy: 135, label: '5V+',   comp: '充电宝',       color: '#ef4444' },
+  'pin-usb-5v':     { cx: 1080,cy: 215, label: '红5V',  comp: 'USB杜邦线',    color: '#ef4444' },
+  'pin-usb-gnd':    { cx: 1120,cy: 215, label: '黑GND', comp: 'USB杜邦线',    color: '#6e7681' },
+  'pin-humid-plus': { cx: 1120,cy: 325, label: '正极',  comp: '加湿器',       color: '#ef4444' },
+};
+
+// ── Correct wiring rules ──
+const correctPairs = [
+  ['pin-esp32-io18', 'pin-max-bclk'],
+  ['pin-esp32-io17', 'pin-max-lrc'],
+  ['pin-esp32-io14', 'pin-max-din'],
+  ['pin-esp32-io1',  'pin-mos-sig'],
+  ['pin-esp32-io16', 'pin-led-din'],
+  ['pin-esp32-gnd',  'pin-bb-gnd'],
+  ['pin-bb-vcc',     'pin-max-vin'],
+  ['pin-bb-vcc',     'pin-led-vcc'],
+  ['pin-bb-vcc',     'pin-mos-dc-plus'],
+  ['pin-bb-gnd',     'pin-max-gnd'],
+  ['pin-bb-gnd',     'pin-led-gnd'],
+  ['pin-bb-gnd',     'pin-mos-dc-minus'],
+  ['pin-mos-out-plus','pin-humid-plus'],
+  ['pin-pb-5v',      'pin-usb-5v'],
+];
+
+// ── Init ──
+function init() {
+  svg = document.getElementById('svgRoot');
+  world = document.getElementById('world');
+  wiresGroup = document.getElementById('wiresGroup');
+
+  // Attach click handlers to all pins
+  document.querySelectorAll('.pin-connector').forEach(c => {
+    c.addEventListener('click', e => onPinClick(c.id, e));
+    c.addEventListener('dblclick', e => onWireDblClick(c.id, e));
+  });
+
+  // Pan/Zoom
+  const wrap = document.getElementById('canvasWrap');
+  wrap.addEventListener('wheel', onWheel, { passive: false });
+  wrap.addEventListener('mousedown', onMouseDown);
+  wrap.addEventListener('mousemove', onMouseMove);
+  wrap.addEventListener('mouseup', onMouseUp);
+  wrap.addEventListener('mouseleave', onMouseUp);
+  wrap.addEventListener('dblclick', e => {
+    if (e.target === wrap || e.target.tagName === 'svg' || e.target.classList.contains('grid-bg') || e.target.tagName === 'rect' && e.target.parentElement.id === 'svgRoot') {
+      // Double-click on background: check for wire under cursor
+    }
+  });
+
+  // Toolbar buttons
+  document.getElementById('btnZoomIn').addEventListener('click', () => zoom(1.3));
+  document.getElementById('btnZoomOut').addEventListener('click', () => zoom(1/1.3));
+  document.getElementById('btnFit').addEventListener('click', fitToScreen);
+  document.getElementById('btnUndo').addEventListener('click', undoWire);
+  document.getElementById('btnClear').addEventListener('click', clearAll);
+  document.getElementById('btnCheck').addEventListener('click', checkWiring);
+
+  fitToScreen();
+}
+
+// ── Pin click ──
+function onPinClick(pinId, e) {
+  e.stopPropagation();
+  if (!selectedPin) {
+    // First click: select source
+    selectedPin = pinId;
+    document.getElementById(pinId).classList.add('selected');
+  } else if (selectedPin === pinId) {
+    // Deselect
+    document.getElementById(pinId).classList.remove('selected');
+    selectedPin = null;
+  } else {
+    // Second click: create wire
+    addWire(selectedPin, pinId);
+    document.getElementById(selectedPin).classList.remove('selected');
+    selectedPin = null;
+  }
+}
+
+// ── Add wire ──
+function addWire(fromId, toId) {
+  // Prevent duplicate
+  const exists = wires.find(w =>
+    (w.from === fromId && w.to === toId) || (w.from === toId && w.to === fromId));
+  if (exists) { log('warn', `连线已存在: ${pinLabel(fromId)} ⇄ ${pinLabel(toId)}`); return; }
+
+  const from = pins[fromId], to = pins[toId];
+  if (!from || !to) return;
+
+  const wire = { from: fromId, to: toId, color: from.color };
+  wires.push(wire);
+  drawWire(wire);
+  log('ok', `[连接] ${from.comp}_${from.label} → ${to.comp}_${to.label} (颜色:${from.color})`);
+  updateCount();
+}
+
+function drawWire(w) {
+  const from = pins[w.from], to = pins[w.to];
+  const dx = to.cx - from.cx;
+  const cp = Math.min(Math.abs(dx) * 0.5, 80);
+  const d = `M ${from.cx} ${from.cy} C ${from.cx + cp} ${from.cy}, ${to.cx - cp} ${to.cy}, ${to.cx} ${to.cy}`;
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', w.color);
+  path.setAttribute('stroke-width', '2.5');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('filter', 'url(#glow)');
+  path.dataset.from = w.from;
+  path.dataset.to = w.to;
+  path.style.cursor = 'pointer';
+  path.addEventListener('dblclick', e => { e.stopPropagation(); deleteWire(w.from, w.to); });
+  wiresGroup.appendChild(path);
+}
+
+function deleteWire(fromId, toId) {
+  const idx = wires.findIndex(w =>
+    (w.from === fromId && w.to === toId) || (w.from === toId && w.to === fromId));
+  if (idx === -1) return;
+  const w = wires[idx];
+  wires.splice(idx, 1);
+  // Remove SVG path
+  const paths = wiresGroup.querySelectorAll('path');
+  paths.forEach(p => {
+    if ((p.dataset.from === w.from && p.dataset.to === w.to) ||
+        (p.dataset.from === w.to && p.dataset.to === w.from)) p.remove();
+  });
+  log('warn', `[删除] ${pinLabel(w.from)} ⇄ ${pinLabel(w.to)}`);
+  updateCount();
+}
+
+function onWireDblClick(pinId, e) {
+  // Find wires connected to this pin and delete them
+  e.stopPropagation();
+  const connected = wires.filter(w => w.from === pinId || w.to === pinId);
+  connected.forEach(w => deleteWire(w.from, w.to));
+}
+
+function undoWire() {
+  if (wires.length === 0) return;
+  const w = wires[wires.length - 1];
+  deleteWire(w.from, w.to);
+}
+
+function clearAll() {
+  while (wires.length) deleteWire(wires[0].from, wires[0].to);
+}
+
+// ── Check wiring ──
+function checkWiring() {
+  const overlay = document.getElementById('resultOverlay');
+  const box = document.getElementById('resultBox');
+  const icon = document.getElementById('resultIcon');
+  const title = document.getElementById('resultTitle');
+  const msg = document.getElementById('resultMsg');
+
+  // Build set of existing pairs (normalized)
+  const existing = new Set();
+  wires.forEach(w => {
+    existing.add(`${w.from}::${w.to}`);
+    existing.add(`${w.to}::${w.from}`);
+  });
+
+  let errors = [];
+  let missing = [];
+
+  // Check each required pair
+  correctPairs.forEach(([a, b]) => {
+    if (!existing.has(`${a}::${b}`) && !existing.has(`${b}::${a}`)) {
+      missing.push(`${pinLabel(a)} → ${pinLabel(b)}`);
+    }
+  });
+
+  // Check for wrong connections
+  wires.forEach(w => {
+    const isCorrect = correctPairs.some(([a,b]) =>
+      (a===w.from && b===w.to) || (a===w.to && b===w.from));
+    // Allow power chain wiring (VCC → anything, GND → anything) as flexible
+    const fromPin = pins[w.from], toPin = pins[w.to];
+    const isPower = (fromPin.label.includes('VCC') || fromPin.label.includes('5V') || fromPin.label.includes('VIN') ||
+                      toPin.label.includes('VCC') || toPin.label.includes('5V') || toPin.label.includes('VIN') ||
+                      fromPin.label.includes('GND') || toPin.label.includes('GND') ||
+                      fromPin.label.includes('DC') || toPin.label.includes('DC'));
+    if (!isCorrect && !isPower) {
+      errors.push(`${pinLabel(w.from)} → ${pinLabel(w.to)} (可能错误)`);
+    }
+  });
+
+  overlay.classList.add('show');
+  if (errors.length === 0 && missing.length === 0) {
+    box.className = 'box'; icon.textContent = '🎉'; title.textContent = '接线完美，可以通电！';
+    msg.textContent = '所有连线均与设计规格一致，板子不会冒烟 🔥';
+  } else if (errors.length === 0 && missing.length <= 3) {
+    box.className = 'box'; icon.textContent = '👍'; title.textContent = '基本正确';
+    msg.textContent = '还差几根线:\n' + missing.join('\n');
+  } else {
+    box.className = 'box fail'; icon.textContent = '❌'; title.textContent = '接线有问题';
+    let txt = '';
+    if (errors.length) txt += '🔴 错误连线:\n' + errors.join('\n') + '\n\n';
+    if (missing.length) txt += '🟡 缺少连线:\n' + missing.join('\n');
+    msg.textContent = txt || '请检查连线';
+  }
+}
+
+// ── Pan/Zoom ──
+function onWheel(e) {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const rect = svg.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const newScale = Math.max(0.2, Math.min(3, scale * factor));
+  tx = mx - (mx - tx) * (newScale / scale);
+  ty = my - (my - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}
+
+function onMouseDown(e) {
+  if (e.target.closest('.pin-connector')) return;
+  isPanning = true;
+  panStart = { x: e.clientX - tx, y: e.clientY - ty };
+  document.getElementById('canvasWrap').style.cursor = 'grabbing';
+}
+
+function onMouseMove(e) {
+  if (!isPanning) return;
+  tx = e.clientX - panStart.x;
+  ty = e.clientY - panStart.y;
+  applyTransform();
+}
+
+function onMouseUp() {
+  isPanning = false;
+  document.getElementById('canvasWrap').style.cursor = 'default';
+}
+
+function zoom(factor) {
+  const rect = svg.getBoundingClientRect();
+  const cx = rect.width / 2, cy = rect.height / 2;
+  const newScale = Math.max(0.2, Math.min(3, scale * factor));
+  tx = cx - (cx - tx) * (newScale / scale);
+  ty = cy - (cy - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}
+
+function fitToScreen() {
+  scale = 0.55; tx = 30; ty = 40;
+  applyTransform();
+}
+
+function applyTransform() {
+  world.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
+}
+
+// ── Log ──
+function log(type, msg) {
+  const list = document.getElementById('logList');
+  if (list.firstChild && list.firstChild.textContent === '等待连线操作…') list.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = type;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+
+function pinLabel(pinId) {
+  const p = pins[pinId];
+  return p ? `${p.comp}_${p.label}` : pinId;
+}
+
+function updateCount() {
+  document.getElementById('wireCount').textContent = `连线: ${wires.length}`;
+}
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
