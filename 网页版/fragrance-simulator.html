@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EmberSigh · 动态香氛混合模拟器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:'PingFang SC','Microsoft YaHei',sans-serif;height:100vh;display:flex;overflow:hidden}
+
+/* ═══ 左侧面板 ═══ */
+#left{width:360px;flex-shrink:0;background:#161b22;border-right:1px solid #30363d;display:flex;flex-direction:column;padding:20px 24px;gap:20px;overflow-y:auto}
+h1{font-size:1.2rem;font-weight:700;letter-spacing:.5px}
+h1 span{color:#58a6ff}
+h2{font-size:.75rem;color:#8b949e;margin-bottom:6px;font-weight:400;text-transform:uppercase;letter-spacing:1px}
+
+/* 时间滑块 */
+#sliderWrap{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:16px}
+#timeDisplay{text-align:center;font-size:2rem;font-weight:700;color:#58a6ff;margin-bottom:4px;font-variant-numeric:tabular-nums}
+#timeLabel{text-align:center;font-size:.72rem;color:#8b949e;margin-bottom:12px}
+input[type=range]{-webkit-appearance:none;width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#1a3a5f 0%,#fbbf24 25%,#f97316 50%,#7c3aed 75%,#1a3a5f 100%);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #58a6ff;cursor:pointer;box-shadow:0 0 12px rgba(88,166,255,.4)}
+#tickMarks{display:flex;justify-content:space-between;font-size:.6rem;color:#484f58;margin-top:4px}
+
+/* 三通道 */
+#channels{display:flex;flex-direction:column;gap:8px}
+.channel{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.channel .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.channel .name{width:48px;font-size:.78rem;font-weight:600;flex-shrink:0}
+.channel .barWrap{flex:1;height:8px;background:#21262d;border-radius:4px;overflow:hidden}
+.channel .bar{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.channel .val{width:40px;text-align:right;font-size:.72rem;color:#8b949e;font-variant-numeric:tabular-nums}
+
+/* 按钮 */
+#btnClap{width:100%;padding:12px;border:2px solid #f85149;border-radius:10px;background:transparent;color:#f85149;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:2px}
+#btnClap:hover{background:#490202;box-shadow:0 0 20px rgba(248,81,73,.3)}
+#btnClap:active{transform:scale(.96)}
+#btnClap.disabled{opacity:.4;pointer-events:none;border-color:#30363d;color:#484f58}
+
+/* 日志 */
+#logBox{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:10px;display:flex;flex-direction:column;min-height:120px}
+#logBox h3{font-size:.7rem;padding:8px 14px;border-bottom:1px solid #30363d;color:#58a6ff;background:#0a0e13;text-transform:uppercase;letter-spacing:1px;margin:0}
+#logList{flex:1;overflow-y:auto;padding:6px 12px;font-size:.68rem;font-family:'Cascadia Code',Consolas,monospace;line-height:1.7}
+#logList div{padding:1px 0;border-bottom:1px solid #161b22}
+#logList .info{color:#8b949e}
+#logList .mix{color:#3fb950}
+#logList .stop{color:#f85149;font-weight:700}
+#logList .resume{color:#d2991d}
+
+/* ═══ 右侧可视化球 ═══ */
+#right{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+#rightOverlay{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:16px;z-index:5}
+#rightOverlay .badge{background:rgba(13,17,23,.85);border:1px solid #30363d;border-radius:20px;padding:5px 14px;font-size:.7rem;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
+#rightOverlay .badge .d{width:8px;height:8px;border-radius:50%}
+#statusOverlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.4rem;font-weight:700;color:#f85149;pointer-events:none;opacity:0;transition:opacity .3s;z-index:6;text-align:center}
+#statusOverlay.show{opacity:1}
+#statusOverlay .sub{font-size:.75rem;color:#f97316;font-weight:400;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div id="left">
+  <h1>EmberSigh <span>听眠</span> · 香氛混合</h1>
+
+  <div id="sliderWrap">
+    <div id="timeDisplay">08:00</div>
+    <div id="timeLabel">清晨 · 松木+柑橘唤醒</div>
+    <input type="range" id="timeSlider" min="0" max="24" value="8" step="0.5">
+    <div id="tickMarks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+  </div>
+
+  <div id="channels">
+    <div class="channel">
+      <div class="dot" style="background:#2d5a27;box-shadow:0 0 8px rgba(45,90,39,.6)"></div>
+      <div class="name" style="color:#4ade80">松木</div>
+      <div class="barWrap"><div class="bar" id="barPine" style="width:70%;background:linear-gradient(90deg,#2d5a27,#4ade80)"></div></div>
+      <div class="val" id="valPine">70%</div>
+    </div>
+    <div class="channel">
+      <div class="dot" style="background:#c2410c;box-shadow:0 0 8px rgba(194,65,12,.6)"></div>
+      <div class="name" style="color:#fb923c">柑橘</div>
+      <div class="barWrap"><div class="bar" id="barCitrus" style="width:30%;background:linear-gradient(90deg,#c2410c,#fb923c)"></div></div>
+      <div class="val" id="valCitrus">30%</div>
+    </div>
+    <div class="channel">
+      <div class="dot" style="background:#6d28d9;box-shadow:0 0 8px rgba(109,40,217,.6)"></div>
+      <div class="name" style="color:#c084fc">薰衣草</div>
+      <div class="barWrap"><div class="bar" id="barLavender" style="width:0%;background:linear-gradient(90deg,#6d28d9,#c084fc)"></div></div>
+      <div class="val" id="valLavender">0%</div>
+    </div>
+  </div>
+
+  <button id="btnClap" onclick="simulateNoise()">👏 噪音干扰（拍手）</button>
+
+  <div id="logBox">
+    <h3>📋 实时日志</h3>
+    <div id="logList"></div>
+  </div>
+</div>
+
+<div id="right">
+  <canvas id="canvas"></canvas>
+  <div id="statusOverlay"><div class="sub"></div></div>
+  <div id="rightOverlay">
+    <div class="badge"><div class="d" style="background:#4ade80"></div>松木</div>
+    <div class="badge"><div class="d" style="background:#fb923c"></div>柑橘</div>
+    <div class="badge"><div class="d" style="background:#c084fc"></div>薰衣草</div>
+  </div>
+</div>
+
+<script>
+// ═══ DOM ═══
+const slider  = document.getElementById('timeSlider');
+const timeDisp = document.getElementById('timeDisplay');
+const timeLabel = document.getElementById('timeLabel');
+const barPine = document.getElementById('barPine'), valPine = document.getElementById('valPine');
+const barCitrus = document.getElementById('barCitrus'), valCitrus = document.getElementById('valCitrus');
+const barLavender = document.getElementById('barLavender'), valLavender = document.getElementById('valLavender');
+const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+const statusOv = document.getElementById('statusOverlay');
+const btnClap = document.getElementById('btnClap');
+
+// ═══ 状态 ═══
+let hour = 8;
+let mix = { pine: 70, citrus: 30, lavender: 0 }; // percentages
+let particles = [];
+let paused = false, pauseTimer = null;
+let W, H, cx, cy, R;
+
+// ═══ 香氛混合公式 ═══
+function getMix(h) {
+  if (h >= 6 && h < 10) return { pine: 70, citrus: 30, lavender: 0, label: '清晨 · 松木+柑橘唤醒' };
+  if (h >= 10 && h < 18) return { pine: 50, citrus: 50, lavender: 0, label: '白天 · 松木+柑橘专注' };
+  return { pine: 0, citrus: 0, lavender: 100, label: '夜晚 · 薰衣草助眠' };
+}
+
+function getPhaseLabel(h) {
+  if (h >= 6 && h < 10) return '清晨唤醒';
+  if (h >= 10 && h < 18) return '白天专注';
+  return '夜晚助眠';
+}
+
+// ═══ 粒子系统 ═══
+const COLORS = {
+  pine:     { r: 45, g: 90, b: 39,  hex: '#2d5a27' },
+  citrus:   { r: 194, g: 65, b: 12, hex: '#c2410c' },
+  lavender: { r: 109, g: 40, b: 217, hex: '#6d28d9' },
+};
+
+class Particle {
+  constructor(type) {
+    this.type = type;
+    this.reset();
+  }
+  reset() {
+    const c = COLORS[this.type];
+    // Spawn near center-bottom of the sphere
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * R * 0.3;
+    this.x = cx + Math.cos(angle) * dist;
+    this.y = cy + Math.sin(angle) * dist * 0.4 + R * 0.4;
+    // Velocity: upward drift with slight horizontal wobble
+    this.vx = (Math.random() - 0.5) * 0.6;
+    this.vy = -(Math.random() * 0.8 + 0.2);
+    this.life = 1;
+    this.decay = 0.002 + Math.random() * 0.004;
+    this.radius = 1.5 + Math.random() * 3;
+    this.opacity = 0.15 + Math.random() * 0.35;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+    // Gently repel from sphere edge
+    const dx = this.x - cx, dy = this.y - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > R * 0.9) {
+      this.vx -= dx * 0.002;
+      this.vy -= dy * 0.002;
+    }
+    if (this.life <= 0) this.reset();
+  }
+  draw() {
+    const c = COLORS[this.type];
+    const alpha = this.opacity * this.life;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${alpha})`;
+    ctx.fill();
+  }
+}
+
+// ═══ 根据混合比例调整粒子类型分布 ═══
+function syncParticles() {
+  const types = [];
+  for (let i = 0; i < Math.round(mix.pine / 100 * 100); i++) types.push('pine');
+  for (let i = 0; i < Math.round(mix.citrus / 100 * 100); i++) types.push('citrus');
+  for (let i = 0; i < Math.round(mix.lavender / 100 * 100); i++) types.push('lavender');
+  if (types.length === 0) types.push('lavender');
+
+  particles.forEach((p, i) => {
+    p.type = types[i % types.length];
+  });
+}
+
+// ═══ 画布尺寸 ═══
+function resize() {
+  const right = document.getElementById('right');
+  W = right.clientWidth;
+  H = right.clientHeight;
+  canvas.width = W;
+  canvas.height = H;
+  cx = W / 2;
+  cy = H / 2;
+  R = Math.min(W, H) * 0.38;
+}
+window.addEventListener('resize', resize);
+
+// ═══ 渲染循环 ═══
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+
+  // 暗色光芒背景
+  const glow = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.1);
+  glow.addColorStop(0, 'rgba(88,166,255,0.04)');
+  glow.addColorStop(0.5, 'rgba(30,30,40,0.06)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // 球体玻璃罩
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(48,54,61,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // 内发光
+  const glass = ctx.createRadialGradient(cx, cy, R * 0.85, cx, cy, R);
+  glass.addColorStop(0, 'rgba(22,27,34,0.15)');
+  glass.addColorStop(0.7, 'rgba(48,54,61,0.08)');
+  glass.addColorStop(1, 'rgba(48,54,61,0.25)');
+  ctx.fillStyle = glass;
+  ctx.fill();
+
+  // 粒子
+  if (!paused) {
+    particles.forEach(p => { p.update(); p.draw(); });
+  } else {
+    // 暂停时：粒子冻结但依然显示（淡出）
+    particles.forEach(p => { p.draw(); });
+  }
+}
+
+function loop() {
+  drawScene();
+  requestAnimationFrame(loop);
+}
+
+// ═══ 应用混合 ═══
+function applyMix(newMix, label) {
+  mix = newMix;
+  barPine.style.width = mix.pine + '%';     valPine.textContent = mix.pine + '%';
+  barCitrus.style.width = mix.citrus + '%';   valCitrus.textContent = mix.citrus + '%';
+  barLavender.style.width = mix.lavender + '%'; valLavender.textContent = mix.lavender + '%';
+  if (label) timeLabel.textContent = label;
+  syncParticles();
+}
+
+// ═══ 日志 ═══
+function log(cls, msg) {
+  const list = document.getElementById('logList');
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+  // 只保留最近 50 条
+  while (list.children.length > 50) list.firstChild.remove();
+}
+
+// ═══ 时间变化 ═══
+function onTimeChange(h) {
+  hour = h;
+  const hrs = Math.floor(h), mins = Math.round((h - hrs) * 60);
+  const ts = String(hrs).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
+  timeDisp.textContent = ts;
+  const m = getMix(h);
+  applyMix(m, m.label);
+  const names = [];
+  if (m.pine > 0) names.push('松木 ' + m.pine + '%');
+  if (m.citrus > 0) names.push('柑橘 ' + m.citrus + '%');
+  if (m.lavender > 0) names.push('薰衣草 ' + m.lavender + '%');
+  log('mix', `[时间轴] 当前 ${ts}，正在混合：${names.join(' + ')}`);
+}
+
+slider.addEventListener('input', () => onTimeChange(parseFloat(slider.value)));
+
+// ═══ 噪音干扰 ═══
+function simulateNoise() {
+  if (paused) return;
+  paused = true;
+  btnClap.classList.add('disabled');
+  statusOv.innerHTML = '<div class="sub">⚠️ 突发噪音！暂停香氛释放</div>';
+  statusOv.classList.add('show');
+
+  // 归零比例
+  barPine.style.width = '0%';     valPine.textContent = '0%';
+  barCitrus.style.width = '0%';   valCitrus.textContent = '0%';
+  barLavender.style.width = '0%'; valLavender.textContent = '0%';
+
+  log('stop', '⚠️ [感知] 突发噪音，触发自适应退让，暂停香氛！');
+
+  // 3 秒后恢复
+  pauseTimer = setTimeout(() => {
+    paused = false;
+    btnClap.classList.remove('disabled');
+    statusOv.classList.remove('show');
+    const m = getMix(hour);
+    applyMix(m, m.label);
+    log('resume', '✅ [感知] 环境恢复安静，香氛已恢复');
+    pauseTimer = null;
+  }, 3000);
+}
+
+// ═══ 初始化 ═══
+function init() {
+  resize();
+  // 创建初始粒子池
+  for (let i = 0; i < 200; i++) {
+    particles.push(new Particle('pine'));
+  }
+  syncParticles();
+  onTimeChange(8);
+  log('info', '🟢 香氛混合模拟器已就绪');
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
