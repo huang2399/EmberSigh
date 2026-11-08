@@ -31,6 +31,7 @@
 #include "driver/i2s_std.h"
 #include "hal_hardware.h"
 #include "audio_player.h"
+#include "embersigh_fonts.h"
 
 static const char *TAG = "dreamstate";
 
@@ -38,7 +39,7 @@ static const char *TAG = "dreamstate";
  * 可调参数
  * ============================================================ */
 #define BUFFER_SAMPLES      512     /* 单次 I2S 读取样本数 */
-#define REFRESH_MS          200     /* UI 刷新周期 */
+#define REFRESH_MS          80      /* UI 刷新周期（80ms ≈ 12.5fps，呼吸动画更顺滑） */
 #define SMOOTH_WINDOW       5       /* RMS 滑动平均窗口帧数 */
 
 /* ---- 开机基线校准 ---- */
@@ -92,20 +93,24 @@ static void state_colors(sys_state_t s,
 {
     switch (s) {
     case ST_CALM:
-        *r = 0x0A; *g = 0x0A; *b = 0x2E;
-        *text = 0x6688CC; *bar = 0x3366FF;
+        /* 深蓝：安静、沉静 */
+        *r = 0x0A; *g = 0x0C; *b = 0x2C;
+        *text = 0x8FA0C0; *bar = 0x3366FF;
         break;
     case ST_RETREAT:
-        *r = 0x3A; *g = 0x0A; *b = 0x26;      /* 紫红 */
-        *text = 0xFF3366; *bar = 0xFF3366;
+        /* 柔和暗赤：比紫红更收敛，不刺眼，呼应"懂退让"的人格 */
+        *r = 0x2C; *g = 0x14; *b = 0x16;
+        *text = 0xD98A8A; *bar = 0xC2585E;
         break;
     case ST_RECOVER:
-        *r = 0x30; *g = 0x20; *b = 0x0A;      /* 橙色 */
-        *text = 0xFF8844; *bar = 0xFF8844;
+        /* 温橙：回暖、渐入 */
+        *r = 0x2A; *g = 0x1E; *b = 0x0C;
+        *text = 0xFFB266; *bar = 0xE09040;
         break;
     case ST_IDLE:
     default:
-        *r = 0x05; *g = 0x05; *b = 0x08;      /* 极暗 */
+        /* 极暗：待机 */
+        *r = 0x05; *g = 0x05; *b = 0x08;
         *text = 0x1A1A22; *bar = 0x1A1A22;
         break;
     }
@@ -350,60 +355,98 @@ void app_main(void)
 
     /* ========================================================
      * 5. 创建 LVGL UI
+     *
+     * 所有 LVGL 调用都必须在 bsp_display_lock() 保护下进行：
+     * LVGL 在其独立任务里跑渲染，跨任务操作对象必须加锁，否则会
+     * 出现断言失败 / 内存踩踏 / 偶发死机。
      * ======================================================== */
-    lv_obj_t *scr = lv_disp_get_scr_act(disp);
+    lv_obj_t *scr          = NULL;
+    lv_obj_t *label_title  = NULL;   /* 顶部：听眠 */
+    lv_obj_t *pulse_ring   = NULL;   /* 中央：脉动/呼吸光圈 */
+    lv_obj_t *label_icon   = NULL;   /* 中央：闭眼图标（RETREAT） */
+    lv_obj_t *label_rms    = NULL;   /* 中央：RMS 数值（CALM） */
+    lv_obj_t *label_main   = NULL;   /* 中央：主文案（RECOVER） */
+    lv_obj_t *bar_rms      = NULL;   /* 电平条 */
+    lv_obj_t *label_ambient= NULL;   /* 底部：极淡环境状态 */
+    lv_obj_t *label_state  = NULL;   /* 底部：状态名（小字） */
 
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0A0A2E), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, LV_PART_MAIN);
+    bsp_display_lock(0);
+    {
+        scr = lv_disp_get_scr_act(disp);
+        lv_obj_set_style_bg_color(scr, lv_color_hex(0x0A0A2E), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, LV_PART_MAIN);
 
-    /* 标题 */
-    lv_obj_t *label_title = lv_label_create(scr);
-    lv_label_set_text(label_title, "EmberSigh");
-    lv_obj_set_style_text_color(label_title, lv_color_hex(0x8888CC), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_title, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_title, LV_ALIGN_TOP_MID, 0, 12);
+        /* ---- 标题：听眠 ---- */
+        label_title = lv_label_create(scr);
+        lv_label_set_text(label_title, "听眠");
+        lv_obj_set_style_text_color(label_title, lv_color_hex(0x8FA0C0), LV_PART_MAIN);
+        lv_obj_set_style_text_font(label_title, &embersigh_font_cjk16, LV_PART_MAIN);
+        lv_obj_align(label_title, LV_ALIGN_TOP_MID, 0, 8);
 
-    /* 脉动光圈 */
-    lv_obj_t *pulse_ring = lv_obj_create(scr);
-    lv_obj_set_size(pulse_ring, 80, 80);
-    lv_obj_set_style_radius(pulse_ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(pulse_ring, lv_color_hex(0x1A1A50), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(pulse_ring, LV_OPA_60, LV_PART_MAIN);
-    lv_obj_set_style_border_width(pulse_ring, 0, LV_PART_MAIN);
-    lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -25);
+        /* ---- 中央光圈（CALM 脉动 / RECOVER 呼吸） ---- */
+        pulse_ring = lv_obj_create(scr);
+        lv_obj_set_size(pulse_ring, 84, 84);
+        lv_obj_set_style_radius(pulse_ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(pulse_ring, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_set_style_border_color(pulse_ring, lv_color_hex(0x3355AA), LV_PART_MAIN);
+        lv_obj_set_style_border_width(pulse_ring, 2, LV_PART_MAIN);
+        lv_obj_set_style_border_opa(pulse_ring, LV_OPA_60, LV_PART_MAIN);
+        lv_obj_set_scroll_dir(pulse_ring, LV_DIR_NONE);
+        lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -20);
 
-    /* RMS 数值 */
-    lv_obj_t *label_rms = lv_label_create(scr);
-    lv_label_set_text(label_rms, "--");
-    lv_obj_set_style_text_color(label_rms, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_rms, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_rms, LV_ALIGN_CENTER, 0, -25);
+        /* ---- 中央图标：闭眼 / 嘘声（RETREAT 专用） ---- */
+        label_icon = lv_label_create(scr);
+        lv_label_set_text(label_icon, LV_SYMBOL_EYE_CLOSE);
+        lv_obj_set_style_text_font(label_icon, &lv_font_montserrat_28, LV_PART_MAIN);
+        lv_obj_set_style_text_color(label_icon, lv_color_hex(0xD98A8A), LV_PART_MAIN);
+        lv_obj_align(label_icon, LV_ALIGN_CENTER, 0, -20);
+        lv_obj_set_hidden(label_icon, true);
 
-    /* RMS 电平条 */
-    lv_obj_t *bar_rms = lv_bar_create(scr);
-    lv_obj_set_size(bar_rms, 180, 10);
-    lv_obj_set_style_radius(bar_rms, 5, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x1A1A40), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x3366FF), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_INDICATOR);
-    lv_bar_set_range(bar_rms, 0, 600);
-    lv_bar_set_value(bar_rms, 0, LV_ANIM_OFF);
-    lv_obj_align(bar_rms, LV_ALIGN_CENTER, 0, 45);
+        /* ---- 中央 RMS 数值（CALM） ---- */
+        label_rms = lv_label_create(scr);
+        lv_label_set_text(label_rms, "--");
+        lv_obj_set_style_text_color(label_rms, lv_color_hex(0xE8EFFF), LV_PART_MAIN);
+        lv_obj_set_style_text_font(label_rms, &lv_font_montserrat_28, LV_PART_MAIN);
+        lv_obj_align(label_rms, LV_ALIGN_CENTER, 0, -20);
 
-    /* 状态文字 */
-    lv_obj_t *label_status = lv_label_create(scr);
-    lv_label_set_text(label_status, "CALIB");
-    lv_obj_set_style_text_color(label_status, lv_color_hex(0x6688CC), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_status, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_status, LV_ALIGN_BOTTOM_MID, 0, -24);
+        /* ---- 中央主文案（RECOVER："正在恢复..."） ---- */
+        label_main = lv_label_create(scr);
+        lv_label_set_text(label_main, "");
+        lv_obj_set_style_text_color(label_main, lv_color_hex(0xFFB266), LV_PART_MAIN);
+        lv_obj_set_style_text_font(label_main, &embersigh_font_cjk16, LV_PART_MAIN);
+        lv_obj_align(label_main, LV_ALIGN_CENTER, 0, -20);
+        lv_obj_set_hidden(label_main, true);
 
-    /* 副标题：显示基线 */
-    lv_obj_t *label_sub = lv_label_create(scr);
-    lv_label_set_text(label_sub, "calibrating");
-    lv_obj_set_style_text_color(label_sub, lv_color_hex(0x444466), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label_sub, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_align(label_sub, LV_ALIGN_BOTTOM_MID, 0, -8);
+        /* ---- 电平条 ---- */
+        bar_rms = lv_bar_create(scr);
+        lv_obj_set_size(bar_rms, 176, 8);
+        lv_obj_set_style_radius(bar_rms, 4, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x16203A), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(bar_rms, lv_color_hex(0x3366FF), LV_PART_INDICATOR);
+        lv_obj_set_style_bg_opa(bar_rms, LV_OPA_COVER, LV_PART_INDICATOR);
+        lv_obj_set_style_radius(bar_rms, 4, LV_PART_INDICATOR);
+        lv_bar_set_range(bar_rms, 0, 600);
+        lv_bar_set_value(bar_rms, 0, LV_ANIM_OFF);
+        lv_obj_align(bar_rms, LV_ALIGN_CENTER, 0, 46);
+
+        /* ---- 底部：极淡的环境状态行（CJK 14，透明度 45%） ---- */
+        label_ambient = lv_label_create(scr);
+        lv_label_set_text(label_ambient, "环境静谧");
+        lv_obj_set_style_text_color(label_ambient, lv_color_hex(0x7A8DB8), LV_PART_MAIN);
+        lv_obj_set_style_text_opa(label_ambient, LV_OPA_50, LV_PART_MAIN);
+        lv_obj_set_style_text_font(label_ambient, &embersigh_font_cjk14, LV_PART_MAIN);
+        lv_obj_align(label_ambient, LV_ALIGN_BOTTOM_MID, 0, -22);
+
+        /* ---- 底部：状态名（10px，极淡） ---- */
+        label_state = lv_label_create(scr);
+        lv_label_set_text(label_state, "CALIB");
+        lv_obj_set_style_text_color(label_state, lv_color_hex(0x4A5A78), LV_PART_MAIN);
+        lv_obj_set_style_text_opa(label_state, LV_OPA_60, LV_PART_MAIN);
+        lv_obj_set_style_text_font(label_state, &lv_font_montserrat_10, LV_PART_MAIN);
+        lv_obj_align(label_state, LV_ALIGN_BOTTOM_MID, 0, -6);
+    }
+    bsp_display_unlock();
 
     /* ========================================================
      * 6. 开机基线校准（3 秒）
@@ -588,7 +631,7 @@ void app_main(void)
             break;
         }
 
-        /* ---------- UI 刷新（200ms） ---------- */
+        /* ---------- UI 刷新 ---------- */
         if ((now - last_ui) >= pdMS_TO_TICKS(REFRESH_MS)) {
             last_ui = now;
 
@@ -596,35 +639,114 @@ void app_main(void)
             uint32_t text_col, bar_col;
             state_colors(st, &tr, &tg, &tb, &text_col, &bar_col);
 
-            bsp_display_lock(0);
-
-            char tmp[32];
-            snprintf(tmp, sizeof(tmp), "%.0f", ui_rms);
-            lv_label_set_text(label_rms, tmp);
-
-            int bar_val = (int)ui_rms;
-            if (bar_val > 600) bar_val = 600;
-            lv_bar_set_value(bar_rms, bar_val, LV_ANIM_ON);
-
-            int ring_size = 60 + (int)(ui_rms * 0.12f);
-            if (ring_size > 140) ring_size = 140;
-            if (ring_size < 60)  ring_size = 60;
-            lv_obj_set_size(pulse_ring, ring_size, ring_size);
-            lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -25);
-
-            lv_label_set_text(label_status, state_name(st));
-            lv_obj_set_style_text_color(label_status, lv_color_hex(text_col), LV_PART_MAIN);
-            lv_obj_set_style_bg_color(bar_rms, lv_color_hex(bar_col), LV_PART_INDICATOR);
-
-            snprintf(tmp, sizeof(tmp), "base %.0f", base_rms);
-            lv_label_set_text(label_sub, tmp);
-
-            /* 背景色平滑插值 */
+            /* 背景色平滑插值（在锁外算好，锁内只做一次赋值） */
             bg_r = bg_r + (tr - bg_r) / 4;
             bg_g = bg_g + (tg - bg_g) / 4;
             bg_b = bg_b + (tb - bg_b) / 4;
-            lv_obj_set_style_bg_color(scr,
-                lv_color_hex((bg_r << 16) | (bg_g << 8) | bg_b), LV_PART_MAIN);
+            if (abs(bg_r - tr) <= 1) bg_r = tr;
+            if (abs(bg_g - tg) <= 1) bg_g = tg;
+            if (abs(bg_b - tb) <= 1) bg_b = tb;
+            uint32_t bg_now = (uint32_t)((bg_r << 16) | (bg_g << 8) | bg_b);
+
+            /* ---- 依据状态决定中央显示什么 ---- */
+            const char *ambient_txt;
+            bool show_ring   = false;
+            bool show_icon   = false;
+            bool show_rms    = false;
+            bool show_main   = false;
+            int  ring_size   = 84;
+
+            switch (st) {
+            case ST_CALM:
+                /* 光圈 + RMS 数值 + 极淡环境状态 */
+                show_ring = true;
+                show_rms  = true;
+                ring_size = 84 + (int)(ui_rms * 0.10f);
+                if (ring_size > 128) ring_size = 128;
+                if (ring_size < 84)  ring_size = 84;
+
+                /* 环境状态文案随音量分三档 */
+                if (sm < base_rms * 1.6f)      ambient_txt = "环境静谧";
+                else if (sm < noise_thr * 0.6f) ambient_txt = "环境平稳";
+                else                            ambient_txt = "环境稍响";
+                break;
+
+            case ST_RETREAT:
+                /* 中央换成闭眼图标，隐藏光圈与数值 */
+                show_icon  = true;
+                ambient_txt = "已暂停香氛";
+                break;
+
+            case ST_RECOVER:
+                /* 呼吸光圈（70↔130 正弦）+ 主文案 */
+                show_ring = true;
+                show_main = true;
+                {
+                    /* 以 2.4s 为周期做正弦呼吸 */
+                    uint32_t period = 2400;
+                    uint32_t phase  = (uint32_t)((now - recover_start) * 1000 /
+                                                 configTICK_RATE_HZ) % period;
+                    float t = (float)phase / (float)period;      /* 0..1 */
+                    float s = 0.5f - 0.5f * cosf(t * 6.2831853f); /* 0..1 平滑呼吸 */
+                    ring_size = 70 + (int)(s * 60.0f);           /* 70..130 */
+                }
+                ambient_txt = "音量渐入";
+                break;
+
+            case ST_IDLE:
+            default:
+                ambient_txt = "待机中";
+                break;
+            }
+
+            char rms_buf[16];
+            snprintf(rms_buf, sizeof(rms_buf), "%.0f", ui_rms);
+
+            bsp_display_lock(0);
+
+            /* 背景 */
+            lv_obj_set_style_bg_color(scr, lv_color_hex(bg_now), LV_PART_MAIN);
+
+            /* 中央元素显隐 */
+            if (show_ring) {
+                lv_obj_set_hidden(pulse_ring, false);
+                lv_obj_set_size(pulse_ring, ring_size, ring_size);
+                lv_obj_align(pulse_ring, LV_ALIGN_CENTER, 0, -20);
+                lv_obj_set_style_border_color(pulse_ring,
+                    lv_color_hex(st == ST_RECOVER ? 0xE09040 : 0x3355AA), LV_PART_MAIN);
+            } else {
+                lv_obj_set_hidden(pulse_ring, true);
+            }
+
+            if (show_rms) {
+                lv_obj_set_hidden(label_rms, false);
+                lv_label_set_text(label_rms, rms_buf);
+            } else {
+                lv_obj_set_hidden(label_rms, true);
+            }
+
+            if (show_icon) lv_obj_set_hidden(label_icon, false);
+            else           lv_obj_set_hidden(label_icon, true);
+
+            if (show_main) {
+                lv_obj_set_hidden(label_main, false);
+                lv_label_set_text(label_main, "正在恢复...");
+            } else {
+                lv_obj_set_hidden(label_main, true);
+            }
+
+            /* 电平条 */
+            int bar_val = (int)ui_rms;
+            if (bar_val > 600) bar_val = 600;
+            lv_bar_set_value(bar_rms, bar_val, LV_ANIM_ON);
+            lv_obj_set_style_bg_color(bar_rms, lv_color_hex(bar_col), LV_PART_INDICATOR);
+
+            /* 底部极淡环境状态行 */
+            lv_label_set_text(label_ambient, ambient_txt);
+            lv_obj_set_style_text_color(label_ambient, lv_color_hex(text_col), LV_PART_MAIN);
+
+            /* 底部状态名 */
+            lv_label_set_text(label_state, state_name(st));
 
             bsp_display_unlock();
         }
