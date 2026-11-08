@@ -11,3 +11,11 @@ CONFIG_LV_USE_GIF=n
 CONFIG_LV_USE_LODEPNG=n
 CONFIG_LV_USE_LIBPNG=n
 CONFIG_LV_USE_BUILTIN_MALLOC=y
+
+# ---- Flash and partition table ----
+# ESP32-S3-EYE reports 8MB flash; the default 2MB setting wastes space and
+# leaves only a 1MB app partition.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="8MB"
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"

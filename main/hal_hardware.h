@@ -20,11 +20,20 @@ extern i2s_chan_handle_t hal_i2s_tx;
 /** 降低喇叭音量（MAX98357 I2S 静音） */
 void hal_lower_volume(void);
 
+/** 设置音量（0.0 ~ 1.0），供主程序做「渐入」斜坡 */
+void hal_set_audio_volume(float vol);
+
 /** 停止香氛释放 + 灯带变暗红防守色 */
 void hal_stop_fragrance(void);
 
+/** 仅恢复香氛 + 灯带（不动音量，配合渐入使用） */
+void hal_restore_fragrance_led(void);
+
 /** 恢复白噪音音量 + 开启香氛 + 灯带恢复深蓝暖光 */
 void hal_restore_environment(void);
+
+/** 待机模式：关灯、断香、静音 */
+void hal_enter_standby(void);
 
 #ifdef __cplusplus
 }

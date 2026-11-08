@@ -122,6 +122,13 @@ void hal_lower_volume(void)
     fflush(stdout);
 }
 
+void hal_set_audio_volume(float vol)
+{
+    if (vol < 0.0f) vol = 0.0f;
+    if (vol > 1.0f) vol = 1.0f;
+    hal_audio_volume = vol;
+}
+
 void hal_stop_fragrance(void)
 {
     /* 切断加湿器 */
@@ -133,6 +140,32 @@ void hal_stop_fragrance(void)
     if (led) {
         for (int i = 0; i < LED_NUM; i++) {
             led_strip_set_pixel(led, i, 32, 0, 0);
+        }
+        led_strip_refresh(led);
+    }
+}
+
+/* 仅恢复香氛 + 灯带，音量保持当前值（供 RECOVER 渐入使用） */
+void hal_restore_fragrance_led(void)
+{
+    gpio_set_level(GPIO_MOS_FRAGRANCE, 1);
+
+    if (led) {
+        for (int i = 0; i < LED_NUM; i++) {
+            led_strip_set_pixel(led, i, 0, 0, 64);
+        }
+        led_strip_refresh(led);
+    }
+}
+
+/* 待机：断香 + 灭灯 + 静音 */
+void hal_enter_standby(void)
+{
+    hal_audio_volume = 0.0f;
+    gpio_set_level(GPIO_MOS_FRAGRANCE, 0);
+    if (led) {
+        for (int i = 0; i < LED_NUM; i++) {
+            led_strip_set_pixel(led, i, 0, 0, 0);
         }
         led_strip_refresh(led);
     }
