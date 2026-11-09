@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberSigh Console</title>
+<style>
+  :root{
+    --bg1:#04120e;      /* 深绿黑 */
+    --bg2:#071a26;      /* 深蓝黑 */
+    --bg3:#0a2e2a;      /* 深绿 */
+    --glass:rgba(255,255,255,.06);
+    --glass-strong:rgba(255,255,255,.09);
+    --stroke:rgba(255,255,255,.14);
+    --text:#eef5f2;
+    --text-dim:rgba(238,245,242,.55);
+    --accent:#6fe3c1;   /* 松玉绿 */
+    --accent2:#7fb8ff;  /* 冰蓝 */
+    --amber:#ffcf8b;    /* 微暖光 */
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 800px at 15% -10%, #0d3b34 0%, transparent 55%),
+      radial-gradient(1000px 700px at 85% 110%, #0b2a44 0%, transparent 55%),
+      linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 100%);
+    background-attachment:fixed;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* 细噪点，提升质感 */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  }
+
+  /* ============ 顶部导航 ============ */
+  nav{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);
+    z-index:100;width:min(920px,92vw);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 20px;border-radius:22px;
+    background:rgba(10,20,26,.45);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    border:1px solid var(--stroke);
+    box-shadow:0 12px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.5px}
+  .brand .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, #c9fff0, var(--accent));
+    box-shadow:0 0 12px var(--accent);
+  }
+  .brand small{color:var(--text-dim);font-weight:400;letter-spacing:2px;margin-left:2px}
+  .tabs{display:flex;gap:4px;background:rgba(0,0,0,.25);padding:4px;border-radius:16px;border:1px solid rgba(255,255,255,.07)}
+  .tab{
+    padding:8px 20px;border-radius:12px;cursor:pointer;font-size:13.5px;
+    color:var(--text-dim);transition:all .35s cubic-bezier(.2,.8,.2,1);border:none;background:transparent;
+    font-family:inherit;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.active{
+    color:#06251f;font-weight:600;
+    background:linear-gradient(135deg,#9df0d6,#6fe3c1);
+    box-shadow:0 4px 16px rgba(111,227,193,.35);
+  }
+
+  /* ============ 布局 ============ */
+  main{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:120px 24px 80px}
+  section.view{display:none;animation:fade .6s cubic-bezier(.2,.8,.2,1)}
+  section.view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .hero{text-align:center;margin-bottom:44px}
+  .hero .eyebrow{font-size:12px;letter-spacing:5px;color:var(--accent);text-transform:uppercase;margin-bottom:14px}
+  .hero h1{font-size:clamp(30px,4.5vw,46px);font-weight:700;letter-spacing:-.5px;line-height:1.15}
+  .hero p{margin-top:12px;color:var(--text-dim);font-size:15px;font-weight:300}
+
+  .glass{
+    background:var(--glass);
+    backdrop-filter:blur(20px) saturate(150%);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);
+    border:1px solid var(--stroke);
+    border-radius:26px;
+    box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+
+  /* ============ Tab1 香氛实验室 ============ */
+  .lab{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch}
+  @media(max-width:820px){.lab{grid-template-columns:1fr}}
+  .lab-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:460px;overflow:hidden}
+  .lab-stage::after{ /* 地面光晕 */
+    content:"";position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+    width:300px;height:60px;border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(111,227,193,.18), transparent 70%);
+    filter:blur(6px);
+  }
+  .stage-title{position:absolute;top:22px;left:26px;font-size:12px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase}
+
+  .oils{display:flex;flex-direction:column;gap:16px;padding:28px}
+  .oil-card{
+    display:flex;align-items:center;gap:18px;padding:18px 20px;border-radius:20px;cursor:pointer;
+    background:var(--glass-strong);border:1px solid var(--stroke);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s, box-shadow .3s;
+    user-select:none;
+  }
+  .oil-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.3);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .oil-card:active{transform:scale(.98)}
+  .oil-bottle{width:38px;height:52px;flex-shrink:0;position:relative}
+  .oil-bottle .bottle-body{position:absolute;bottom:0;width:32px;left:3px;height:36px;border-radius:8px 8px 10px 10px;border:1.5px solid rgba(255,255,255,.4);background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03));overflow:hidden}
+  .oil-bottle .liquid{position:absolute;bottom:0;width:100%;height:60%;transition:height .3s}
+  .oil-bottle .cap{position:absolute;top:0;left:12px;width:14px;height:12px;border-radius:4px;background:rgba(255,255,255,.5)}
+  .oil-name{font-weight:600;font-size:15px}
+  .oil-sub{font-size:12px;color:var(--text-dim);margin-top:3px}
+  .oil-ratio{margin-left:auto;text-align:right;min-width:120px}
+  .oil-pct{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .oil-bar{width:100px;height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:7px;overflow:hidden}
+  .oil-bar i{display:block;height:100%;width:0;border-radius:3px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .lab-hint{font-size:12px;color:var(--text-dim);text-align:center;margin-top:6px}
+  .reset-btn{
+    margin-top:4px;align-self:center;padding:9px 26px;border-radius:14px;cursor:pointer;
+    background:transparent;border:1px solid var(--stroke);color:var(--text-dim);
+    font-size:13px;font-family:inherit;transition:all .3s;
+  }
+  .reset-btn:hover{color:var(--text);border-color:rgba(255,255,255,.35)}
+
+  /* 混合瓶（SVG 容器 + 绝对定位液体/滴落动画） */
+  .mix-bottle{position:relative;width:180px;height:320px;z-index:2}
+  .drop{
+    position:absolute;width:12px;height:16px;border-radius:50% 50% 60% 60%;
+    animation:dropFall 1s cubic-bezier(.5,0,.9,.4) forwards;pointer-events:none;z-index:5;
+  }
+  @keyframes dropFall{
+    0%{transform:translateY(0) scale(1);opacity:1}
+    80%{transform:translateY(150px) scale(.85);opacity:1}
+    100%{transform:translateY(160px) scale(.6,.4);opacity:0}
+  }
+  .mist{position:absolute;top:20px;left:50%;transform:translateX(-50%);width:70px;height:34px;opacity:0;transition:opacity .8s;pointer-events:none}
+  .mist.on{opacity:.9;animation:mistRise 2.2s ease-out forwards}
+  @keyframes mistRise{
+    0%{transform:translate(-50%,10px) scale(.6);opacity:0}
+    40%{opacity:.9}
+    100%{transform:translate(-50%,-34px) scale(1.5);opacity:0}
+  }
+  .mix-label{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px;letter-spacing:2px;color:var(--text-dim)}
+
+  /* ============ Tab2 状态监控 ============ */
+  .monitor{display:grid;grid-template-columns:auto 1fr;gap:24px}
+  @media(max-width:820px){.monitor{grid-template-columns:1fr;justify-items:center}}
+  .phone-shell{
+    width:250px;height:520px;border-radius:44px;position:relative;overflow:hidden;
+    background:linear-gradient(160deg,#0c1f2c,#07141c);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;
+  }
+  .phone-shell::before{ /* 灵动岛 */
+    content:"";position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    width:70px;height:20px;border-radius:12px;background:#000;
+  }
+  .phone-status{position:absolute;top:16px;width:100%;display:flex;justify-content:space-between;padding:0 24px;font-size:10px;color:rgba(255,255,255,.5);font-weight:600}
+  .phone-status span:last-child{margin-left:auto}
+  .breath-ring{
+    width:150px;height:150px;border-radius:50%;position:relative;
+    background:radial-gradient(circle at 35% 30%, #1a4a8f, #0a2b5c 60%, #07203f);
+    box-shadow:0 0 40px rgba(60,130,255,.35), inset 0 0 30px rgba(0,20,60,.6);
+    animation:breathe 4.2s ease-in-out infinite;
+  }
+  .breath-ring::after{
+    content:"";position:absolute;inset:-14px;border-radius:50%;
+    border:1.5px solid rgba(110,170,255,.4);
+    animation:breathe 4.2s ease-in-out infinite;
+  }
+  .breath-ring::before{
+    content:"";position:absolute;inset:26px;border-radius:50%;
+    border:1px solid rgba(150,200,255,.25);
+  }
+  @keyframes breathe{
+    0%,100%{transform:scale(.88);box-shadow:0 0 30px rgba(60,130,255,.25), inset 0 0 30px rgba(0,20,60,.6)}
+    50%{transform:scale(1.04);box-shadow:0 0 70px rgba(70,150,255,.5), inset 0 0 34px rgba(0,25,70,.6)}
+  }
+  .breath-text{text-align:center}
+  .breath-text .big{font-size:22px;font-weight:600;letter-spacing:1px}
+  .breath-text .small{font-size:11px;color:var(--text-dim);margin-top:6px;letter-spacing:3px}
+  .phone-nav{position:absolute;bottom:12px;width:110px;height:4px;border-radius:3px;background:rgba(255,255,255,.25)}
+
+  .monitor-right{display:flex;flex-direction:column;gap:20px;min-width:0}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .stat-card{padding:18px 20px;text-align:left}
+  .stat-card .k{font-size:11px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
+  .stat-card .v{font-size:24px;font-weight:600;margin-top:8px;font-variant-numeric:tabular-nums}
+  .stat-card .v small{font-size:12px;color:var(--text-dim);font-weight:400;margin-left:3px}
+  .stat-card .trend{font-size:11px;margin-top:6px;color:var(--accent)}
+  .log-panel{flex:1;display:flex;flex-direction:column;padding:20px 22px;min-height:300px}
+  .log-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .log-head .t{font-size:13px;font-weight:600;letter-spacing:1px}
+  .log-live{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--accent);letter-spacing:1px}
+  .log-live i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 1.6s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .log-box{
+    flex:1;overflow-y:auto;border-radius:16px;background:rgba(0,8,6,.55);
+    border:1px solid rgba(255,255,255,.08);
+    font-family:"SF Mono","Cascadia Code",Consolas,monospace;
+    font-size:12px;line-height:1.9;padding:14px 16px;min-height:220px;max-height:320px;
+  }
+  .log-box::-webkit-scrollbar{width:5px}
+  .log-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+  .log-line{white-space:pre-wrap;word-break:break-all}
+  .log-line .ts{color:rgba(160,200,190,.5)}
+  .log-line .tag{color:#6fe3c1}
+  .log-line .tag.warn{color:#ffcf8b}
+  .log-line .msg{color:rgba(235,245,242,.85)}
+
+  /* ============ Tab3 开发者档案 ============ */
+  .arch{padding:40px 30px}
+  .arch-title{text-align:center;margin-bottom:36px}
+  .arch-title .t{font-size:17px;font-weight:600;letter-spacing:2px}
+  .arch-title .s{font-size:12px;color:var(--text-dim);margin-top:8px;letter-spacing:1px}
+  .arch-diagram{display:flex;flex-direction:column;align-items:center;gap:0}
+  .node{
+    padding:14px 30px;border-radius:16px;text-align:center;position:relative;
+    background:var(--glass-strong);border:1px solid var(--stroke);
+    transition:all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .node:hover{transform:translateY(-3px);border-color:rgba(111,227,193,.5);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .node .n-name{font-weight:600;font-size:14px}
+  .node .n-sub{font-size:11px;color:var(--text-dim);margin-top:4px}
+  .node.core{
+    background:linear-gradient(135deg,rgba(111,227,193,.16),rgba(127,184,255,.16));
+    border-color:rgba(111,227,193,.45);min-width:230px;
+    box-shadow:0 0 40px rgba(111,227,193,.12);
+  }
+  .node.core .n-name{font-size:16px;letter-spacing:1px}
+  .vline{width:2px;height:34px;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.08))}
+  .bus{width:min(640px,90%);height:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28) 12%,rgba(255,255,255,.28) 88%,transparent);position:relative}
+  .bus::after{content:"";position:absolute;left:50%;top:0;transform:translate(-50%,-100%);width:2px;height:20px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.28))}
+  .periph-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;width:min(720px,100%);margin-top:34px}
+  .periph{padding:18px 14px;text-align:center;position:relative}
+  .periph::before{content:"";position:absolute;top:-34px;left:50%;transform:translateX(-50%);width:2px;height:34px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.08))}
+  .periph .icon{font-size:22px;margin-bottom:8px}
+  .dev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-top:26px}
+  .dev-card{padding:24px 26px}
+  .dev-card .t{font-size:13px;font-weight:600;letter-spacing:2px;color:var(--accent);margin-bottom:14px;text-transform:uppercase}
+  .spec{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px}
+  .spec:last-child{border-bottom:none}
+  .spec .k{color:var(--text-dim)}
+  .spec .v{font-weight:500;font-variant-numeric:tabular-nums}
+  .chip{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;background:rgba(111,227,193,.12);color:var(--accent);border:1px solid rgba(111,227,193,.3);margin:3px 4px 0 0}
+
+  footer{text-align:center;padding:40px 20px 30px;color:var(--text-dim);font-size:12px;letter-spacing:1px}
+  footer .sig{opacity:.6}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><span class="dot"></span>EmberSigh <small>CONSOLE</small></div>
+  <div class="tabs">
+    <button class="tab active" data-view="lab">香氛实验室</button>
+    <button class="tab" data-view="monitor">状态监控</button>
+    <button class="tab" data-view="dev">开发者档案</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ================= Tab 1 香氛实验室 ================= -->
+  <section class="view active" id="view-lab">
+    <div class="hero">
+      <div class="eyebrow">Scent Laboratory</div>
+      <h1>调配属于你的叹息。</h1>
+      <p>点击精油瓶，将一滴注入混合瓶，观察比例实时变化。</p>
+    </div>
+    <div class="lab">
+      <!-- 左：混合瓶舞台 -->
+      <div class="glass lab-stage">
+        <div class="stage-title">Blend Vessel</div>
+        <div class="mist" id="mist">
+          <svg width="70" height="34" viewBox="0 0 70 34" fill="none">
+            <circle cx="20" cy="24" r="9" fill="rgba(190,240,225,.35)"/>
+            <circle cx="38" cy="16" r="12" fill="rgba(190,240,225,.45)"/>
+            <circle cx="54" cy="24" r="9" fill="rgba(190,240,225,.35)"/>
+          </svg>
+        </div>
+        <div class="mix-bottle">
+          <!-- 瓶内液体（SVG path 高度由 JS 控制） -->
+          <svg width="180" height="320" viewBox="0 0 180 320" fill="none">
+            <defs>
+              <linearGradient id="liq" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#7fe9cc" stop-opacity=".92"/>
+                <stop offset="1" stop-color="#3a9e8a" stop-opacity=".92"/>
+              </linearGradient>
+              <linearGradient id="glassShine" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#fff" stop-opacity=".22"/>
+                <stop offset=".18" stop-color="#fff" stop-opacity=".04"/>
+                <stop offset=".8" stop-color="#fff" stop-opacity="0"/>
+                <stop offset="1" stop-color="#fff" stop-opacity=".14"/>
+              </linearGradient>
+              <clipPath id="flaskClip">
+                <path d="M84 96 h12 v10 c0 8 2 14 6 20 c14 20 24 32 24 58 c0 40 -18 66 -36 66 c-18 0 -36 -26 -36 -66 c0 -26 10 -38 24 -58 c4 -6 6 -12 6 -20 z"/>
+              </clipPath>
+            </defs>
+            <!-- 液体 -->
+            <g clip-path="url(#flaskClip)">
+              <rect id="liquid" x="0" y="240" width="180" height="80" fill="url(#liq)"/>
+              <ellipse id="liquidTop" cx="90" cy="240" rx="40" ry="5" fill="rgba(220,255,245,.5)"/>
+            </g>
+            <!-- 瓶身轮廓 -->
+            <path d="M84 96 h12 v10 c0 8 2 14 6 20 c14 20 24 32 24 58 c0 40 -18 66 -36 66 c-18 0 -36 -26 -36 -66 c0 -26 10 -38 24 -58 c4 -6 6 -12 6 -20 z"
+                  stroke="rgba(255,255,255,.65)" stroke-width="2" fill="url(#glassShine)"/>
+            <!-- 瓶颈磨砂塞 -->
+            <rect x="76" y="58" width="28" height="40" rx="8" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+            <rect x="80" y="44" width="20" height="18" rx="6" fill="rgba(255,255,255,.3)" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+            <!-- 高光 -->
+            <path d="M64 190 c-4 12 -5 22 -3 34" stroke="rgba(255,255,255,.35)" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <div class="mix-label" id="mixLabel">EMPTY · 待注入</div>
+        </div>
+      </div>
+
+      <!-- 右：三种精油 -->
+      <div class="glass oils">
+        <div class="oil-card" data-oil="pine">
+          <div class="oil-bottle">
+            <div class="cap"></div>
+            <div class="bottle-body"><div class="liquid" style="background:linear-gradient(180deg,#7fd8a8,#2f8f66)"></div></div>
+          </div>
+          <div>
+            <div class="oil-name">松木 Pine</div>
+            <div class="oil-sub">木质 · 冷冽森林</div>
+          </div>
+          <div class="oil-ratio">
+            <div class="oil-pct" id="pct-pine">0%</div>
+            <div class="oil-bar"><i id="bar-pine" style="background:linear-gradient(90deg,#7fd8a8,#2f8f66)"></i></div>
+          </div>
+        </div>
+        <div class="oil-card" data-oil="citrus">
+          <div class="oil-bottle">
+            <div class="cap"></div>
+            <div class="bottle-body"><div class="liquid" style="background:linear-gradient(180deg,#ffd98a,#e8a23c)"></div></div>
+          </div>
+          <div>
+            <div class="oil-name">柑橘 Citrus</div>
+            <div class="oil-sub">果香 · 晨光清透</div>
+          </div>
+          <div class="oil-ratio">
+            <div class="oil-pct" id="pct-citrus">0%</div>
+            <div class="oil-bar"><i id="bar-citrus" style="background:linear-gradient(90deg,#ffd98a,#e8a23c)"></i></div>
+          </div>
+        </div>
+        <div class="oil-card" data-oil="lavender">
+          <div class="oil-bottle">
+            <div class="cap"></div>
+            <div class="bottle-body"><div class="liquid" style="background:linear-gradient(180deg,#c3b0f5,#7d63c9)"></div></div>
+          </div>
+          <div>
+            <div class="oil-name">薰衣草 Lavender</div>
+            <div class="oil-sub">花草 · 夜间安眠</div>
+          </div>
+          <div class="oil-ratio">
+            <div class="oil-pct" id="pct-lavender">0%</div>
+            <div class="oil-bar"><i id="bar-lavender" style="background:linear-gradient(90deg,#c3b0f5,#7d63c9)"></i></div>
+          </div>
+        </div>
+        <div class="lab-hint" id="dropCount">已注入 0 滴</div>
+        <button class="reset-btn" id="resetBtn">清空配方</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Tab 2 状态监控 ================= -->
+  <section class="view" id="view-monitor">
+    <div class="hero">
+      <div class="eyebrow">Live Telemetry</div>
+      <h1>呼吸，正在被记录。</h1>
+      <p>设备端实时状态与串口日志流。</p>
+    </div>
+    <div class="monitor">
+      <!-- 手机轮廓 -->
+      <div class="phone-shell">
+        <div class="phone-status"><span>EmberSigh</span><span>5G ▮▮▮</span></div>
+        <div class="breath-ring"></div>
+        <div class="breath-text">
+          <div class="big" id="bpm">— bpm</div>
+          <div class="small">BREATHING · 深蓝呼吸</div>
+        </div>
+        <div class="phone-nav"></div>
+      </div>
+
+      <div class="monitor-right">
+        <div class="stat-row">
+          <div class="glass stat-card">
+            <div class="k">Battery 电量</div>
+            <div class="v" id="battVal">87<small>%</small></div>
+            <div class="trend">▲ 充电中</div>
+          </div>
+          <div class="glass stat-card">
+            <div class="k">Scent 剩余香氛</div>
+            <div class="v" id="scentVal">64<small>%</small></div>
+            <div class="trend">松木·柑橘混合</div>
+          </div>
+          <div class="glass stat-card">
+            <div class="k">Temp 核心温度</div>
+            <div class="v" id="tempVal">36.2<small>°C</small></div>
+            <div class="trend">正常范围</div>
+          </div>
+        </div>
+        <div class="glass log-panel">
+          <div class="log-head">
+            <div class="t">SERIAL LOG · UART0 @ 115200</div>
+            <div class="log-live"><i></i>LIVE</div>
+          </div>
+          <div class="log-box" id="logBox"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Tab 3 开发者档案 ================= -->
+  <section class="view" id="view-dev">
+    <div class="hero">
+      <div class="eyebrow">Developer Dossier</div>
+      <h1>一块芯片的嗅觉系统。</h1>
+      <p>EmberSigh 硬件架构 · 基于 ESP32-S3 的情绪感知香氛终端</p>
+    </div>
+    <div class="glass arch">
+      <div class="arch-title">
+        <div class="t">System Architecture</div>
+        <div class="s">ESP32-S3 主控 → 四路外设 · I²C / I²S / GPIO / SPI 总线</div>
+      </div>
+      <div class="arch-diagram">
+        <div class="node core">
+          <div class="n-name">ESP32-S3</div>
+          <div class="n-sub">双核 Xtensa LX7 @ 240MHz · Wi-Fi + BLE 5</div>
+        </div>
+        <div class="vline"></div>
+        <div class="bus"></div>
+        <div class="periph-row">
+          <div class="glass periph">
+            <div class="icon">🎙️</div>
+            <div class="n-name">麦克风</div>
+            <div class="n-sub">INMP441 · I²S<br>环境声纹采集</div>
+          </div>
+          <div class="glass periph">
+            <div class="icon">🔊</div>
+            <div class="n-name">喇叭</div>
+            <div class="n-sub">MAX98357A · I²S<br>白噪音输出</div>
+          </div>
+          <div class="glass periph">
+            <div class="icon">🌿</div>
+            <div class="n-name">香氛模块</div>
+            <div class="n-sub">3× 雾化片 · GPIO<br>三通道精油</div>
+          </div>
+          <div class="glass periph">
+            <div class="icon">🖥️</div>
+            <div class="n-name">屏幕</div>
+            <div class="n-sub">GC9A01 圆屏 · SPI<br>呼吸光效渲染</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dev-grid">
+      <div class="glass dev-card">
+        <div class="t">Firmware 固件</div>
+        <div class="spec"><span class="k">框架</span><span class="v">ESP-IDF v5.2</span></div>
+        <div class="spec"><span class="k">构建系统</span><span class="v">CMake + Ninja</span></div>
+        <div class="spec"><span class="k">FreeRTOS 任务</span><span class="v">6 tasks</span></div>
+        <div class="spec"><span class="k">固件体积</span><span class="v">1.24 MB</span></div>
+        <div style="margin-top:12px">
+          <span class="chip">C</span><span class="chip">FreeRTOS</span><span class="chip">ESP-IDF</span>
+        </div>
+      </div>
+      <div class="glass dev-card">
+        <div class="t">Sensing 感知链路</div>
+        <div class="spec"><span class="k">采样率</span><span class="v">16 kHz / 24bit</span></div>
+        <div class="spec"><span class="k">检测模型</span><span class="v">ESP-SR 唤醒词</span></div>
+        <div class="spec"><span class="k">呼吸节律</span><span class="v">4.2s 正弦插值</span></div>
+        <div class="spec"><span class="k">联动策略</span><span class="v">声纹 → 香型映射</span></div>
+        <div style="margin-top:12px">
+          <span class="chip">I²S</span><span class="chip">DSP</span><span class="chip">Edge AI</span>
+        </div>
+      </div>
+      <div class="glass dev-card">
+        <div class="t">Roadmap 迭代计划</div>
+        <div class="spec"><span class="k">v1.0 · 当前</span><span class="v">基础香氛 + 呼吸屏</span></div>
+        <div class="spec"><span class="k">v1.1</span><span class="v">App 蓝牙配网</span></div>
+        <div class="spec"><span class="k">v1.2</span><span class="v">情绪自适应配方</span></div>
+        <div class="spec"><span class="k">v2.0</span><span class="v">多设备香氛协同</span></div>
+        <div style="margin-top:12px">
+          <span class="chip">BLE Mesh</span><span class="chip">MLP</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="sig">EmberSigh · 每一次呼吸都值得被温柔对待</div>
+</footer>
+
+<script>
+/* ============ 导航切换 ============ */
+const tabs = document.querySelectorAll('.tab');
+const views = document.querySelectorAll('.view');
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  views.forEach(v => v.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('view-' + t.dataset.view).classList.add('active');
+  if (t.dataset.view === 'monitor') startMonitor();
+}));
+
+/* ============ Tab1 香氛实验室 ============ */
+const OILS = {
+  pine:     { name:'松木',     color1:'#7fe9cc', color2:'#3a9e8a' },
+  citrus:   { name:'柑橘',     color1:'#ffd98a', color2:'#e8a23c' },
+  lavender: { name:'薰衣草',   color1:'#c3b0f5', color2:'#7d63c9' }
+};
+const counts = { pine:0, citrus:0, lavender:0 };
+let totalDrops = 0;
+const CY = 240;           // 液面顶部 y（空瓶时）
+const CY_MIN = 130;       // 满瓶液面最高位置
+
+const liquid = document.getElementById('liquid');
+const liquidTop = document.getElementById('liquidTop');
+const mixLabel = document.getElementById('mixLabel');
+const mist = document.getElementById('mist');
+const mixBottle = document.querySelector('.mix-bottle');
+
+function mixColor(){
+  let r=0,g=0,b=0;
+  for(const k in counts){
+    if(!counts[k]) continue;
+    const w = counts[k]/totalDrops;
+    const c1 = OILS[k].color1, c2 = OILS[k].color2;
+    r += w * (parseInt(c1.slice(1,3),16)*.4 + parseInt(c2.slice(1,3),16)*.6);
+    g += w * (parseInt(c1.slice(3,5),16)*.4 + parseInt(c2.slice(3,5),16)*.6);
+    b += w * (parseInt(c1.slice(5,7),16)*.4 + parseInt(c2.slice(5,7),16)*.6);
+  }
+  return `rgb(${r|0},${g|0},${b|0})`;
+}
+
+function updateRatios(){
+  for(const k in counts){
+    const pct = totalDrops ? Math.round(counts[k]/totalDrops*100) : 0;
+    document.getElementById('pct-'+k).textContent = pct + '%';
+    document.getElementById('bar-'+k).style.width = pct + '%';
+  }
+  document.getElementById('dropCount').textContent = `已注入 ${totalDrops} 滴`;
+  // 液面高度
+  const fill = Math.min(totalDrops, 14) / 14;   // 14 滴视为满
+  const y = CY - (CY - CY_MIN) * fill;
+  liquid.setAttribute('y', y);
+  liquid.setAttribute('height', 320 - y);
+  liquidTop.setAttribute('cy', y);
+  liquidTop.style.opacity = fill > 0 ? 1 : 0;
+  // 液体颜色随配方变化
+  if(totalDrops > 0){
+    const col = mixColor();
+    liquid.setAttribute('fill', col);
+    mixLabel.textContent = totalDrops
+      ? Object.keys(counts).filter(k=>counts[k]).map(k=>`${OILS[k].name} ${Math.round(counts[k]/totalDrops*100)}%`).join(' · ')
+      : 'EMPTY · 待注入';
+  } else {
+    liquid.setAttribute('fill','url(#liq)');
+    mixLabel.textContent = 'EMPTY · 待注入';
+  }
+}
+
+document.querySelectorAll('.oil-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const key = card.dataset.oil;
+    counts[key]++;
+    totalDrops++;
+    // 滴落动画：从瓶口上方落到液面
+    const drop = document.createElement('div');
+    drop.className = 'drop';
+    drop.style.left = '84px';
+    drop.style.top = '52px';
+    drop.style.background = `linear-gradient(180deg, ${OILS[key].color1}, ${OILS[key].color2})`;
+    mixBottle.appendChild(drop);
+    setTimeout(() => drop.remove(), 1100);
+    // 香雾
+    mist.classList.remove('on'); void mist.offsetWidth; mist.classList.add('on');
+    updateRatios();
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  counts.pine = counts.citrus = counts.lavender = 0;
+  totalDrops = 0;
+  updateRatios();
+});
+updateRatios();
+
+/* ============ Tab2 状态监控 ============ */
+let monitorStarted = false;
+const logBox = document.getElementById('logBox');
+const TAGS = [
+  {tag:'CORE', cls:'', msgs:['FreeRTOS tick ok, heap free {n} bytes','Task "scent_mix" scheduled, prio 5','NVS read OK, config checksum 0x{n}']},
+  {tag:'AUDIO', cls:'', msgs:['I²S RX buffer 512 frames, underrun 0','Mic gain auto-tuned to 0x{n}','Noise floor: {db} dB, stable']},
+  {tag:'SCENT', cls:'', msgs:['Atomizer #1 ON, duty 42%, 1.8s pulse','Blend ratio P{n}:C{n2}:L3 verified','Reservoir level 64%, no fault']},
+  {tag:'DISP', cls:'', msgs:['GC9A01 frame pushed, 240x240 @ 30fps','Breath phase 0x{n}, easing sine','Backlight PWM = {n}%']},
+  {tag:'PWR', cls:'warn', msgs:['Battery {p}%, charging 280mA','Core temp {t}°C, thermal OK','Brown-out detector: idle']},
+];
+let seq = 0;
+function pad(n,l=4){ return String(n).padStart(l,'0'); }
+function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+function pushLog(){
+  const t = TAGS[rand(0, TAGS.length-1)];
+  const now = new Date();
+  const ts = `${pad(now.getHours(),2)}:${pad(now.getMinutes(),2)}:${pad(now.getSeconds(),2)}.${pad(now.getMilliseconds(),3)}`;
+  let msg = t.msgs[rand(0, t.msgs.length-1)]
+    .replace('{n2}', rand(2,9)).replace('{db}', rand(28,44))
+    .replace(/\{n\}/g, rand(1000,9999))
+    .replace('{p}', 85 + rand(0,3))
+    .replace('{t}', (35 + Math.random()*3).toFixed(1));
+  seq++;
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="ts">[${ts}]</span> <span class="tag ${t.cls}">[${t.tag}]</span> <span class="msg">${msg}</span>`;
+  logBox.appendChild(line);
+  while(logBox.children.length > 60) logBox.removeChild(logBox.firstChild);
+  logBox.scrollTop = logBox.scrollHeight;
+  // 更新顶部数值
+  document.getElementById('bpm').textContent = (12 + Math.random()*2).toFixed(1) + ' bpm';
+  document.getElementById('tempVal').innerHTML = (35.6 + Math.random()*1.2).toFixed(1) + '<small>°C</small>';
+}
+
+function startMonitor(){
+  if(monitorStarted) return;
+  monitorStarted = true;
+  pushLog();
+  setInterval(pushLog, 1400);
+}
+// 首次进入页面预热一条，切到监控页时再补满
+pushLog();
+pushLog();
+</script>
+</body>
+</html>

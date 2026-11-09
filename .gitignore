@@ -30,3 +30,6 @@ Thumbs.db
 desktop.ini
 # ±à¼­Æ÷±¸·Ý
 *.bak
+
+# å·¥ä½œåŒºæœ¬åœ°è®°å¿†
+.workbuddy/

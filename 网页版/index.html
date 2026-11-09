@@ -259,7 +259,7 @@ main{position:fixed;inset:74px 0 0 0;z-index:2;}
 .p-card .tag{font-family:var(--mono);font-size:8px;letter-spacing:.18em;color:var(--ink-faint);margin-top:9px;display:block;}
 
 /* ═══════════ 2 · 控制台 ═══════════ */
-#v-console.active{display:grid;grid-template-columns:380px 1fr;gap:20px;}
+#v-console.active{display:grid;grid-template-columns:252px 352px 1fr;gap:20px;}
 .screen-card{padding:22px 24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
 .device-frame{
   position:relative;width:278px;height:278px;border-radius:44px;flex:none;
@@ -538,12 +538,138 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
 .toast.show{opacity:1;transform:translate(-50%,0);}
 .toast.warn{border-color:rgba(176,68,47,.45);color:var(--danger);}
 
+/* ═══════════ 移植组件 · 深色玻璃拟态（局部深色，与米白底形成对比） ═══════════ */
+.dcard{
+  position:relative;overflow:hidden;color:#eef5f2;
+  background:
+    radial-gradient(640px 320px at 12% -12%, rgba(13,59,52,.5), transparent 58%),
+    radial-gradient(560px 300px at 92% 112%, rgba(11,42,68,.5), transparent 58%),
+    linear-gradient(160deg,#0b1a16,#081420);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius);
+  box-shadow:0 30px 60px -36px rgba(24,44,38,.85),inset 0 1px 0 rgba(255,255,255,.1);
+}
+.dcard::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 26%);}
+.dcard .card-title{color:#eef5f2;}
+.dcard .card-note{color:rgba(238,245,242,.4);}
+.dcard .card-title .tick{background:#6fe3c1;box-shadow:0 0 12px rgba(111,227,193,.55);}
+.dk-sans{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;}
+
+/* —— 手机呼吸实况 —— */
+.phone-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;}
+.phone-cap{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--ink-faint);}
+.phone-shell{
+  width:246px;height:506px;border-radius:44px;position:relative;overflow:hidden;flex:none;
+  background:linear-gradient(160deg,#0c1f2c,#07141c);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 36px 70px -32px rgba(20,40,50,.85),inset 0 1px 0 rgba(255,255,255,.12);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;
+}
+.phone-shell::before{content:"";position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  width:70px;height:20px;border-radius:12px;background:#000;z-index:3;}
+.phone-status{position:absolute;top:17px;width:100%;display:flex;justify-content:space-between;
+  padding:0 24px;font-size:10px;color:rgba(255,255,255,.5);font-weight:600;z-index:2;}
+.breath-ring{
+  width:148px;height:148px;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 30%,#1a4a8f,#0a2b5c 60%,#07203f);
+  box-shadow:0 0 40px rgba(60,130,255,.35),inset 0 0 30px rgba(0,20,60,.6);
+  animation:phoneBreathe 4.2s ease-in-out infinite;
+}
+.breath-ring::after{content:"";position:absolute;inset:-14px;border-radius:50%;
+  border:1.5px solid rgba(110,170,255,.4);animation:phoneBreathe 4.2s ease-in-out infinite;}
+.breath-ring::before{content:"";position:absolute;inset:26px;border-radius:50%;
+  border:1px solid rgba(150,200,255,.25);}
+@keyframes phoneBreathe{
+  0%,100%{transform:scale(.88);box-shadow:0 0 30px rgba(60,130,255,.25),inset 0 0 30px rgba(0,20,60,.6);}
+  50%{transform:scale(1.05);box-shadow:0 0 70px rgba(70,150,255,.5),inset 0 0 34px rgba(0,25,70,.6);}
+}
+.breath-text{text-align:center;}
+.breath-text .big{font-size:22px;font-weight:600;letter-spacing:1px;color:#eef5f2;font-variant-numeric:tabular-nums;}
+.breath-text .small{font-size:10px;color:rgba(238,245,242,.55);margin-top:6px;letter-spacing:3px;}
+.phone-nav{position:absolute;bottom:12px;width:110px;height:4px;border-radius:3px;background:rgba(255,255,255,.25);}
+/* 噪音警觉态：呼吸转暖红并加速 */
+.phone-shell.alert .breath-ring,.phone-shell.alert .breath-ring::after{
+  animation-duration:1.5s;
+  background:radial-gradient(circle at 35% 30%,#8f2a34,#5c0f1c 60%,#3f0712);
+}
+.phone-shell.alert .breath-ring{box-shadow:0 0 44px rgba(255,110,110,.45),inset 0 0 30px rgba(60,0,10,.6);}
+
+/* —— 遥测数据卡片 —— */
+.console-right{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;}
+.console-right .term-card{flex:1;min-height:0;}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:none;}
+.stat-card{
+  padding:15px 17px;border-radius:18px;position:relative;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;
+  background:linear-gradient(160deg,rgba(16,34,31,.94),rgba(9,23,28,.94));
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 20px 40px -24px rgba(24,44,38,.8),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .35s cubic-bezier(.22,1,.36,1),border-color .35s,box-shadow .35s;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:16%;right:16%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(111,227,193,.45),transparent);}
+.stat-card:hover{transform:translateY(-3px);border-color:rgba(111,227,193,.4);
+  box-shadow:0 26px 48px -26px rgba(24,60,50,.95);}
+.stat-card .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:rgba(238,245,242,.5);text-transform:uppercase;}
+.stat-card .v{font-size:23px;font-weight:600;margin-top:7px;color:#eef5f2;font-variant-numeric:tabular-nums;}
+.stat-card .v small{font-size:12px;color:rgba(238,245,242,.55);font-weight:400;margin-left:3px;}
+.stat-card .trend{font-size:10.5px;margin-top:5px;color:#6fe3c1;letter-spacing:.05em;}
+.stat-card .trend.w{color:#ffcf8b;}
+
+/* —— 系统架构图（深色拓扑树 + 接线图） —— */
+.dev-arch{padding:16px 22px 12px;display:flex;flex-direction:column;overflow:hidden;}
+.arch-wrap{flex:1;display:grid;grid-template-columns:.92fr 1.08fr;gap:12px;min-height:0;align-items:center;position:relative;z-index:2;}
+.arch-tree{display:flex;flex-direction:column;align-items:center;min-height:0;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;}
+.arch-node{
+  padding:11px 26px;border-radius:14px;text-align:center;position:relative;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+  transition:all .35s cubic-bezier(.2,.8,.2,1);
+}
+.arch-node:hover{transform:translateY(-3px);border-color:rgba(111,227,193,.5);box-shadow:0 10px 28px rgba(0,0,0,.45);}
+.arch-node .n-name{font-weight:600;font-size:13.5px;color:#eef5f2;}
+.arch-node .n-sub{font-size:10px;color:rgba(238,245,242,.55);margin-top:3px;letter-spacing:.04em;}
+.arch-core{
+  background:linear-gradient(135deg,rgba(111,227,193,.18),rgba(127,184,255,.18));
+  border-color:rgba(111,227,193,.5);min-width:216px;
+  box-shadow:0 0 36px rgba(111,227,193,.14);
+}
+.arch-core .n-name{font-size:15.5px;letter-spacing:1px;}
+.arch-vline{width:2px;height:26px;background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.1));}
+.arch-bus{width:min(430px,92%);height:2px;position:relative;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28) 12%,rgba(255,255,255,.28) 88%,transparent);}
+.arch-bus::after{content:"";position:absolute;left:50%;top:0;transform:translate(-50%,-100%);
+  width:2px;height:16px;background:rgba(255,255,255,.28);}
+.arch-periph-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:min(470px,100%);margin-top:26px;}
+.arch-periph{
+  padding:13px 10px;text-align:center;position:relative;border-radius:14px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  transition:all .35s cubic-bezier(.2,.8,.2,1);
+}
+.arch-periph::before{content:"";position:absolute;top:-26px;left:50%;transform:translateX(-50%);
+  width:2px;height:26px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.08));}
+.arch-periph .icon{font-size:19px;margin-bottom:6px;}
+.arch-periph .n-name{font-size:12px;font-weight:600;color:#eef5f2;}
+.arch-periph .n-sub{font-size:9.5px;color:rgba(238,245,242,.5);margin-top:3px;line-height:1.55;}
+.arch-periph:hover,.arch-periph.hot{transform:translateY(-3px);border-color:rgba(111,227,193,.55);
+  box-shadow:0 0 24px rgba(111,227,193,.28),0 10px 26px rgba(0,0,0,.4);}
+.arch-wires{height:100%;min-height:0;display:flex;align-items:center;}
+.arch-wires svg{width:100%;max-height:100%;}
+/* 深色接线图内文字 */
+.dnode-label{font-family:var(--mono);font-size:8.5px;fill:#7f8d9b;letter-spacing:.06em;}
+.dmod-title{font-family:var(--serif);font-size:9.5px;fill:#cfdae5;font-weight:600;letter-spacing:.1em;}
+.dmod-sub{font-family:var(--mono);font-size:7.5px;fill:#5f6c79;letter-spacing:.06em;}
+
 /* 响应式兜底 */
 @media (max-width:1280px){
   .tab em{display:none;}
   .dash-grid{grid-template-columns:206px 1fr 232px;gap:16px;}
-  #v-console.active{grid-template-columns:344px 1fr;}
-  .device-frame{width:246px;height:246px;}
+  #v-console.active{grid-template-columns:222px 314px 1fr;gap:14px;}
+  .phone-shell{width:224px;height:470px;}
+  .breath-ring{width:128px;height:128px;}
+  .device-frame{width:234px;height:234px;}
   .nav{padding:0 28px;}
   .view{padding:18px 28px 22px;}
 }
@@ -551,6 +677,8 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
   .view{padding:14px 30px 16px;}
   .bwrap svg{height:min(35vh,275px);}
   .device-frame{width:232px;height:232px;}
+  .phone-shell{width:224px;height:464px;}
+  .breath-ring{width:124px;height:124px;}
   .principles .p-card{padding:13px 16px;}
   .vision-copy h1{font-size:clamp(26px,2.7vw,38px);}
 }
@@ -680,6 +808,21 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
        TAB 2 · 控制台（三级状态机）
        ══════════════════════════════════════════ -->
   <section class="view" id="v-console">
+    <!-- 左：手机呼吸实况（深色玻璃拟态） -->
+    <div class="phone-col">
+      <div class="phone-shell" id="phoneShell">
+        <div class="phone-status"><span>EmberSigh</span><span>5G ▮▮▮</span></div>
+        <div class="breath-ring"></div>
+        <div class="breath-text">
+          <div class="big" id="bpm">12.6 bpm</div>
+          <div class="small">BREATHING · 深蓝呼吸</div>
+        </div>
+        <div class="phone-nav"></div>
+      </div>
+      <div class="phone-cap">设备实况 · LIVE TELEMETRY</div>
+    </div>
+
+    <!-- 中：三级状态机模拟屏 -->
     <div class="glass screen-card">
       <div class="card-h" style="width:100%;margin-bottom:0;">
         <div class="card-title"><span class="tick"></span>设备屏幕 · 240×240</div>
@@ -717,7 +860,27 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
       </div>
     </div>
 
-    <div class="glass term-card">
+    <!-- 右：遥测数据卡片 + 日志终端 -->
+    <div class="console-right">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="k">Battery 电量</div>
+          <div class="v" id="battVal">87<small>%</small></div>
+          <div class="trend">▲ 充电中 · 280mA</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">Scent 剩余香氛</div>
+          <div class="v" id="scentVal">64<small>%</small></div>
+          <div class="trend">松木 · 柑橘混合</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">Temp 核心温度</div>
+          <div class="v" id="tempVal">36.2<small>°C</small></div>
+          <div class="trend">正常范围</div>
+        </div>
+      </div>
+
+      <div class="glass term-card">
       <div class="term-head">
         <div class="term-title">
           <div class="term-dots"><i></i><i></i><i></i></div>
@@ -733,7 +896,8 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
         <span>香氛 <b id="ftAroma">薰衣草 82%</b></span>
         <span>灯环 <b id="ftLed" class="v-em">#1F3A5F</b></span>
       </div>
-    </div>
+      </div><!-- /term-card -->
+    </div><!-- /console-right -->
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -919,95 +1083,133 @@ table.pins .warn-tag{color:var(--danger);font-family:var(--mono);font-size:8px;m
        TAB 4 · 开发者
        ══════════════════════════════════════════ -->
   <section class="view" id="v-dev">
-    <div class="glass dev-top">
+    <!-- 深色玻璃架构卡：左拓扑树 + 右引脚接线图 -->
+    <div class="dcard dev-arch">
       <div class="card-h">
-        <div class="card-title"><span class="tick"></span>接线拓扑 · ESP32-S3 → 外设</div>
-        <div class="card-note">悬停引脚行可高亮对应连线</div>
+        <div class="card-title">系统架构 · ESP32-S3 → 四路外设</div>
+        <div class="card-note">悬停引脚行可高亮模块与连线</div>
       </div>
 
-      <svg viewBox="0 0 1000 360" id="wireSvg">
+      <div class="arch-wrap">
+        <!-- 左：系统拓扑树（移植自文件2，悬浮发光） -->
+        <div class="arch-tree">
+          <div class="arch-node arch-core">
+            <div class="n-name">ESP32-S3</div>
+            <div class="n-sub">双核 Xtensa LX7 @ 240MHz · Wi-Fi + BLE 5</div>
+          </div>
+          <div class="arch-vline"></div>
+          <div class="arch-bus"></div>
+          <div class="arch-periph-row">
+            <div class="arch-periph" id="ph-mic">
+              <div class="icon">🎙️</div>
+              <div class="n-name">麦克风</div>
+              <div class="n-sub">INMP441 · I²S<br>环境声纹采集</div>
+            </div>
+            <div class="arch-periph" id="ph-spk">
+              <div class="icon">🔊</div>
+              <div class="n-name">喇叭</div>
+              <div class="n-sub">MAX98357A · I²S<br>白噪音输出</div>
+            </div>
+            <div class="arch-periph" id="ph-aroma">
+              <div class="icon">🌿</div>
+              <div class="n-name">香氛模块</div>
+              <div class="n-sub">3× 雾化片 · GPIO<br>三通道精油</div>
+            </div>
+            <div class="arch-periph" id="ph-scr">
+              <div class="icon">🖥️</div>
+              <div class="n-name">屏幕</div>
+              <div class="n-sub">GC9A01 圆屏 · SPI<br>呼吸光效渲染</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右：引脚级接线图（深色化，与拓扑树同区） -->
+        <div class="arch-wires">
+      <svg viewBox="0 0 1000 360" id="wireSvg" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="boardG" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f1e7d7"/>
+            <stop offset="0" stop-color="#18212a"/><stop offset="1" stop-color="#0b1015"/>
           </linearGradient>
           <linearGradient id="modG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="rgba(255,255,255,.92)"/><stop offset="1" stop-color="rgba(255,255,255,.55)"/>
+            <stop offset="0" stop-color="rgba(255,255,255,.08)"/><stop offset="1" stop-color="rgba(255,255,255,.02)"/>
           </linearGradient>
         </defs>
 
         <!-- 主控板 -->
         <g>
-          <rect x="34" y="42" width="216" height="278" rx="18" fill="url(#boardG)" stroke="rgba(120,98,68,.3)"/>
-          <rect x="34" y="42" width="216" height="30" rx="18" fill="rgba(176,141,87,.1)"/>
-          <text x="52" y="63" class="mod-title">ESP32-S3-EYE</text>
-          <text x="52" y="90" class="mod-sub">DUAL-CORE 240MHz · 8MB PSRAM</text>
-          <rect x="66" y="108" width="152" height="94" rx="12" fill="rgba(140,116,82,.1)" stroke="rgba(120,98,68,.22)"/>
-          <text x="142" y="148" text-anchor="middle" class="mod-sub" fill="#8a7a64">ESP32-S3 QFN56</text>
-          <text x="142" y="166" text-anchor="middle" class="mod-sub" fill="#a3937f">Wi-Fi · BLE · I2S ×2</text>
-          <text x="52" y="230" class="mod-sub">USB-C · 5V IN (仅供板)</text>
-          <text x="52" y="250" class="mod-sub" fill="#b0442f">⚠ 拔除 CAMERA 排线释放 IO16-18</text>
-          <text x="52" y="268" class="mod-sub" fill="#b0442f">⚠ GPIO19 = USB D−，禁用</text>
+          <rect x="34" y="42" width="216" height="278" rx="16" fill="url(#boardG)" stroke="rgba(255,255,255,.14)"/>
+          <rect x="34" y="42" width="216" height="30" rx="16" fill="rgba(255,255,255,.04)"/>
+          <text x="52" y="63" class="dmod-title">ESP32-S3-EYE</text>
+          <text x="52" y="90" class="dmod-sub">DUAL-CORE 240MHz · 8MB PSRAM</text>
+          <rect x="66" y="108" width="152" height="94" rx="10" fill="#0c1218" stroke="rgba(122,162,247,.3)"/>
+          <text x="142" y="148" text-anchor="middle" class="dmod-sub" fill="#7c93ab">ESP32-S3 QFN56</text>
+          <text x="142" y="166" text-anchor="middle" class="dmod-sub" fill="#4d5c6a">Wi-Fi · BLE · I2S ×2</text>
+          <text x="52" y="230" class="dmod-sub">USB-C · 5V IN (仅供板)</text>
+          <text x="52" y="250" class="dmod-sub" fill="#ff9d94">⚠ 拔除 CAMERA 排线释放 IO16-18</text>
+          <text x="52" y="268" class="dmod-sub" fill="#ff9d94">⚠ GPIO19 = USB D−，禁用</text>
 
           <!-- 引脚（右侧出口） -->
           <g>
-            <circle class="pin-dot" id="p-io18" cx="250" cy="110" r="4.5" fill="#8b7aa8"/>
-            <circle class="pin-dot" id="p-io17" cx="250" cy="140" r="4.5" fill="#5f7f9e"/>
-            <circle class="pin-dot" id="p-io14" cx="250" cy="170" r="4.5" fill="#c07f45"/>
-            <circle class="pin-dot" id="p-io1"  cx="250" cy="200" r="4.5" fill="#b08d57"/>
-            <circle class="pin-dot" id="p-io16" cx="250" cy="230" r="4.5" fill="#6d8a63"/>
-            <circle class="pin-dot" id="p-gnd"  cx="250" cy="260" r="4.5" fill="#9a8b78"/>
-            <g class="node-label" text-anchor="end">
-              <text x="240" y="113" fill="#8b7aa8">IO18</text>
-              <text x="240" y="143" fill="#5f7f9e">IO17</text>
-              <text x="240" y="173" fill="#c07f45">IO14</text>
-              <text x="240" y="203" fill="#b08d57">IO1</text>
-              <text x="240" y="233" fill="#6d8a63">IO16</text>
-              <text x="240" y="263" fill="#9a8b78">GND</text>
+            <circle class="pin-dot" id="p-io18" cx="250" cy="110" r="4.5" fill="#b39ddb"/>
+            <circle class="pin-dot" id="p-io17" cx="250" cy="140" r="4.5" fill="#7aa2f7"/>
+            <circle class="pin-dot" id="p-io14" cx="250" cy="170" r="4.5" fill="#fb923c"/>
+            <circle class="pin-dot" id="p-io1"  cx="250" cy="200" r="4.5" fill="#f5b56a"/>
+            <circle class="pin-dot" id="p-io16" cx="250" cy="230" r="4.5" fill="#4ade80"/>
+            <circle class="pin-dot" id="p-gnd"  cx="250" cy="260" r="4.5" fill="#8b98a6"/>
+            <g class="dnode-label" text-anchor="end">
+              <text x="240" y="113" fill="#b39ddb">IO18</text>
+              <text x="240" y="143" fill="#7aa2f7">IO17</text>
+              <text x="240" y="173" fill="#fb923c">IO14</text>
+              <text x="240" y="203" fill="#f5b56a">IO1</text>
+              <text x="240" y="233" fill="#4ade80">IO16</text>
+              <text x="240" y="263" fill="#8b98a6">GND</text>
             </g>
           </g>
         </g>
 
         <!-- 连线 -->
         <g id="wires">
-          <path class="wire" id="w-io18" stroke="#8b7aa8" d="M250,110 C360,110 380,70 470,70 L660,70 C680,70 686,62 706,62" color="#8b7aa8"/>
-          <path class="wire" id="w-io17" stroke="#5f7f9e" d="M250,140 C360,140 400,120 470,120 L660,120 C680,120 686,110 706,110" color="#5f7f9e"/>
-          <path class="wire" id="w-io14" stroke="#c07f45" d="M250,170 C360,170 400,170 470,170 L660,170 C680,170 686,158 706,158" color="#c07f45"/>
-          <path class="wire" id="w-io1"  stroke="#b08d57" d="M250,200 C370,200 430,235 520,235 L660,235 C680,235 686,225 706,225" color="#b08d57"/>
-          <path class="wire" id="w-io16" stroke="#6d8a63" d="M250,230 C370,230 440,290 540,290 L706,290" color="#6d8a63"/>
-          <path class="wire" id="w-gnd"  stroke="#9a8b78" d="M250,260 C350,260 380,320 470,320 L880,320" color="#9a8b78"/>
+          <path class="wire" id="w-io18" stroke="#b39ddb" d="M250,110 C360,110 380,70 470,70 L660,70 C680,70 686,62 706,62" color="#b39ddb"/>
+          <path class="wire" id="w-io17" stroke="#7aa2f7" d="M250,140 C360,140 400,120 470,120 L660,120 C680,120 686,110 706,110" color="#7aa2f7"/>
+          <path class="wire" id="w-io14" stroke="#fb923c" d="M250,170 C360,170 400,170 470,170 L660,170 C680,170 686,158 706,158" color="#fb923c"/>
+          <path class="wire" id="w-io1"  stroke="#f5b56a" d="M250,200 C370,200 430,235 520,235 L660,235 C680,235 686,225 706,225" color="#f5b56a"/>
+          <path class="wire" id="w-io16" stroke="#4ade80" d="M250,230 C370,230 440,290 540,290 L706,290" color="#4ade80"/>
+          <path class="wire" id="w-gnd"  stroke="#8b98a6" d="M250,260 C350,260 380,320 470,320 L880,320" color="#8b98a6"/>
         </g>
 
         <!-- 模块：MAX98357 -->
         <g>
-          <rect x="700" y="38" width="272" height="112" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
-          <text x="718" y="62" class="mod-title">MAX98357 · I2S 功放</text>
-          <text x="718" y="80" class="mod-sub">3W CLASS-D → 4Ω 喇叭</text>
-          <circle cx="700" cy="62" r="4" fill="#8b7aa8"/><text x="684" y="66" class="mod-sub" text-anchor="end">BCLK</text>
-          <circle cx="700" cy="110" r="4" fill="#5f7f9e"/><text x="684" y="114" class="mod-sub" text-anchor="end">LRC</text>
-          <circle cx="700" cy="158" r="4" fill="#c07f45"/><text x="684" y="162" class="mod-sub" text-anchor="end">DIN</text>
-          <rect x="718" y="96" width="236" height="36" rx="8" fill="rgba(140,116,82,.09)" stroke="rgba(120,98,68,.14)"/>
-          <text x="836" y="118" text-anchor="middle" class="mod-sub" fill="#8a7a64">VIN 5V · GND · SPK±</text>
+          <rect x="700" y="38" width="272" height="112" rx="14" fill="url(#modG)" stroke="rgba(255,255,255,.12)"/>
+          <text x="718" y="62" class="dmod-title">MAX98357 · I2S 功放</text>
+          <text x="718" y="80" class="dmod-sub">3W CLASS-D → 4Ω 喇叭</text>
+          <circle cx="700" cy="62" r="4" fill="#b39ddb"/><text x="684" y="66" class="dmod-sub" text-anchor="end">BCLK</text>
+          <circle cx="700" cy="110" r="4" fill="#7aa2f7"/><text x="684" y="114" class="dmod-sub" text-anchor="end">LRC</text>
+          <circle cx="700" cy="158" r="4" fill="#fb923c"/><text x="684" y="162" class="dmod-sub" text-anchor="end">DIN</text>
+          <rect x="718" y="96" width="236" height="36" rx="7" fill="rgba(0,0,0,.28)" stroke="rgba(255,255,255,.05)"/>
+          <text x="836" y="118" text-anchor="middle" class="dmod-sub" fill="#8fa3b5">VIN 5V · GND · SPK±</text>
         </g>
 
         <!-- 模块：MOS -->
         <g>
-          <rect x="700" y="190" width="272" height="78" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
-          <text x="718" y="216" class="mod-title">光耦 MOS 模块</text>
-          <text x="718" y="234" class="mod-sub">DC+ / DC− → 加湿器（独立 5V）</text>
-          <circle cx="700" cy="225" r="4" fill="#b08d57"/><text x="684" y="229" class="mod-sub" text-anchor="end">SIG</text>
-          <rect x="790" y="246" width="164" height="12" rx="5" fill="rgba(176,68,47,.12)"/>
+          <rect x="700" y="190" width="272" height="78" rx="14" fill="url(#modG)" stroke="rgba(255,255,255,.12)"/>
+          <text x="718" y="216" class="dmod-title">光耦 MOS 模块</text>
+          <text x="718" y="234" class="dmod-sub">DC+ / DC− → 加湿器（独立 5V）</text>
+          <circle cx="700" cy="225" r="4" fill="#f5b56a"/><text x="684" y="229" class="dmod-sub" text-anchor="end">SIG</text>
+          <rect x="790" y="246" width="164" height="12" rx="4" fill="rgba(255,123,114,.12)"/>
         </g>
 
         <!-- 模块：WS2812 -->
         <g>
-          <rect x="700" y="272" width="272" height="66" rx="14" fill="url(#modG)" stroke="rgba(120,98,68,.24)"/>
-          <text x="718" y="296" class="mod-title">WS2812 · 16 灯环</text>
-          <text x="718" y="314" class="mod-sub">RMT · 5V / 0.96A 峰值</text>
-          <circle cx="700" cy="290" r="4" fill="#6d8a63"/><text x="684" y="294" class="mod-sub" text-anchor="end">DIN</text>
+          <rect x="700" y="272" width="272" height="66" rx="14" fill="url(#modG)" stroke="rgba(255,255,255,.12)"/>
+          <text x="718" y="296" class="dmod-title">WS2812 · 16 灯环</text>
+          <text x="718" y="314" class="dmod-sub">RMT · 5V / 0.96A 峰值</text>
+          <circle cx="700" cy="290" r="4" fill="#4ade80"/><text x="684" y="294" class="dmod-sub" text-anchor="end">DIN</text>
         </g>
 
-        <text x="470" y="345" class="mod-sub" fill="#9a8b78">共地母线 · 所有 GND 汇接于面包板蓝轨</text>
+        <text x="470" y="345" class="dmod-sub" fill="#8b98a6">共地母线 · 所有 GND 汇接于面包板蓝轨</text>
       </svg>
+        </div><!-- /arch-wires -->
+      </div><!-- /arch-wrap -->
     </div>
 
     <div class="dev-bottom">
@@ -1170,6 +1372,9 @@ function log(type, tag, msg){
 /* 屏幕状态渲染 */
 function paintScreen(){
   scr.className = 'screen s-' + state;
+  /* 手机呼吸轮廓联动：噪音时转警觉红并加速呼吸 */
+  var ph = document.querySelector('.phone-shell');
+  if(ph) ph.classList.toggle('alert', state === 'noise');
   var pills = document.querySelectorAll('.sm-pill');
   for(var i=0;i<pills.length;i++){
     pills[i].classList.toggle('on', pills[i].dataset.s === state);
@@ -1551,16 +1756,51 @@ setInterval(function(){ /* 隐藏时不必重绘 */ }, 60000);
    4. 开发者：连线高亮联动
    ═══════════════════════════════════════ */
 var rows = document.querySelectorAll('table.pins tbody tr');
+/* 引脚 → 架构图模块映射：悬停表格行时同步点亮拓扑树节点 */
+var WIRE2PH = { 'w-io18':'ph-spk','w-io17':'ph-spk','w-io14':'ph-spk','w-io1':'ph-aroma','w-io16':'ph-scr' };
 rows.forEach(function(row){
   var wire = document.getElementById(row.dataset.wire);
+  var ph = document.getElementById(WIRE2PH[row.dataset.wire] || '');
   row.addEventListener('mouseenter', function(){
     document.querySelectorAll('.wire').forEach(function(w){ w.classList.remove('hot'); });
     if(wire) wire.classList.add('hot');
+    if(ph) ph.classList.add('hot');
   });
   row.addEventListener('mouseleave', function(){
     if(wire) wire.classList.remove('hot');
+    if(ph) ph.classList.remove('hot');
   });
 });
+
+/* ═══════════════════════════════════════
+   5. 手机实况遥测：呼吸 bpm / 电量 / 香氛余量 / 核心温度
+   ═══════════════════════════════════════ */
+var telBpm = 12.6, telBatt = 87, telTemp = 36.2;
+setInterval(function(){
+  /* 呼吸频率跟随状态机：Calm 深蓝慢呼吸，Noise 加速，Calming 缓慢回落 */
+  var target = state === 'noise' ? 24 + Math.random()*4 : (state === 'calming' ? 16 : 12.6);
+  telBpm = lerp(telBpm, target, .3);
+  var bpmEl = $('bpm');
+  if(bpmEl) bpmEl.textContent = telBpm.toFixed(1) + ' bpm';
+
+  telTemp = clamp(telTemp + (Math.random() - .5) * .16, 35.2, 37.6);
+  var tv = $('tempVal');
+  if(tv) tv.innerHTML = telTemp.toFixed(1) + '<small>°C</small>';
+
+  /* 电量偶尔 ±1%，香氛缓慢消耗 */
+  if(Math.random() < .12){
+    telBatt = clamp(telBatt + (Math.random() < .5 ? -1 : 1), 58, 100);
+    var bv = $('battVal');
+    if(bv) bv.innerHTML = telBatt + '<small>%</small>';
+  }
+  if(Math.random() < .08){
+    var sv = $('scentVal');
+    if(sv){
+      var sc = clamp(parseFloat(sv.textContent) - .5, 20, 100);
+      sv.innerHTML = Math.round(sc) + '<small>%</small>';
+    }
+  }
+}, 1600);
 
 })();
 </script>

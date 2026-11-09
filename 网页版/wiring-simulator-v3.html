@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EmberSigh 连线模拟器 v3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#121212;color:#ccc;font-family:'PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── 顶栏 ── */
+#top{flex-shrink:0;background:#1a1a1a;border-bottom:1px solid #333;padding:5px 14px;display:flex;align-items:center;gap:10px;z-index:30;font-size:.78rem}
+#top .hint{color:#888;flex:1}
+#top .hint b{color:#58a6ff}
+#top .stat{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:3px 12px;font-size:.75rem;color:#888}
+#top button{padding:5px 14px;border:1px solid #444;border-radius:5px;background:#1a1a1a;color:#ccc;cursor:pointer;font-size:.73rem;white-space:nowrap}
+#top button:hover{background:#252525;border-color:#58a6ff}
+#top button.alert:hover{background:#3b0000;border-color:#f44}
+
+/* ── 主区域 ── */
+#main{display:flex;flex:1;overflow:hidden}
+#vp{flex:1;overflow:hidden;position:relative;cursor:grab;background:radial-gradient(ellipse at center,#1a1a1a 0%,#0d0d0d 100%)}
+#vp:active{cursor:grabbing}
+#world{position:absolute;top:0;left:0;width:1600px;height:1000px;transform-origin:0 0}
+#wiresSvg{position:absolute;top:0;left:0;width:1600px;height:1000px;pointer-events:none;z-index:10}
+#wiresSvg path{pointer-events:auto;cursor:pointer}
+
+/* ── 日志面板 ── */
+#log{width:230px;flex-shrink:0;background:#1a1a1a;border-left:1px solid #333;display:flex;flex-direction:column}
+#log h3{font-size:.76rem;padding:8px 12px;border-bottom:1px solid #333;color:#58a6ff;background:#151515;margin:0}
+#logList{flex:1;overflow-y:auto;padding:5px 10px;font-size:.68rem;font-family:Consolas,monospace;line-height:1.55}
+#logList div{padding:2px 0;border-bottom:1px solid #222}
+#logList .ok{color:#3fb950}
+#logList .warn{color:#d2991d}
+#logList .err{color:#f85149}
+
+/* ── 组件通用 ── */
+.comp{position:absolute;border-radius:10px;background:#161b22;border:2px solid #30363d;overflow:visible}
+.comp .ttl{text-align:center;font-weight:700;font-size:11px;padding:6px 0 2px;letter-spacing:.5px}
+
+/* ── 引脚（金属孔） ── */
+.pin{position:absolute;width:22px;height:22px;border-radius:50%;cursor:pointer;z-index:5;
+  background:radial-gradient(circle at 35% 35%,#555 0%,#222 40%,#111 100%);
+  border:1.5px solid #444;
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.08),0 2px 6px rgba(0,0,0,.6),0 0 0 2px #0a0a0a;
+  transition:all .15s}
+.pin:hover{background:radial-gradient(circle at 35% 35%,#888 0%,#444 40%,#222 100%);border-color:#58a6ff;transform:scale(1.15)}
+.pin.selected{background:radial-gradient(circle at 35% 35%,#fff 0%,#58a6ff 40%,#1d4ed8 100%);border-color:#fff;box-shadow:inset 0 1px 2px rgba(255,255,255,.3),0 0 16px rgba(88,166,255,.6),0 2px 6px rgba(0,0,0,.6)}
+.pin.hint{animation:phint .7s infinite}
+@keyframes phint{0%,100%{box-shadow:inset 0 1px 2px rgba(255,255,255,.08),0 0 6px rgba(88,166,255,.3),0 2px 6px rgba(0,0,0,.6)}50%{box-shadow:inset 0 1px 2px rgba(255,255,255,.08),0 0 20px rgba(88,166,255,.8),0 2px 6px rgba(0,0,0,.6);background:radial-gradient(circle at 35% 35%,#aaa 0%,#666 40%,#333 100%)}}
+.pin .lbl{position:absolute;white-space:nowrap;font-size:8px;font-weight:700;pointer-events:none;text-shadow:0 1px 3px #000}
+.pin .sub{position:absolute;white-space:nowrap;font-size:6px;pointer-events:none;opacity:.5}
+
+/* ── ESP32 开发板 ── */
+#esp32{left:20px;top:50px;width:310px;height:480px;background:#161b22;border-color:#3b82f6}
+#esp32 .ttl{color:#3b82f6}
+#esp32 .board-img{position:absolute;left:10px;top:40px;width:290px;height:200px;border-radius:6px;object-fit:cover;opacity:.5;border:1px solid #21262d}
+#esp32 .chip-label{position:absolute;left:70px;top:100px;width:170px;text-align:center;color:#444;font-size:16px;font-weight:700}
+#esp32 .usb-port{position:absolute;left:105px;top:255px;width:100px;height:22px;background:#111;border:1px solid #444;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#555}
+#esp32 .cam-port{position:absolute;left:90px;top:287px;width:130px;height:24px;background:#1a0000;border:1px dashed #490202;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:6px;color:#f85149}
+
+/* ── 面包板 ── */
+#breadboard{left:360px;top:50px;width:400px;height:480px;background:#ede0c8;border-color:#b8a88a}
+#breadboard .ttl{color:#9a8a6a}
+.bb-rail{position:absolute;width:52px;border-radius:3px}
+.bb-rail.red{background:linear-gradient(180deg,#b91c1c,#7f1d1d,#b91c1c)}
+.bb-rail.blue{background:linear-gradient(180deg,#2563eb,#1e3a5f,#2563eb)}
+.bb-holes{position:absolute;background:radial-gradient(circle at 5px 5px,#999 2.2px,transparent 2.3px),radial-gradient(circle at 23px 5px,#999 2.2px,transparent 2.3px),radial-gradient(circle at 5px 20px,#999 2.2px,transparent 2.3px),radial-gradient(circle at 23px 20px,#999 2.2px,transparent 2.3px),#e8dcc8;background-size:28px 28px}
+#bb-groove{position:absolute;background:linear-gradient(90deg,#d4c4a8,#c4b498,#d4c4a8);border-radius:3px}
+
+/* ── 右侧模块 ── */
+.module{position:absolute;width:210px;border-radius:10px;background:#161b22;overflow:visible}
+.module .ttl{font-size:10.5px;padding:5px 0 1px}
+.module .term{position:absolute;background:linear-gradient(180deg,#1a3a1a,#0d1a0d);border:1px solid #2d5a2d;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#4ade80}
+
+/* ── 充电宝/加湿器 ── */
+.accessory{position:absolute;width:160px;border-radius:10px;background:#161b22;overflow:visible}
+.accessory .ttl{font-size:10px;padding:5px 0 1px}
+
+/* ── 气泡 ── */
+#pop{position:fixed;pointer-events:none;z-index:999;opacity:0;transform:translate(-50%,-120%);transition:opacity .2s;background:#1c1c1c;border:1px solid #f85149;border-radius:8px;padding:8px 14px;font-size:.76rem;color:#f85149;max-width:280px;text-align:center;box-shadow:0 4px 20px rgba(255,0,0,.15);white-space:pre-line}
+#pop.show{opacity:1}
+#pop.good{border-color:#3fb950;color:#3fb950;box-shadow:0 4px 16px rgba(0,255,0,.1)}
+
+/* ── 检查弹窗 ── */
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:998;display:none;align-items:center;justify-content:center;flex-direction:column}
+#overlay.show{display:flex}
+#overlay .bx{background:#1a1a1a;border:2px solid #3fb950;border-radius:14px;padding:28px 40px;text-align:center;max-width:460px}
+#overlay .bx.bad{border-color:#f85149}
+#overlay .ic{font-size:3.5rem}
+#overlay h2{font-size:1.2rem;margin:6px 0 4px}
+#overlay p{font-size:.76rem;color:#888;line-height:1.6;white-space:pre-line}
+#overlay button{margin-top:12px;padding:6px 24px;border:1px solid #444;border-radius:6px;background:#21262d;color:#ccc;cursor:pointer;font-size:.75rem}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span class="hint">🖱️ <b>按住左键拖屏幕</b> 平移 &nbsp;|&nbsp; 🔍 <b>滚轮</b> 缩放 &nbsp;|&nbsp; ✏️ 点左边引脚 → 再点右边引脚 = 连线 &nbsp;|&nbsp; 💡 选中后正确目标<b style="color:#3fb950">自动闪</b></span>
+  <span class="stat" id="wc">已连: 0</span>
+  <button onclick="undo()">↩ 撤销</button>
+  <button class="alert" onclick="clearAll()">✕ 清空</button>
+  <button onclick="check()">✅ 检查</button>
+</div>
+
+<div id="main">
+  <div id="vp">
+    <div id="world">
+      <!-- 连线层 -->
+      <svg id="wiresSvg"><defs><filter id="wireGlow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g id="wirePaths"></g></svg>
+
+      <!-- ═══ ESP32-S3-EYE ═══ -->
+      <div class="comp" id="esp32">
+        <div class="ttl">ESP32-S3-EYE 开发板</div>
+        <img class="board-img" src="board_front.png" onerror="this.style.display='none'" alt="板子实物照" title="把 board_front.png 放同级目录即可显示实物图">
+        <div class="chip-label">ESP32-S3</div>
+        <div class="usb-port">USB-C</div>
+        <div class="cam-port">⚠ 摄像头座 (建议拔掉释放 IO16/17/18)</div>
+
+        <!-- 左侧引脚列 -->
+        <div class="pin" id="p-io1"  style="left:8px;top:355px"><div class="lbl" style="left:-38px;top:2px;color:#fbbf24">IO1</div><div class="sub" style="left:-38px;top:14px;color:#fbbf24">控制脚</div></div>
+        <div class="pin" id="p-io16" style="left:8px;top:400px"><div class="lbl" style="left:-42px;top:2px;color:#22c55e">IO16</div><div class="sub" style="left:-42px;top:14px;color:#f85149">⚠ 原:摄像头</div></div>
+        <div class="pin" id="p-gnd"  style="left:8px;top:445px"><div class="lbl" style="left:-34px;top:2px;color:#aaa">GND</div><div class="sub" style="left:-34px;top:14px">接地</div></div>
+
+        <!-- 右侧引脚列 -->
+        <div class="pin" id="p-io14" style="left:280px;top:340px"><div class="lbl" style="left:28px;top:2px;color:#f97316">IO14</div><div class="sub" style="left:28px;top:14px">数据输出</div></div>
+        <div class="pin" id="p-io17" style="left:280px;top:385px"><div class="lbl" style="left:28px;top:2px;color:#3b82f6">IO17</div><div class="sub" style="left:28px;top:14px;color:#f85149">⚠ 原:摄像头</div></div>
+        <div class="pin" id="p-io18" style="left:280px;top:430px"><div class="lbl" style="left:28px;top:2px;color:#a855f7">IO18</div><div class="sub" style="left:28px;top:14px;color:#f85149">⚠ 原:摄像头</div></div>
+      </div>
+
+      <!-- ═══ 面包板 ═══ -->
+      <div class="comp" id="breadboard">
+        <div class="ttl">830 孔 面包板</div>
+        <div class="bb-rail red" style="left:12px;top:32px;height:220px"><span style="position:absolute;top:100px;left:-18px;color:#fca5a5;font-size:8px;font-weight:700;white-space:nowrap;transform:rotate(-90deg)">红色正极（+）</span></div>
+        <div class="bb-rail blue" style="left:12px;top:258px;height:210px"><span style="position:absolute;top:95px;left:-18px;color:#93c5fd;font-size:8px;font-weight:700;white-space:nowrap;transform:rotate(-90deg)">蓝色负极（−）</span></div>
+        <div class="bb-rail red" style="left:336px;top:32px;height:220px"><span style="position:absolute;top:100px;left:54px;color:#fca5a5;font-size:8px;font-weight:700;white-space:nowrap;transform:rotate(90deg)">红色正极（+）</span></div>
+        <div class="bb-rail blue" style="left:336px;top:258px;height:210px"><span style="position:absolute;top:95px;left:54px;color:#93c5fd;font-size:8px;font-weight:700;white-space:nowrap;transform:rotate(90deg)">蓝色负极（−）</span></div>
+
+        <div class="bb-holes" style="left:70px;top:32px;width:260px;height:220px"></div>
+        <div class="bb-holes" style="left:70px;top:258px;width:260px;height:210px"></div>
+        <div id="bb-groove" style="left:190px;top:32px;width:20px;height:436px"></div>
+        <div style="position:absolute;left:200px;top:240px;color:#8b7355;font-size:8px;font-weight:700;transform:rotate(-90deg);white-space:nowrap">─ 凹槽 ─</div>
+
+        <!-- 面包板供电接线点 -->
+        <div class="pin" id="p-bbp" style="left:18px;top:235px"><div class="lbl" style="left:28px;top:-14px;color:#fca5a5;font-size:7px">接正极</div></div>
+        <div class="pin" id="p-bbm" style="left:18px;top:280px"><div class="lbl" style="left:28px;top:-14px;color:#93c5fd;font-size:7px">接负极</div></div>
+      </div>
+
+      <!-- ═══ MAX98357 功放 ═══ -->
+      <div class="module" style="left:790px;top:50px;height:200px;border-color:#3b82f6">
+        <div class="ttl" style="color:#3b82f6">MAX98357 功放</div>
+        <div style="text-align:center;color:#555;font-size:7px;margin-top:-2px">驱动喇叭发声</div>
+        <div class="term" style="left:12px;top:34px;width:186px;height:22px">VIN · GND · LRC · BCLK · DIN</div>
+        <div class="pin" id="p-max-vin"  style="left:22px;top:72px"><div class="lbl" style="left:-6px;top:24px;color:#fca5a5;font-size:7px">VIN</div></div>
+        <div class="pin" id="p-max-gnd"  style="left:82px;top:72px"><div class="lbl" style="left:-6px;top:24px;color:#aaa;font-size:7px">GND</div></div>
+        <div class="pin" id="p-max-bclk" style="left:142px;top:72px"><div class="lbl" style="left:-8px;top:24px;color:#c084fc;font-size:7px">BCLK</div></div>
+        <div class="pin" id="p-max-lrc"  style="left:22px;top:120px"><div class="lbl" style="left:-6px;top:24px;color:#60a5fa;font-size:7px">LRC</div></div>
+        <div class="pin" id="p-max-din"  style="left:82px;top:120px"><div class="lbl" style="left:-6px;top:24px;color:#fb923c;font-size:7px">DIN</div></div>
+        <div class="term" style="left:130px;top:112px;width:46px;height:26px;font-size:6px;color:#fbbf24">🔊喇叭</div>
+      </div>
+
+      <!-- ═══ MOS 管 ═══ -->
+      <div class="module" style="left:790px;top:270px;height:170px;border-color:#fbbf24">
+        <div class="ttl" style="color:#fbbf24">光耦 MOS 管 开关</div>
+        <div style="text-align:center;color:#555;font-size:7px;margin-top:-2px">控制加湿器通断电</div>
+        <div class="pin" id="p-mos-sig"  style="left:22px;top:36px"><div class="lbl" style="left:-4px;top:24px;color:#fcd34d;font-size:7px">SIG</div></div>
+        <div class="pin" id="p-mos-dcp"  style="left:82px;top:36px"><div class="lbl" style="left:-4px;top:24px;color:#fca5a5;font-size:7px">DC+</div></div>
+        <div class="pin" id="p-mos-dcm"  style="left:142px;top:36px"><div class="lbl" style="left:-4px;top:24px;color:#aaa;font-size:7px">DC-</div></div>
+        <div class="pin" id="p-mos-oup"  style="left:52px;top:84px"><div class="lbl" style="left:-4px;top:24px;color:#fb923c;font-size:6px">OUT+</div></div>
+        <div class="pin" id="p-mos-oum"  style="left:112px;top:84px"><div class="lbl" style="left:-4px;top:24px;color:#aaa;font-size:6px">OUT-</div></div>
+        <div style="position:absolute;left:22px;top:130px;color:#555;font-size:6px">OUT 接加湿器正负极</div>
+      </div>
+
+      <!-- ═══ WS2812 灯环 ═══ -->
+      <div class="module" style="left:790px;top:460px;height:140px;border-color:#22c55e">
+        <div class="ttl" style="color:#22c55e">WS2812 彩色灯环</div>
+        <div style="text-align:center;color:#555;font-size:7px;margin-top:-2px">16颗灯珠 · 全彩氛围</div>
+        <div class="pin" id="p-led-vcc" style="left:30px;top:40px"><div class="lbl" style="left:-6px;top:24px;color:#fca5a5;font-size:7px">VCC</div></div>
+        <div class="pin" id="p-led-gnd" style="left:90px;top:40px"><div class="lbl" style="left:-6px;top:24px;color:#aaa;font-size:7px">GND</div></div>
+        <div class="pin" id="p-led-din" style="left:150px;top:40px"><div class="lbl" style="left:-6px;top:24px;color:#4ade80;font-size:7px">DIN</div></div>
+      </div>
+
+      <!-- ═══ 充电宝 ═══ -->
+      <div class="accessory" style="left:1040px;top:50px;height:90px;border-color:#f97316">
+        <div class="ttl" style="color:#f97316">🔋 充电宝</div>
+        <div style="text-align:center;color:#555;font-size:6px;margin-top:-2px">独立 5V 供电</div>
+        <div class="pin" id="p-bank-5v" style="left:70px;top:46px"><div class="lbl" style="left:28px;top:2px;color:#fca5a5;font-size:7px">5V+</div></div>
+      </div>
+
+      <!-- ═══ USB 转杜邦线 ═══ -->
+      <div class="accessory" style="left:1040px;top:160px;height:80px;border-color:#666">
+        <div class="ttl" style="color:#888">USB→杜邦4芯</div>
+        <div class="pin" id="p-usb-5v" style="left:40px;top:42px"><div class="lbl" style="left:20px;top:2px;color:#fca5a5;font-size:6px">红5V</div></div>
+        <div class="pin" id="p-usb-gnd" style="left:100px;top:42px"><div class="lbl" style="left:20px;top:2px;color:#aaa;font-size:6px">黑GND</div></div>
+      </div>
+
+      <!-- ═══ 加湿器 ═══ -->
+      <div class="accessory" style="left:1040px;top:260px;height:120px;border-color:#06b6d4">
+        <div class="ttl" style="color:#06b6d4">💧 加湿器</div>
+        <div style="text-align:center;color:#555;font-size:6px;margin-top:-2px">香氛雾化 · 剪线接入</div>
+        <div class="pin" id="p-humid-p" style="left:70px;top:50px"><div class="lbl" style="left:28px;top:2px;color:#fca5a5;font-size:7px">正极+</div></div>
+        <div style="position:absolute;left:40px;top:82px;color:#555;font-size:6px">连到MOS的OUT+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日志 -->
+  <div id="log">
+    <h3>📋 连线记录</h3>
+    <div id="logList"><div style="color:#444">还没连线，点引脚试试～</div></div>
+  </div>
+</div>
+
+<div id="pop"></div>
+
+<div id="overlay"><div class="bx" id="obx"><div class="ic" id="oic"></div><h2 id="oti"></h2><p id="oms"></p><button onclick="document.getElementById('overlay').classList.remove('show')">知道了</button></div></div>
+
+<script>
+// ═══ 引脚定义：{id, cx, cy (相对于 #world), color, role} ═══
+const P = {
+  'p-io1':{cx:43,cy:430,clr:'#fbbf24',rl:'控制脚→MOS管SIG'},
+  'p-io16':{cx:43,cy:475,clr:'#22c55e',rl:'灯带数据→WS2812 DIN'},
+  'p-gnd':{cx:43,cy:520,clr:'#888',rl:'接地→面包板负极'},
+  'p-io14':{cx:313,cy:415,clr:'#f97316',rl:'音频数据→功放DIN'},
+  'p-io17':{cx:313,cy:460,clr:'#3b82f6',rl:'声道时钟→功放LRC'},
+  'p-io18':{cx:313,cy:505,clr:'#a855f7',rl:'位时钟→功放BCLK'},
+  'p-bbp':{cx:391,cy:308,clr:'#ef4444',rl:'面包板正极(+)'},
+  'p-bbm':{cx:391,cy:353,clr:'#6e7681',rl:'面包板负极(−)'},
+  'p-max-vin':{cx:824,cy:138,clr:'#ef4444',rl:'功放电源'},
+  'p-max-gnd':{cx:884,cy:138,clr:'#888',rl:'功放接地'},
+  'p-max-bclk':{cx:944,cy:138,clr:'#a855f7',rl:'位时钟输入'},
+  'p-max-lrc':{cx:824,cy:186,clr:'#3b82f6',rl:'声道时钟输入'},
+  'p-max-din':{cx:884,cy:186,clr:'#f97316',rl:'音频数据输入'},
+  'p-mos-sig':{cx:824,cy:322,clr:'#fbbf24',rl:'开关信号'},
+  'p-mos-dcp':{cx:884,cy:322,clr:'#ef4444',rl:'MOS供电正'},
+  'p-mos-dcm':{cx:944,cy:322,clr:'#888',rl:'MOS供电负'},
+  'p-mos-oup':{cx:854,cy:370,clr:'#f97316',rl:'输出正→加湿器'},
+  'p-mos-oum':{cx:914,cy:370,clr:'#888',rl:'输出负'},
+  'p-led-vcc':{cx:832,cy:516,clr:'#ef4444',rl:'灯环5V供电'},
+  'p-led-gnd':{cx:892,cy:516,clr:'#888',rl:'灯环接地'},
+  'p-led-din':{cx:952,cy:516,clr:'#22c55e',rl:'灯环数据输入'},
+  'p-bank-5v':{cx:1112,cy:112,clr:'#ef4444',rl:'充电宝5V输出'},
+  'p-usb-5v':{cx:1092,cy:218,clr:'#ef4444',rl:'USB红5V'},
+  'p-usb-gnd':{cx:1152,cy:218,clr:'#888',rl:'USB黑GND'},
+  'p-humid-p':{cx:1112,cy:326,clr:'#ef4444',rl:'加湿器正极'},
+};
+
+// ═══ 正确配对 ═══
+const OK = {
+  'p-io18':['p-max-bclk'],'p-io17':['p-max-lrc'],'p-io14':['p-max-din'],
+  'p-io1':['p-mos-sig'],'p-io16':['p-led-din'],'p-gnd':['p-bbm'],
+  'p-bbp':['p-max-vin','p-led-vcc','p-mos-dcp'],
+  'p-bbm':['p-max-gnd','p-led-gnd','p-mos-dcm','p-usb-gnd'],
+  'p-mos-oup':['p-humid-p'],'p-bank-5v':['p-usb-5v','p-bbp'],
+  'p-usb-5v':['p-bbp'],
+};
+
+let wires=[], sel=null, s=0.55, tx=30, ty=40, dragging=false, ds={x:0,y:0};
+
+function init(){
+  document.querySelectorAll('.pin').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();onPin(el.id);});
+  });
+  const vp=document.getElementById('vp');
+  vp.addEventListener('wheel',onWheel,{passive:false});
+  vp.addEventListener('mousedown',onDown);
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onUp);
+  apply();
+}
+
+function onPin(id){
+  hidePop();
+  if(!sel){sel=id;highlight(id);showHints(id);}
+  else if(sel===id){unselect();}
+  else{tryConnect(sel,id);unselect();}
+}
+function highlight(id){document.getElementById(id).classList.add('selected');}
+function unselect(){
+  if(sel)document.getElementById(sel).classList.remove('selected');
+  sel=null;
+  document.querySelectorAll('.pin.hint').forEach(e=>e.classList.remove('hint'));
+}
+function showHints(src){
+  unselect();sel=src;highlight(src);
+  const ts=OK[src];if(ts)ts.forEach(t=>document.getElementById(t)?.classList.add('hint'));
+}
+function tryConnect(a,b){
+  const ta=OK[a]||[],tb=OK[b]||[];
+  if(ta.includes(b)||tb.includes(a)){
+    const fr=ta.includes(b)?a:b,to=ta.includes(b)?b:a;
+    addWire(fr,to);
+  }else{
+    const pa=P[b];let msg;
+    if(pa&&pa.lbl&&pa.lbl.includes('VIN'))msg='错啦！信号线不能接到电源脚上哦！\n电源要从面包板红色正极（+）拉线。';
+    else if(pa&&pa.rl&&pa.rl.includes('接地'))msg='错啦！信号线不能接到接地脚！\n接地统一走面包板蓝色负极（−）。';
+    else msg='这两根不该连一起哦～\n试试看连线正确的那一边？';
+    showPop(b,msg,false);
+  }
+}
+
+function addWire(f,t){
+  if(wires.find(w=>(w.f===f&&w.t===t)||(w.f===t&&w.t===f))){log('warn',`已连过：${nm(f)} ⇄ ${nm(t)}`);return;}
+  const w={f,t,clr:P[f].clr};wires.push(w);
+  drawWire(w);
+  log('ok',`${nm(w.f)} → ${nm(w.t)}，颜色：${w.clr}`);
+  upd();
+}
+
+function drawWire(w){
+  const a=P[w.f],b=P[w.t],dx=b.cx-a.cx,cp=Math.min(Math.abs(dx)*.45,90);
+  const d=`M${a.cx} ${a.cy} C${a.cx+cp} ${a.cy},${b.cx-cp} ${b.cy},${b.cx} ${b.cy}`;
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d',d);p.setAttribute('fill','none');
+  p.setAttribute('stroke',w.clr);p.setAttribute('stroke-width','4');
+  p.setAttribute('stroke-linecap','round');p.setAttribute('filter','url(#wireGlow)');
+  p.dataset.f=w.f;p.dataset.t=w.t;
+  p.addEventListener('dblclick',e=>{e.stopPropagation();delWire(w.f,w.t);});
+  document.getElementById('wirePaths').appendChild(p);
+}
+
+function delWire(f,t){
+  const i=wires.findIndex(w=>(w.f===f&&w.t===t)||(w.f===t&&w.t===f));
+  if(i<0)return;const w=wires[i];wires.splice(i,1);
+  document.querySelectorAll('#wirePaths path').forEach(p=>{
+    if((p.dataset.f===w.f&&p.dataset.t===w.t)||(p.dataset.f===w.t&&p.dataset.t===w.f))p.remove();
+  });
+  log('warn','删除：'+nm(w.f)+' ⇄ '+nm(w.t));upd();
+}
+function undo(){if(wires.length){const w=wires[wires.length-1];delWire(w.f,w.t);}}
+function clearAll(){while(wires.length)delWire(wires[0].f,wires[0].t);unselect();}
+
+function nm(id){const p=P[id];return p?p.rl.split('→')[0]||id:id;}
+
+// ═══ 气泡 ═══
+function showPop(pinId,msg,good){
+  const el=document.getElementById(pinId);if(!el)return;
+  const r=el.getBoundingClientRect(),b=document.getElementById('pop');
+  b.textContent=msg;b.className=good?'good':'';
+  b.style.left=(r.left+r.width/2)+'px';b.style.top=(r.top-10)+'px';
+  b.classList.add('show');
+  clearTimeout(b._t);b._t=setTimeout(hidePop,3200);
+}
+function hidePop(){const b=document.getElementById('pop');b.classList.remove('show','good');}
+
+// ═══ 检查 ═══
+function check(){
+  const ex=new Set();wires.forEach(w=>{ex.add(w.f+'::'+w.t);ex.add(w.t+'::'+w.f);});
+  let miss=[],wrong=[];
+  for(const[src,tgts]of Object.entries(OK))for(const t of tgts){
+    if(!ex.has(src+'::'+t)&&!ex.has(t+'::'+src))miss.push(P[src].rl.split('→')[0]+' → '+P[t].rl.split('→')[0]);
+  }
+  wires.forEach(w=>{
+    if(!(OK[w.f]||[]).includes(w.t)&&!(OK[w.t]||[]).includes(w.f))wrong.push(nm(w.f)+' → '+nm(w.t));
+  });
+  const ov=document.getElementById('overlay'),bx=document.getElementById('obx');
+  ov.classList.add('show');
+  if(!wrong.length&&!miss.length){
+    bx.className='bx';document.getElementById('oic').textContent='🎉';
+    document.getElementById('oti').textContent='全部接对！可以通电！';
+    document.getElementById('oms').textContent='所有信号线和电源线都连到了正确的位置。';
+  }else if(!wrong.length&&miss.length<=4){
+    bx.className='bx';document.getElementById('oic').textContent='👍';
+    document.getElementById('oti').textContent='基本正确，还差几根';
+    document.getElementById('oms').textContent='还没连：\n'+miss.map(m=>'▸ '+m).join('\n');
+  }else{
+    bx.className='bx bad';document.getElementById('oic').textContent='❌';
+    document.getElementById('oti').textContent='有些线有问题';
+    let t='';if(wrong.length)t+='🔴 接错的：\n'+wrong.map(w=>'▸ '+w).join('\n')+'\n\n';
+    if(miss.length)t+='🟡 还没连：\n'+miss.map(m=>'▸ '+m).join('\n');
+    document.getElementById('oms').textContent=t;
+  }
+}
+
+// ═══ 平移缩放 ═══
+function onWheel(e){e.preventDefault();
+  const vp=document.getElementById('vp'),r=vp.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top,f=e.deltaY<0?1.08:0.92;
+  const ns=Math.max(0.15,Math.min(3,s*f));
+  tx=mx-(mx-tx)*(ns/s);ty=my-(my-ty)*(ns/s);s=ns;apply();
+}
+function onDown(e){if(e.target.classList.contains('pin'))return;dragging=true;ds={x:e.clientX-tx,y:e.clientY-ty};}
+function onMove(e){if(!dragging)return;tx=e.clientX-ds.x;ty=e.clientY-ds.y;apply();}
+function onUp(){dragging=false;}
+function apply(){
+  const w=document.getElementById('world');
+  w.style.transform=`translate(${tx}px,${ty}px) scale(${s})`;
+}
+
+// ═══ 日志 ═══
+function log(type,msg){
+  const l=document.getElementById('logList');
+  if(l.children[0]?.textContent==='还没连线，点引脚试试～')l.innerHTML='';
+  const d=document.createElement('div');d.className=type;
+  d.textContent=new Date().toLocaleTimeString()+' '+msg;l.appendChild(d);
+  l.scrollTop=l.scrollHeight;
+}
+function upd(){document.getElementById('wc').textContent='已连: '+wires.length;}
+
+init();
+</script>
+</body>
+</html>
