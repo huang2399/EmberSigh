@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>状态监控 · EmberSigh 听眠</title>
+<meta name="description" content="EmberSigh 三级状态机实时演示：Calm → Noise → Calming，设备实况与 HAL 日志。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="ambient">
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+</div>
+<div class="grain"></div>
+<div class="toplight"></div>
+<div class="mote" style="width:5px;height:5px;left:22%;top:30%;animation-duration:13s;"></div>
+<div class="mote" style="width:6px;height:6px;left:78%;top:22%;animation-duration:17s;animation-delay:-4s;"></div>
+
+<!-- ══════════ 导航栏 ══════════ -->
+<nav class="nav">
+  <a class="brand" href="index.html">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#b08d57" stroke-width="1.8" stroke-linecap="round">
+        <path d="M4 12h1.5M9 7v10M14 4.5v15M19 9v6"/>
+      </svg>
+    </div>
+    <div class="nm">Ember<em>Sigh</em><span class="zh">听眠</span><span class="ver">v1.0</span></div>
+  </a>
+
+  <div class="tabs">
+    <div class="glider" id="glider"></div>
+    <a class="tab" href="index.html">理念<em>Vision</em></a>
+    <a class="tab active" href="console.html">控制台<em>Console</em></a>
+    <a class="tab" href="lab.html">嗅觉实验室<em>Lab</em></a>
+    <a class="tab" href="developer.html">开发者<em>Developer</em></a>
+  </div>
+
+  <div class="nav-right">
+    <div class="status"><span class="dot"></span>ESP32-S3 · ONLINE</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="GitHub 开源仓库">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.72c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05.8-.23 1.65-.34 2.5-.34s1.7.11 2.5.34c1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49C19.14 20.61 22 16.78 22 12.25 22 6.58 17.52 2 12 2z"/></svg>
+      GitHub 仓库
+    </a>
+  </div>
+</nav>
+
+<div class="page wrap">
+
+  <!-- 页首标题 -->
+  <section class="sec" style="padding-top:26px;">
+    <div class="sec-head" style="margin-bottom:26px;">
+      <div>
+        <div class="sec-no">02 · CONSOLE</div>
+        <h2 style="margin-top:12px;">三级状态机，<b>实时运转</b>。</h2>
+      </div>
+      <div class="sub">Calm → Noise → Calming → Calm</div>
+    </div>
+  </section>
+
+  <!-- 三栏：手机实况 / 模拟屏 / 遥测 + 日志 -->
+  <section class="console-grid">
+    <!-- 左：手机呼吸实况（深色玻璃拟态） -->
+    <div class="phone-col">
+      <div class="phone-shell" id="phoneShell">
+        <div class="phone-status"><span>EmberSigh</span><span>5G ▮▮▮</span></div>
+        <div class="breath-ring"></div>
+        <div class="breath-text">
+          <div class="big" id="bpm">12.6 bpm</div>
+          <div class="small">BREATHING · 深蓝呼吸</div>
+        </div>
+        <div class="phone-nav"></div>
+      </div>
+      <div class="phone-cap">设备实况 · LIVE TELEMETRY</div>
+    </div>
+
+    <!-- 中：三级状态机模拟屏 -->
+    <div class="glass screen-card">
+      <div class="card-h" style="width:100%;margin-bottom:0;">
+        <div class="card-title"><span class="tick"></span>设备屏幕 · 240×240</div>
+        <div class="card-note">LVGL v9.6</div>
+      </div>
+
+      <div class="device-frame">
+        <div class="cam"></div>
+        <div class="screen s-calm" id="screen">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="cd-ring" id="cdRing"></div>
+          <div class="bars" id="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="scr-content">
+            <div class="scr-main" id="scrMain">Calm</div>
+            <div class="scr-sub" id="scrSub">42 dB · 环境稳定</div>
+          </div>
+          <div class="scr-foot" id="scrFoot">SCENE · 森林鸟鸣 42% ｜ AROMA · 薰衣草 82%</div>
+        </div>
+      </div>
+
+      <div class="sm">
+        <div class="sm-pill on" data-s="calm">CALM</div>
+        <span class="sm-arrow">→</span>
+        <div class="sm-pill" data-s="noise">NOISE!</div>
+        <span class="sm-arrow">→</span>
+        <div class="sm-pill" data-s="calming">CALMING</div>
+      </div>
+
+      <button class="btn" id="clapBtn">模拟拍手 · 触发噪音</button>
+      <div class="screen-meta">
+        <span>THRESHOLD 50 / 150</span>
+        <span>EMA α = 0.20</span>
+        <span>COOLDOWN 3.0s</span>
+      </div>
+    </div>
+
+    <!-- 右：遥测数据卡片 + 日志终端 -->
+    <div class="console-right">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="k">Battery 电量</div>
+          <div class="v" id="battVal">87<small>%</small></div>
+          <div class="trend">▲ 充电中 · 280mA</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">Scent 剩余香氛</div>
+          <div class="v" id="scentVal">64<small>%</small></div>
+          <div class="trend">松木 · 柑橘混合</div>
+        </div>
+        <div class="stat-card">
+          <div class="k">Temp 核心温度</div>
+          <div class="v" id="tempVal">36.2<small>°C</small></div>
+          <div class="trend">正常范围</div>
+        </div>
+      </div>
+
+      <div class="glass term-card">
+        <div class="term-head">
+          <div class="term-title">
+            <div class="term-dots"><i></i><i></i><i></i></div>
+            HAL / SENSOR 实时日志
+          </div>
+          <div class="card-note" id="termState">STATE · CALM</div>
+        </div>
+        <div class="term-body" id="termBody"></div>
+        <div class="term-foot">
+          <span>RMS <b id="ftRms">42</b></span>
+          <span>状态 <b id="ftState" class="v-em">CALM</b></span>
+          <span>音量 <b id="ftVol">42%</b></span>
+          <span>香氛 <b id="ftAroma">薰衣草 82%</b></span>
+          <span>灯环 <b id="ftLed" class="v-em">#1F3A5F</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 说明区：三个状态卡 + 隐私短卡 -->
+  <section class="sec">
+    <div class="sec-head reveal">
+      <h2>退让，是<b>一帧内</b>完成的。</h2>
+      <div class="sub">Fallback first.</div>
+    </div>
+    <div class="flow reveal">
+      <div class="flow-card glass">
+        <div class="f-step">TRIGGER</div>
+        <h3>听见</h3>
+        <div class="f-en">RMS &gt; 150 · 连续 2s</div>
+        <p>EMA 平滑后的噪音能量越过迟滞上阈，主状态机立刻切入 Noise —— 不等你的确认，也不发出任何提示音。</p>
+        <div class="f-bar"><i style="background:linear-gradient(90deg,#e2a294,#b0442f)"></i></div>
+      </div>
+      <div class="flow-card glass">
+        <div class="f-step">ACTION</div>
+        <h3>退让</h3>
+        <div class="f-en">声景 0 · 香氛 OFF · 灯暗红</div>
+        <p>香氛控制运行在独立 FreeRTOS 任务上，主状态机只写一个目标占空比 —— 断香延迟小于 10ms，麦克风采样全程不断档。</p>
+        <div class="f-bar"><i style="background:linear-gradient(90deg,#c9a86f,#b08d57)"></i></div>
+      </div>
+      <div class="flow-card glass">
+        <div class="f-step">RECOVER</div>
+        <h3>回归</h3>
+        <div class="f-en">安静 3s 后平滑恢复</div>
+        <p>冷却环走完一圈，声景渐入、香氛起雾、灯环呼吸 —— 像什么都没发生过，这正是设计的目的。</p>
+        <div class="f-bar"><i style="background:linear-gradient(90deg,#ecc68f,#c08a3e)"></i></div>
+      </div>
+    </div>
+    <div class="glass reveal" style="margin-top:26px;padding:22px 26px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <div class="card-title" style="flex:none;"><span class="tick"></span>极简隐私设计</div>
+      <div style="display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-soft);">
+        <span>不设摄像头</span><span>·</span>
+        <span>不存储原始音频</span><span>·</span>
+        <span>端侧 RMS 特征提取</span><span>·</span>
+        <span>数据不出设备</span>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /page -->
+
+<!-- ══════════ 页脚 ══════════ -->
+<footer>
+  <div class="foot-base">
+    <div class="inner">
+      <span>© 2026 EMBERSIGH 听眠 · 端侧睡眠环境管家</span>
+      <span>ESP32-S3 · FREERTOS · 100% ON-DEVICE</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"><span id="toastIco">✦</span><span id="toastMsg"></span></div>
+
+<script src="assets/common.js"></script>
+<script>
+/* ═══════════ 控制台页 · 三级状态机 + 遥测 ═══════════ */
+(function(){
+'use strict';
+var $ = function(id){ return document.getElementById(id); };
+var clamp = function(v,a,b){ return Math.max(a,Math.min(b,v)); };
+var lerp = function(a,b,t){ return a+(b-a)*t; };
+
+var state = 'calm';
+var rms = 42, volume = 42;
+var scr = $('screen'), scrMain = $('scrMain'), scrSub = $('scrSub'),
+    scrFoot = $('scrFoot'), cdRing = $('cdRing'), termBody = $('termBody');
+
+/* 日志 */
+function log(type, tag, msg){
+  var line = document.createElement('div');
+  line.className = 'line ' + type;
+  var d = new Date(), p = function(n){ return String(n).padStart(2,'0'); };
+  var t = p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+  line.innerHTML = '<span class="t">'+t+'</span><span class="tag">['+tag+']</span><span class="msg">'+msg+'</span>';
+  termBody.appendChild(line);
+  if(termBody.children.length > 90) termBody.removeChild(termBody.firstChild);
+  termBody.scrollTop = termBody.scrollHeight;
+}
+
+/* 屏幕状态渲染（联动手机呼吸轮廓） */
+function paintScreen(){
+  scr.className = 'screen s-' + state;
+  var ph = $('phoneShell');
+  if(ph) ph.classList.toggle('alert', state === 'noise');
+  var pills = document.querySelectorAll('.sm-pill');
+  for(var i=0;i<pills.length;i++){
+    pills[i].classList.toggle('on', pills[i].dataset.s === state);
+  }
+  if(state === 'calm'){
+    scrMain.textContent = 'Calm';
+    scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
+    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · 薰衣草 82%';
+  } else if(state === 'noise'){
+    scrMain.textContent = 'Noise!';
+    scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
+    scrFoot.textContent = 'FALLBACK · 声景 0% ｜ AROMA OFF ｜ LED 防守暗红';
+  } else {
+    scrMain.textContent = 'Calming…';
+    scrSub.textContent = '冷却中 · 3 秒';
+    scrFoot.textContent = 'COOLDOWN · 等待环境恢复安静';
+  }
+  $('termState').textContent = 'STATE · ' + state.toUpperCase();
+  $('ftState').textContent = state.toUpperCase();
+  $('ftState').className = state === 'calm' ? 'v-em' : (state === 'noise' ? 'v-rose' : 'v-amber');
+}
+
+/* RMS 呼吸式抖动 */
+setInterval(function(){
+  var target;
+  if(state === 'calm') target = 38 + Math.random()*9;
+  else if(state === 'noise') target = 158 + Math.random()*32;
+  else target = Math.max(46, rms - 6 - Math.random()*8);
+  rms = lerp(rms, target, .35);
+  $('ftRms').textContent = Math.round(rms);
+  $('ftRms').className = rms > 150 ? 'v-rose' : '';
+  if(state === 'calm') scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
+  if(state === 'noise') scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
+}, 420);
+
+/* 触发噪音 */
+$('clapBtn').addEventListener('click', function(){
+  if(state !== 'calm') return;
+  state = 'noise';
+  $('clapBtn').disabled = true;
+  paintScreen();
+  scr.classList.add('shake');
+  setTimeout(function(){ scr.classList.remove('shake'); }, 900);
+
+  log('err', 'MIC', 'RMS ' + Math.round(160+Math.random()*20) + ' &gt; 150 · 触发噪音门限');
+  setTimeout(function(){ log('warn','HAL','检测到噪音，切入退让模式'); }, 120);
+  setTimeout(function(){ log('dim','I2S','声景音量 42% → 0%（阻尼 300ms）'); }, 260);
+  setTimeout(function(){ log('dim','MOS','香氛通道切断 · 薰衣草 82% 暂停'); }, 400);
+  setTimeout(function(){ log('dim','LED','WS2812 → 防守暗红 #FF1E1E'); }, 520);
+
+  volume = 0;
+  $('ftVol').textContent = '0%';
+  $('ftAroma').textContent = 'OFF';
+  $('ftLed').textContent = '#FF1E1E';
+  $('ftLed').className = 'v-rose';
+
+  /* 1.4s 后进入 Calming 冷却态 */
+  setTimeout(function(){
+    state = 'calming';
+    paintScreen();
+    log('warn','HAL','进入 Calming 冷却态 · 3.0s');
+
+    var t0 = performance.now(), DUR = 3000;
+    (function ring(t){
+      var p = Math.min((t-t0)/DUR, 1);
+      cdRing.style.background = 'conic-gradient(var(--amber) ' + (p*360) + 'deg, rgba(255,255,255,.05) 0deg)';
+      scrSub.textContent = '冷却中 · ' + Math.max(1, Math.ceil(3 - p*3)) + ' 秒';
+      if(p < 1) requestAnimationFrame(ring);
+    })(t0);
+
+    setTimeout(function(){ log('dim','TIMER','冷却 3s → 2s'); }, 1000);
+    setTimeout(function(){ log('dim','TIMER','冷却 2s → 1s'); }, 2000);
+
+    /* 3 秒后恢复 */
+    setTimeout(function(){
+      state = 'calm';
+      volume = 42;
+      paintScreen();
+      $('clapBtn').disabled = false;
+      $('ftVol').textContent = '42%';
+      $('ftAroma').textContent = '薰衣草 82%';
+      $('ftLed').textContent = '#1F3A5F';
+      $('ftLed').className = 'v-em';
+      cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
+      log('ok','HAL','环境恢复安静 · 平滑恢复');
+      setTimeout(function(){ log('dim','I2S','音量 0% → 42%'); }, 180);
+      setTimeout(function(){ log('ok','MOS','香氛恢复 · 配比 松木 5 / 柑橘 5 / 薰衣草 90'); }, 340);
+      setTimeout(function(){ log('ok','SYS','三级状态机回到 Calm · 待机'); }, 520);
+    }, 3000);
+  }, 1400);
+});
+
+/* 初始化 */
+paintScreen();
+log('ok','SYS','EmberSigh 控制台已就绪 · LVGL v9.6');
+log('dim','MIC','ES8311 Codec 初始化完成 · 48kHz / 16bit / 左声道');
+log('dim','HAL','阈值 安静&lt;50 / 噪音&gt;150 · 迟滞区间启用');
+log('dim','I2S','森林鸟鸣 WAV 已嵌入固件 · 12s / EMBED_FILES');
+log('dim','MOS','加湿器通道待命 · 目标配比 薰衣草 82%');
+log('dim','LED','WS2812 ×16 灯环 · RMT 通道就绪');
+
+/* 安静时周期性心跳日志 */
+setInterval(function(){
+  if(state === 'calm' && document.visibilityState === 'visible'){
+    var pool = [
+      ['dim','MIC','RMS ' + Math.round(38+Math.random()*8) + ' · 环境稳定'],
+      ['dim','SYS','FreeRTOS 任务正常 · heap 182KB'],
+      ['dim','LED','WS2812 呼吸灯 · 亮度 18%']
+    ];
+    var p = pool[Math.floor(Math.random()*pool.length)];
+    log(p[0], p[1], p[2]);
+  }
+}, 9000);
+
+/* ── 遥测：呼吸 bpm / 电量 / 香氛余量 / 核心温度 ── */
+var telBpm = 12.6, telBatt = 87, telTemp = 36.2;
+setInterval(function(){
+  var target = state === 'noise' ? 24 + Math.random()*4 : (state === 'calming' ? 16 : 12.6);
+  telBpm = lerp(telBpm, target, .3);
+  var bpmEl = $('bpm');
+  if(bpmEl) bpmEl.textContent = telBpm.toFixed(1) + ' bpm';
+
+  telTemp = clamp(telTemp + (Math.random() - .5) * .16, 35.2, 37.6);
+  $('tempVal').innerHTML = telTemp.toFixed(1) + '<small>°C</small>';
+
+  if(Math.random() < .12){
+    telBatt = clamp(telBatt + (Math.random() < .5 ? -1 : 1), 58, 100);
+    $('battVal').innerHTML = telBatt + '<small>%</small>';
+  }
+  if(Math.random() < .08){
+    var sv = $('scentVal');
+    var sc = clamp(parseFloat(sv.textContent) - .5, 20, 100);
+    sv.innerHTML = Math.round(sc) + '<small>%</small>';
+  }
+}, 1600);
+})();
+</script>
+</body>
+</html>
