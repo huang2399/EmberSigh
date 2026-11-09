@@ -34,9 +34,20 @@ static const char *TAG = "hal";
 /* ========== 香氛时间切片参数 ========== */
 /* 控制窗口：一次完整的「通 - 断」周期（毫秒）。
  * 2s 是雾化片热惯性与香氛扩散速度的折中：窗口太短香量不稳，太长则调节迟钝。 */
-#define FRAGRANCE_WINDOW_MS   2000
+#define FRAGRANCE_WINDOW_MS     2000
 /* 恢复香氛时使用的占空比（%），50% 约等于「半功率持续释香」 */
 #define FRAGRANCE_RESTORE_DUTY  50
+/* 香氛任务的状态机步进（毫秒）：每 10ms 走一步，判断当前相位是否该翻转电平。
+ * 10ms 远小于 1s 的相位长度，占空比误差 < 1%，肉眼与雾量都感知不到。 */
+#define FRAGRANCE_TICK_MS       10
+/* 香氛任务栈大小（字节）与优先级（低于麦克风采集任务，不抢占实时性） */
+#define FRAGRANCE_TASK_STACK    2048
+#define FRAGRANCE_TASK_PRIO     (tskIDLE_PRIORITY + 2)
+
+/* 目标占空比：主状态机只写这个变量，实际电平由 fragrance_task 在后台翻转。
+ * volatile 保证跨任务可见性；单字节写入天然原子，无需加锁。 */
+static volatile uint8_t s_fragrance_target_duty = 0;
+static TaskHandle_t     s_fragrance_task = NULL;
 
 /* ========== 公开句柄 & 音量 ========== */
 i2s_chan_handle_t  hal_i2s_tx = NULL;
@@ -48,7 +59,67 @@ volatile float hal_audio_volume = 1.0f;
  * ============================================================ */
 
 /**
- * @brief 初始化香氛控制 GPIO
+ * @brief 香氛控制任务（独立 FreeRTOS 任务，10ms 步进状态机）
+ *
+ * 为什么不用 vTaskDelay(on_ms)：那会让调用方（麦克风采集任务）整整睡 1~2 秒，
+ * RMS 采样与状态判定全部停摆，与「毫秒级退让」的设计目标直接冲突。
+ * 这里把延时拆成 10ms 的小步，任务每个 tick 只做两件事：
+ *   1) 读目标占空比，算出当前相位（导通 / 关断）该持续多久；
+ *   2) 累计相位时长，超时就翻转 GPIO1 电平。
+ * 整个任务永远只睡 10ms，既不阻塞别人，自己也不被长时间挂起。
+ *
+ * 时间切片语义：在 2000ms 窗口内连续导通 on_ms、完全关断 off_ms。
+ * 这是低频间歇开关，不是 LEDC 那种几十 kHz 斩波，
+ * 雾化片能拿到完整直流通电窗口，谐振不被打断。
+ */
+static void fragrance_task(void *arg)
+{
+    (void)arg;
+
+    bool     on_phase = false;   /* 当前是否处于导通相位 */
+    uint32_t phase_ms = 0;       /* 当前相位已持续的毫秒数 */
+    int16_t  last_duty = -1;     /* 上一轮的目标占空比，用于检测目标变化 */
+
+    gpio_set_level(FRAGRANCE_GPIO, 0);   /* 任务启动先保证关闭 */
+
+    while (1) {
+        uint8_t duty = s_fragrance_target_duty;
+
+        if ((int16_t)duty != last_duty) {
+            /* ---- 目标值变化：立即对齐，不让旧相位拖住新决策 ---- */
+            if (duty == 0) {
+                on_phase = false;
+                gpio_set_level(FRAGRANCE_GPIO, 0);
+            } else {
+                /* 0 → N 或 N → 100：直接从导通相位起算，尽快出雾，响应更快 */
+                on_phase = true;
+                gpio_set_level(FRAGRANCE_GPIO, 1);
+            }
+            phase_ms  = 0;
+            last_duty = (int16_t)duty;
+
+        } else if (duty > 0 && duty < 100) {
+            /* ---- 稳态时间切片：算相位上限，到点翻转 ---- */
+            uint32_t on_ms  = (FRAGRANCE_WINDOW_MS * (uint32_t)duty) / 100u;
+            uint32_t off_ms = FRAGRANCE_WINDOW_MS - on_ms;
+            uint32_t limit  = on_phase ? on_ms : off_ms;
+
+            if (phase_ms >= limit) {
+                on_phase = !on_phase;
+                gpio_set_level(FRAGRANCE_GPIO, on_phase ? 1 : 0);
+                phase_ms = 0;
+            } else {
+                phase_ms += FRAGRANCE_TICK_MS;
+            }
+        }
+        /* duty == 0 或 >= 100 且目标未变：电平已锁死，无需动作 */
+
+        vTaskDelay(pdMS_TO_TICKS(FRAGRANCE_TICK_MS));   /* 固定 10ms，绝不长睡 */
+    }
+}
+
+/**
+ * @brief 初始化香氛控制 GPIO 并启动后台香氛任务
  *
  * 配置 FRAGRANCE_GPIO 为推挽输出，并给一个内部下拉：
  * 上电默认输出低电平，即 MOS 关断、加湿器不通电，
@@ -71,53 +142,45 @@ esp_err_t fragrance_init(void)
     }
 
     gpio_set_level(FRAGRANCE_GPIO, 0);          /* 上电默认关闭 */
-    ESP_LOGI(TAG, "香氛 MOS GPIO%d 初始化完成（默认 LOW = 关闭）", FRAGRANCE_GPIO);
+
+    if (s_fragrance_task == NULL) {
+        BaseType_t ok = xTaskCreate(fragrance_task, "fragrance",
+                                    FRAGRANCE_TASK_STACK, NULL,
+                                    FRAGRANCE_TASK_PRIO, &s_fragrance_task);
+        if (ok != pdPASS) {
+            ESP_LOGE(TAG, "香氛任务创建失败");
+            return ESP_FAIL;
+        }
+        ESP_LOGI(TAG, "香氛 MOS GPIO%d 初始化完成（默认 LOW = 关闭，后台任务已启动）",
+                 FRAGRANCE_GPIO);
+    }
     return ESP_OK;
 }
 
 /**
- * @brief 设置香氛释放占空比（0 ~ 100）
+ * @brief 设置香氛释放占空比（0 ~ 100）—— 非阻塞，仅写入目标值
  *
  * 【为什么不能用 LEDC】
  * 驱动的是超声波雾化片（压电陶瓷，工作在 ~108kHz 机械谐振点）。
  * 它靠谐振持续振荡把水打成微米级雾滴，需要「连续直流导通」的供电窗口；
  * 若用 LEDC 输出几十 kHz 的 PWM 斩波，MOS 反复开关会打断谐振、
  * 造成雾化片发热、发出啸叫，长期还会损伤压电片。
- * 因此这里用「低频时间切片」模拟功率调节：
- * 在一个 2000ms 的大窗口里，让 MOS 连续导通 on_ms、完全关断 off_ms，
- * 用占空比控制单位时间的出雾总量 —— 这是开关式间歇控制，不是高频斩波。
+ * 因此由 fragrance_task 做低频时间切片（2s 窗口内通 on_ms、断 off_ms）。
  *
  * @param duty 0=完全关闭, 100=全功率常开, 1~99=按比例间歇工作
- *
- * @note 本函数内部使用 vTaskDelay 阻塞当前任务：
- *       - duty=50 时一次调用最长占用约 2000ms（1000ms 通 + 1000ms 断）；
- *       - MVP 阶段可接受（只在上电、退让、恢复等状态切换时调用）；
- *       - 若后续需要在主循环中高频调用，请把香氛控制迁到独立的 FreeRTOS 任务
- *         （任务内做时间切片，调用方只投递目标 duty），避免阻塞麦克风采样/UI 刷新。
+ * @note 本函数立即返回（耗时 < 1µs），电平由后台任务在下一个 10ms tick 内响应，
+ *       调用方可以是麦克风采集任务、UI 任务或任意高频循环，不会阻塞。
  */
 void set_fragrance_duty(uint8_t duty)
 {
-    /* 边界 1：全关 —— 立即拉低并返回，不做延时 */
-    if (duty == 0) {
-        gpio_set_level(FRAGRANCE_GPIO, 0);
-        return;
-    }
+    if (duty > 100) duty = 100;
+    s_fragrance_target_duty = duty;   /* 单字节写入，天然原子 */
+}
 
-    /* 边界 2：全开 —— 立即拉高并返回，常通（注意：长时间满功率易过雾） */
-    if (duty >= 100) {
-        gpio_set_level(FRAGRANCE_GPIO, 1);
-        return;
-    }
-
-    /* 1~99：按比例切分 2000ms 窗口 */
-    uint32_t on_ms  = (FRAGRANCE_WINDOW_MS * (uint32_t)duty) / 100u;
-    uint32_t off_ms = FRAGRANCE_WINDOW_MS - on_ms;
-
-    gpio_set_level(FRAGRANCE_GPIO, 1);          /* 导通窗口 */
-    vTaskDelay(pdMS_TO_TICKS(on_ms));
-
-    gpio_set_level(FRAGRANCE_GPIO, 0);          /* 关断窗口 */
-    vTaskDelay(pdMS_TO_TICKS(off_ms));
+/** 读取当前目标占空比（调试/UI 用） */
+uint8_t fragrance_get_duty(void)
+{
+    return s_fragrance_target_duty;
 }
 
 /* ============================================================
@@ -233,9 +296,8 @@ void hal_stop_fragrance(void)
 }
 
 /* 仅恢复香氛 + 灯带，音量保持当前值（供 RECOVER 渐入使用）
- * 注意：set_fragrance_duty(50) 会阻塞约 2000ms，本函数被麦克风检测任务调用，
- *       期间 RMS 采样与 UI 状态色刷新会顺延一次；若需绝对流畅，
- *       可改为向独立香氛任务投递目标 duty（非阻塞）。 */
+ * 非阻塞：只写入目标 duty(50%)，电平由 fragrance_task 在 10ms 内接管，
+ * 麦克风采集任务调用本函数后立即返回，RMS 采样不会被打断。 */
 void hal_restore_fragrance_led(void)
 {
     set_fragrance_duty(FRAGRANCE_RESTORE_DUTY);
@@ -271,9 +333,9 @@ void hal_restore_environment(void)
     printf("[HAL] 硬件真实恢复音量 (volume=1.0)\n");
     fflush(stdout);
 
-    /* 恢复香氛：50% 时间切片占空比（阻塞约 2s，MVP 可接受） */
+    /* 恢复香氛：写入 50% 目标占空比即返回，后台任务在 10ms 内接管电平 */
     set_fragrance_duty(FRAGRANCE_RESTORE_DUTY);
-    printf("[HAL] 恢复香氛释放（duty=%d%%，窗口 %dms）\n",
+    printf("[HAL] 恢复香氛释放（duty=%d%%，窗口 %dms，后台任务已接管）\n",
            FRAGRANCE_RESTORE_DUTY, FRAGRANCE_WINDOW_MS);
     fflush(stdout);
 
