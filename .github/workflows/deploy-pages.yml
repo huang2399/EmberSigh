@@ -1,0 +1,41 @@
+name: Deploy EmberSigh Site
+
+# 只在「网页版」目录或本工作流本身变化时触发，避免固件代码提交也触发部署
+on:
+  push:
+    branches: [main]
+    paths:
+      - '网页版/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      # 拉取仓库
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 把「网页版」目录打包成 Pages 产物（index.html 即为站点首页）
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 网页版
+
+      # 部署到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
