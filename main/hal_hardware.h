@@ -13,6 +13,16 @@ extern "C" {
 /** 初始化所有硬件外设（I2S、GPIO、LED灯带），app_main 早期调用一次 */
 esp_err_t hal_hardware_init(void);
 
+/** 香氛 MOS 管 GPIO 初始化（GPIO1 输出，默认低电平=关闭） */
+esp_err_t fragrance_init(void);
+
+/**
+ * 设置香氛释放占空比 0~100（时间切片 PWM，非 LEDC 高频斩波）
+ * 0=关闭，100=常开，1~99=在 2000ms 窗口内按比例间歇工作
+ * @note 内部 vTaskDelay 阻塞，1~99 时单次调用最长占用约 2000ms
+ */
+void set_fragrance_duty(uint8_t duty);
+
 /** 音频音量控制（0.0 = 静音, 1.0 = 满音量），供 audio_player 任务实时读取 */
 extern volatile float hal_audio_volume;
 extern i2s_chan_handle_t hal_i2s_tx;
