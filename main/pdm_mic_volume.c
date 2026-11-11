@@ -46,15 +46,31 @@ static const char *TAG = "dreamstate";
 #define CALIB_MS            3000    /* 采集 3 秒环境音求 Base_RMS */
 #define CALIB_WARMUP_MS     300     /* 丢弃最初 300ms 的脏数据 */
 
-/* ---- 阈值（全部相对 Base_RMS） ---- */
-#define NOISE_RATIO         2.2f    /* 噪音阈值 = Base × 2.2 */
-#define NOISE_DELTA_MIN     120.0f  /* 但至少比基线高 120 */
+/* ---- 阈值（全部相对 Base_RMS） ----
+ *
+ * 自适应思路：
+ *   - 底噪低（安静房间 base≈15）→ 阈值 ≈ base×2 ≈ 30~47，轻咳、拍手即触发
+ *   - 底噪高（吵闹环境 base≈120）→ 比例项主导 ≈ 240，不会一点动静就误触
+ * 因此 DELTA_MIN 只做「最低增量保护」，不再压过比例项。 */
+#define NOISE_RATIO         1.8f    /* 噪音阈值 = Base × 1.8 */
+#define NOISE_DELTA_MIN     22.0f   /* 至少比基线高 22（原 120 太高，手拍根本到不了） */
+#define NOISE_THR_FLOOR     25.0f   /* 阈值下限，防止绝对安静时被风扇/电流底噪误触 */
 #define NOISE_RELEASE       0.75f   /* 回落到阈值的 75% 才算噪音结束 */
-#define QUIET_RATIO         1.30f   /* 安静阈值 = Base × 1.3 */
-#define QUIET_DELTA_MIN     25.0f   /* 但至少比基线高 25 */
+#define QUIET_RATIO         1.25f   /* 安静阈值 = Base × 1.25 */
+#define QUIET_DELTA_MIN     12.0f   /* 但至少比基线高 12 */
+
+/* ---- 瞬发强触发 ----
+ * 拍手 / 一声大声说话是「短促强瞬态」，能量往往撑不满判定时长。
+ *
+ * 注意：不能只看 smooth（5 帧滑动平均）。一次 50~100ms 的拍手会被平均
+ * 稀释掉一半以上，smooth 可能只冒出 1~2 帧就掉回去，永远凑不满计时。
+ * 因此额外用「瞬时 raw」做峰值判定 —— raw 是单帧（约 11ms）RMS，
+ * 能可靠抓到拍手尖峰。 */
+#define NOISE_INSTANT_RATIO     1.6f  /* smooth 超过阈值 1.6 倍：持续强噪音，立即触发 */
+#define NOISE_INSTANT_RAW_RATIO 1.3f  /* raw 超过阈值 1.3 倍：拍手尖峰，立即触发 */
 
 /* ---- 时间参数 ---- */
-#define NOISE_SUSTAIN_MS    2000    /* 高音量必须连续维持 2 秒 */
+#define NOISE_SUSTAIN_MS    300     /* 高音量维持 300ms 即判定（原 2000ms，演示太难触发） */
 #define QUIET_CONFIRM_MS    400     /* 安静确认时长，避免边界抖动 */
 #define RECOVER_MS          3000    /* 恢复态持续时间 */
 
@@ -64,6 +80,7 @@ static const char *TAG = "dreamstate";
 #define BASE_ADAPT_MAX      2.0f    /* 基线上限 = 校准值 × 2.0 */
 
 #define LOG_PERIOD_MS       1000    /* 状态日志周期 */
+#define DATA_PERIOD_MS      500     /* 网页 Web Serial 数据行周期 */
 
 /* ============================================================
  * 四状态机
@@ -83,6 +100,18 @@ static const char *state_name(sys_state_t s)
     case ST_RECOVER: return "RECOVER";
     case ST_IDLE:    return "IDLE";
     default:         return "?";
+    }
+}
+
+/* 供网页 Web Serial 解析用的状态名（RETREAT 对外呈现为 NOISE） */
+static const char *web_state_name(sys_state_t s)
+{
+    switch (s) {
+    case ST_CALM:    return "CALM";
+    case ST_RETREAT: return "NOISE";
+    case ST_RECOVER: return "RECOVER";
+    case ST_IDLE:    return "IDLE";
+    default:         return "UNKNOWN";
     }
 }
 
@@ -151,10 +180,13 @@ static float smooth_rms(float *window, int *idx, int *count, float new_rms)
     return sum / (float)(*count);
 }
 
-/* 阈值计算：比例 + 最小增量取较大者 */
+/* 阈值计算：比例 + 最小增量取较大者，并保证不低于下限 */
 static void update_thresholds(float base, float *noise_thr, float *quiet_thr)
 {
     *noise_thr = fmaxf(base * NOISE_RATIO, base + NOISE_DELTA_MIN);
+    if (*noise_thr < NOISE_THR_FLOOR) {
+        *noise_thr = NOISE_THR_FLOOR;
+    }
     *quiet_thr = fmaxf(base * QUIET_RATIO, base + QUIET_DELTA_MIN);
 }
 
@@ -485,6 +517,7 @@ void app_main(void)
     /* 周期任务 */
     TickType_t last_ui  = 0;
     TickType_t last_log = 0;
+    TickType_t last_data = 0;
 
     /* 每秒统计（用于日志与基线自适应） */
     float sec_sum = 0.0f;
@@ -540,13 +573,25 @@ void app_main(void)
         bool sustained = high_active &&
                          ((now - high_since) >= pdMS_TO_TICKS(NOISE_SUSTAIN_MS));
 
+        /* 瞬发强触发：raw 抓拍手尖峰，sm 抓持续强噪音 */
+        bool instant = (sm  >= noise_thr * NOISE_INSTANT_RATIO) ||
+                       (raw >= noise_thr * NOISE_INSTANT_RAW_RATIO);
+
+        if (instant && !sustained) {
+            ESP_LOGI(TAG, "[判定] 瞬发触发 raw=%.1f sm=%.1f 阈=%.1f 进入 RETREAT",
+                     raw, sm, noise_thr);
+        }
+
+        bool trigger = sustained || instant;
+
         /* ---------- 状态机 ---------- */
         switch (st) {
 
         /* ============ CALM：正常监听 ============ */
         case ST_CALM:
-            if (sustained) {
-                ESP_LOGI(TAG, ">>> 噪音已持续 %d ms → 进入 RETREAT", NOISE_SUSTAIN_MS);
+            if (trigger) {
+                ESP_LOGI(TAG, ">>> 噪音已确认（%s）→ 进入 RETREAT",
+                         instant ? "瞬态直触发" : "持续判定");
                 hal_lower_volume();
                 hal_stop_fragrance();
                 printf("[HAL] 音量降低，暂停香氛\n");
@@ -584,8 +629,8 @@ void app_main(void)
         /* ============ RECOVER：恢复（音量线性渐入） ============ */
         case ST_RECOVER: {
             /* 恢复期若再次满足持续噪音，直接退回 RETREAT */
-            if (sustained) {
-                ESP_LOGI(TAG, ">>> 恢复期再次出现持续噪音 → 退回 RETREAT");
+            if (trigger) {
+                ESP_LOGI(TAG, ">>> 恢复期再次出现噪音 → 退回 RETREAT");
                 hal_lower_volume();
                 hal_stop_fragrance();
                 printf("[HAL] 音量降低，暂停香氛\n");
@@ -621,7 +666,7 @@ void app_main(void)
              * 当前未绑定物理按键，故该分支只在被手动置位后生效。
              * 唤醒条件：检测到持续噪音即回到 CALM。
              */
-            if (sustained) {
+            if (trigger) {
                 ESP_LOGI(TAG, ">>> 待机中检测到噪音，唤醒 → CALM");
                 hal_set_audio_volume(1.0f);
                 hal_restore_fragrance_led();
@@ -749,6 +794,17 @@ void app_main(void)
             lv_label_set_text(label_state, state_name(st));
 
             bsp_display_unlock();
+        }
+
+        /* ---------- 每 500ms：给网页 Web Serial 解析的数据行 ---------- */
+        if ((now - last_data) >= pdMS_TO_TICKS(DATA_PERIOD_MS)) {
+            last_data = now;
+
+            int rms_out = (int)(ui_rms + 0.5f);
+            if (rms_out < 0) rms_out = 0;
+
+            printf("DATA | RMS: %d | STATE: %s\n", rms_out, web_state_name(st));
+            fflush(stdout);
         }
 
         /* ---------- 每秒：日志 + 基线自适应 ---------- */
