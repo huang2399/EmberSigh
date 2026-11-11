@@ -225,7 +225,7 @@ body{
 .chip .k.s{color:var(--sky);}
 
 /* 设备样机 */
-.hero-visual{position:relative;display:grid;place-items:center;padding-bottom:34px;min-height:420px;}
+.hero-visual{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding-bottom:0;min-height:420px;text-align:center;}
 .device{position:relative;width:clamp(240px,23vw,304px);aspect-ratio:1;border-radius:50%;
   background:radial-gradient(circle at 34% 26%,#fffefa,#f4ecdf 48%,#e7ddcb 100%);
   border:1px solid rgba(140,116,82,.22);
@@ -264,7 +264,7 @@ body{
 .screen-orb .wave i:nth-child(4){height:15px;animation-delay:.45s;}
 .screen-orb .wave i:nth-child(5){height:9px;animation-delay:.6s;}
 @keyframes waveBar{0%,100%{transform:scaleY(.55);opacity:.65;}50%{transform:scaleY(1.12);opacity:1;}}
-.device-cap{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;}
+.device-cap{position:static;text-align:center;white-space:normal;max-width:440px;margin:0;}
 .device-cap .n{font-size:11.5px;letter-spacing:.24em;color:var(--ink-soft);}
 .device-cap .s{font-family:var(--mono);font-size:8.5px;color:var(--ink-faint);letter-spacing:.16em;margin-top:5px;}
 .float-card{
@@ -834,8 +834,36 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 .link-status.warn{color:var(--danger);border-color:rgba(176,68,47,.6);border-style:solid;
   background:rgba(176,68,47,.07);font-weight:700;}
 
-/* 实验室紧急停香 · 红色大字（瓶身上方闪烁，NOISE 时放大 + 红色发光背景） */
-.cut-badge{display:none;text-align:center;font-family:var(--mono);font-weight:700;font-size:15px;
+/* ═══════════ 真实产品图嵌入 ═══════════ */
+.hero-img{width:min(400px,76%);aspect-ratio:1.04/1;object-fit:cover;border-radius:36px;display:block;flex:none;
+  border:1px solid rgba(255,255,255,.65);
+  box-shadow:0 44px 86px -38px rgba(96,76,48,.6),0 14px 36px -18px rgba(96,76,48,.42);}
+.shot-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:6px;}
+.shot{margin:0;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:18px;padding:12px;
+  box-shadow:0 20px 44px -28px rgba(96,76,48,.45);display:flex;flex-direction:column;align-items:stretch;}
+.shot img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;object-position:center;border-radius:12px;display:block;flex:none;}
+.shot figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-soft);
+  padding-top:12px;text-align:center;display:flex;align-items:center;justify-content:center;min-height:2.6em;line-height:1.5;}
+/* 实验室小配件图：更矮、更浅的玻璃卡，融入版面而不喧宾夺主 */
+.shot.humid{background:rgba(255,255,255,.34);border-color:rgba(255,255,255,.72);
+  box-shadow:0 14px 30px -24px rgba(96,76,48,.32);padding:10px;border-radius:16px;}
+.shot.humid img{width:100%;max-height:200px;height:200px;aspect-ratio:auto;object-fit:cover;object-position:center;
+  border-radius:10px;}
+.shot.humid figcaption{font-size:9.5px;letter-spacing:.08em;padding-top:9px;min-height:0;color:var(--ink-faint);}
+.board-img{height:280px;max-height:280px;width:auto;max-width:100%;object-fit:cover;border-radius:18px;display:block;flex:none;
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:0 28px 60px -32px rgba(96,76,48,.55);}
+/* 图片缺失时的优雅占位（与对应图框同比例，破版不可能发生） */
+.img-fallback{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.14em;
+  background:repeating-linear-gradient(45deg,rgba(176,141,87,.09) 0 12px,rgba(176,141,87,.03) 12px 24px),rgba(255,255,255,.55);
+  border:1px dashed rgba(176,141,87,.45);}
+.hero-img.img-fallback{aspect-ratio:1.04/1;height:auto;}
+.board-img.img-fallback{height:280px;max-height:280px;aspect-ratio:auto;width:auto;padding:0 34px;}
+@media (max-width:1180px){ .shot-row{grid-template-columns:1fr 1fr;} }
+@media (max-width:898px){ .shot-row{grid-template-columns:1fr;} }
+
+/* 实验室紧急停香 · 红色大字（瓶身上方闪烁，NOISE 时放大 + 红色发光背景） */.cut-badge{display:none;text-align:center;font-family:var(--mono);font-weight:700;font-size:15px;
   letter-spacing:.16em;color:#c23a2b;margin-bottom:6px;text-shadow:0 1px 0 rgba(255,255,255,.6);}
 .cut-badge.on{display:block;font-size:30px;letter-spacing:.12em;padding:10px 26px;border-radius:14px;
   background:rgba(194,58,43,.16);border:1.5px solid rgba(194,58,43,.55);
@@ -979,15 +1007,13 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
       <div class="hero-visual">
         <div class="float-card fc1">MIC · RMS <b>42</b> dB</div>
         <div class="float-card fc2">AROMA · <b>3</b> CH</div>
-        <div class="device">
-          <div class="screen-orb">
-            <div class="lbl">Calm</div>
-            <div class="wave"><i></i><i></i><i></i><i></i><i></i></div>
-          </div>
-        </div>
+        <img class="hero-img" src="images/hero-product.jpg"
+             alt="EmberSigh One 产品渲染图" loading="eager"
+             onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
         <div class="device-cap">
           <div class="n">EmberSigh One · 概念样机</div>
           <div class="s">ESP32-S3 · 240×240 · SOUNDSCAPE + AROMA</div>
+          <div class="s" style="margin-top:5px;color:var(--ink-faint);">*概念工业设计渲染，当前工程验证采用模块化方案</div>
         </div>
       </div>
     </section>
@@ -1351,6 +1377,31 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
       </div>
     </section>
 
+    <!-- 实机运行状态 · 真实屏幕照片 -->
+    <section class="sec">
+      <div class="sec-head reveal">
+        <h2>实机运行状态。</h2>
+        <div class="sub">Real device · 240×240 TFT · 三级状态机</div>
+      </div>
+      <div class="shot-row">
+        <figure class="shot reveal">
+          <img src="images/screen-calm.jpg" alt="实机 Calm 状态" loading="lazy"
+               onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          <figcaption>实机运行状态：CALM · 蓝色呼吸待机</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="images/screen-noise.jpg" alt="实机 Noise 状态" loading="lazy"
+               onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          <figcaption>实机运行状态：NOISE · 红色防守退让</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <img src="images/screen-calming.jpg" alt="实机 Calming 状态" loading="lazy"
+               onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          <figcaption>实机运行状态：CALMING · 橙色冷却缓冲</figcaption>
+        </figure>
+      </div>
+    </section>
+
   </div><!-- /v-console -->
 
   <!-- ══════════════════════════════════════════
@@ -1501,6 +1552,12 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
             <input type="range" id="tlSlider" min="0" max="24" step="0.25" value="22">
             <div class="tl-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
           </div>
+
+          <figure class="shot humid" style="margin-top:14px;">
+            <img src="images/humidifier.jpg" alt="微孔雾化器出雾特写" loading="lazy"
+                 onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+            <figcaption>单通道微孔雾化器（MVP 验证版）· 出雾实测</figcaption>
+          </figure>
         </div>
 
         <!-- 右：比例 + 预测 -->
@@ -1593,6 +1650,19 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <h2 style="margin-top:12px;">固件与调度算法，<b>完全开源</b>。</h2>
         </div>
         <div class="sub">Architecture · Pinout · Field Notes</div>
+      </div>
+    </section>
+
+    <!-- 工程验证板实拍 -->
+    <section class="dcard reveal" style="margin-bottom:20px;padding:20px 24px;display:flex;gap:26px;align-items:center;flex-wrap:wrap;">
+      <img class="board-img" src="images/board-prototype.jpg" alt="ESP32-S3 概念机内部结构渲染" loading="lazy"
+           onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+      <div style="min-width:240px;flex:1;">
+        <div class="card-title" style="margin-bottom:8px;"><span class="tick"></span>概念机内部结构 · 渲染</div>
+        <div style="font-family:var(--serif);font-size:12.5px;line-height:2;color:rgba(238,245,242,.72);">
+          基于 <b style="color:#eef5f2;">ESP32-S3-EYE</b> 的概念机内部结构验证<br>
+          I2S 数字麦克风 · 三通道 MOS 雾化 · WS2812 灯环 · 240×240 LVGL 屏
+        </div>
       </div>
     </section>
 
@@ -1882,6 +1952,14 @@ window.emergencyFlash = function(){
   el.classList.add('on');
   window._emgT1 = setTimeout(function(){ el.classList.add('out'); }, 1500);
   window._emgT2 = setTimeout(function(){ el.classList.remove('on','out'); }, 2050);
+};
+
+/* ── 6.6 产品图降级：实机照片缺失时替换为优雅占位块，不破坏排版 ── */
+window.imgFallback = function(img){
+  var d = document.createElement('div');
+  d.className = 'img-fallback' + (img.className && img.className !== 'img-fallback' ? ' ' + img.className : '');
+  d.textContent = '📷 实机照片待补充';
+  if(img.parentNode) img.parentNode.replaceChild(d, img);
 };
 
 /* ── 1. 视图路由：页内"跳页"，带独立 hash 地址 ──
