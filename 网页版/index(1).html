@@ -532,6 +532,11 @@ footer{position:relative;z-index:2;margin-top:50px;
 .line.lg-warn .tag{color:#b5872f;}
 .line.lg-err .tag{color:var(--danger);}
 .line.lg-err .msg{color:#8f3f2d;}
+/* EMERGENCY 紧急日志：粗体红色大字 */
+.line.lg-emg{padding:5px 0;}
+.line.lg-emg .tag{color:#fff;background:var(--danger);border-radius:4px;padding:1px 6px;font-weight:700;}
+.line.lg-emg .msg{color:var(--danger);font-weight:700;font-size:14px;letter-spacing:.05em;
+  text-shadow:0 0 10px rgba(194,58,43,.45);}
 .line.lg-dim .msg{color:#9c8d78;}
 .term-foot{flex:none;display:flex;gap:26px;padding:13px 20px;border-top:1px solid var(--line);
   font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--ink-faint);
@@ -821,6 +826,49 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 }
 .toast.show{opacity:1;transform:translate(-50%,0);}
 .toast.warn{border-color:rgba(176,68,47,.45);color:var(--danger);}
+
+/* 跨页联动状态栏（控制台屏幕下方 / 实验室瓶身下方各一条） */
+.link-status{margin-top:10px;text-align:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;
+  color:var(--ink-soft);padding:7px 10px;border:1px dashed rgba(139,111,71,.4);border-radius:8px;
+  background:rgba(255,255,255,.5);transition:color .3s,border-color .3s,background .3s;}
+.link-status.warn{color:var(--danger);border-color:rgba(176,68,47,.6);border-style:solid;
+  background:rgba(176,68,47,.07);font-weight:700;}
+
+/* 实验室紧急停香 · 红色大字（瓶身上方闪烁，NOISE 时放大 + 红色发光背景） */
+.cut-badge{display:none;text-align:center;font-family:var(--mono);font-weight:700;font-size:15px;
+  letter-spacing:.16em;color:#c23a2b;margin-bottom:6px;text-shadow:0 1px 0 rgba(255,255,255,.6);}
+.cut-badge.on{display:block;font-size:30px;letter-spacing:.12em;padding:10px 26px;border-radius:14px;
+  background:rgba(194,58,43,.16);border:1.5px solid rgba(194,58,43,.55);
+  box-shadow:0 0 34px rgba(194,58,43,.45),inset 0 0 22px rgba(194,58,43,.18);
+  text-shadow:0 0 20px rgba(194,58,43,.95),0 0 46px rgba(194,58,43,.55);
+  animation:cutBlink 1s steps(2) infinite;}
+@keyframes cutBlink{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+
+/* 全局紧急浮层：任意 Tab 收到 NOISE 时屏幕正中央弹出，1.5s 后淡出 */
+.emergency{position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;
+  background:rgba(120,18,8,.30);backdrop-filter:blur(3px);pointer-events:none;transition:opacity .5s ease;}
+.emergency.on{display:flex;animation:emgIn .22s ease-out;}
+.emergency.out{opacity:0;}
+.emergency .emg-box{
+  max-width:86vw;text-align:center;padding:30px 46px;border-radius:20px;
+  font-family:var(--mono);font-weight:700;font-size:30px;letter-spacing:.08em;color:#fff;
+  background:linear-gradient(145deg,rgba(194,58,43,.96),rgba(150,32,20,.96));
+  border:2px solid rgba(255,120,90,.75);
+  box-shadow:0 0 70px rgba(194,58,43,.85),0 30px 80px -20px rgba(90,10,4,.9),inset 0 0 30px rgba(255,90,60,.28);
+  text-shadow:0 0 16px rgba(255,150,120,.85);animation:emgPulse .9s ease-in-out infinite;}
+@keyframes emgIn{from{opacity:0;transform:scale(1.08);}to{opacity:1;transform:none;}}
+@keyframes emgPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.035);}}
+
+/* 实验室视觉暴走：烈震 + 红色高亮光晕 */
+.bwrap.quake{animation:bottleQuake .3s ease-in-out infinite;
+  filter:drop-shadow(0 0 18px rgba(194,58,43,.6)) drop-shadow(0 0 46px rgba(194,58,43,.35));}
+@keyframes bottleQuake{
+  0%,100%{transform:translateX(0) rotate(0);}
+  20%{transform:translateX(-11px) rotate(-2.2deg);}
+  40%{transform:translateX(9px) rotate(1.8deg);}
+  60%{transform:translateX(-7px) rotate(-1.2deg);}
+  80%{transform:translateX(6px) rotate(1deg);}
+}
 
 /* ═══════════ 滚动浮现（克制） ═══════════ */
 .reveal{opacity:0;transform:translateY(18px);filter:blur(4px);
@@ -1220,6 +1268,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <span>EMA α = 0.20</span>
           <span>COOLDOWN 3.0s</span>
         </div>
+        <div class="link-status" id="consoleLink">🔗 联动状态：已与嗅觉实验室同步 (当前配方：薰衣草 82%)</div>
       </div>
 
       <!-- 右：遥测数据卡片 + 日志终端 -->
@@ -1382,6 +1431,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
         <div class="col bottle-col">
           <div class="bottle-name" id="blendName">深夜安眠 · Nocturne</div>
           <div class="bottle-sub" id="blendSub">松木 5% ｜ 柑橘 5% ｜ 薰衣草 90%</div>
+          <div class="cut-badge" id="cutBadge">[ 已紧急切断香氛 ]</div>
 
           <div class="bwrap" id="bwrap">
             <svg id="bottleSvg" viewBox="0 0 320 440">
@@ -1404,6 +1454,17 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
               </defs>
 
               <ellipse cx="160" cy="416" rx="116" ry="15" fill="url(#floorG)"/>
+
+              <!-- 紧急停香 · 红色裂痕特效（NOISE 时显现） -->
+              <g id="crackG" opacity="0" style="transition:opacity .35s ease;">
+                <path d="M116 150 L128 168 L122 186 L136 204 L130 224" fill="none"
+                      stroke="#c23a2b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M128 168 L142 176 M136 204 L148 210 M204 160 L192 182 L200 202 L188 226 L196 248"
+                      fill="none" stroke="#c23a2b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M160 138 L154 160 L162 178 L150 196 M218 246 L204 262 L212 284 L198 302
+                         M108 268 L124 284 L114 304 L128 322 M170 300 L182 318 L172 338 L184 356"
+                      fill="none" stroke="#a82f22" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
 
               <g clip-path="url(#liqClip)">
                 <g id="liquidG2">
@@ -1429,6 +1490,8 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
                     font-size="8.5" fill="rgba(52,40,28,.24)" letter-spacing="5">嗅 觉 实 验 室</text>
             </svg>
           </div>
+
+          <div class="link-status" id="labLink">🔗 联动状态：与硬件感知同步 (当前状态：CALM)</div>
 
           <div class="tl">
             <div class="tl-top">
@@ -1784,6 +1847,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 </footer>
 
 <div class="toast" id="toast"><span id="toastIco">✦</span><span id="toastMsg"></span></div>
+<div class="emergency" id="emergency"><div class="emg-box">🚨 检测到环境噪音，已强制切断香氛！</div></div>
 
 <script>
 /* ═══════════════════════════════════════════
@@ -1806,6 +1870,18 @@ window.toast = function(msg, ico, type){
   el.className = 'toast show' + (type ? ' '+type : '');
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+};
+
+/* ── 6.5 全局紧急浮层：任意 Tab 收到 NOISE 时屏幕正中央弹出，1.5s 后淡出 ── */
+window.emergencyFlash = function(){
+  var el = $('emergency');
+  if(!el) return;
+  clearTimeout(window._emgT1);
+  clearTimeout(window._emgT2);
+  el.classList.remove('out');
+  el.classList.add('on');
+  window._emgT1 = setTimeout(function(){ el.classList.add('out'); }, 1500);
+  window._emgT2 = setTimeout(function(){ el.classList.remove('on','out'); }, 2050);
 };
 
 /* ── 1. 视图路由：页内"跳页"，带独立 hash 地址 ──
@@ -2031,6 +2107,17 @@ function emitState(){
       }));
     }
   }catch(e){}
+  /* 联动状态栏：让用户在控制台就能看到跨页联动是否生效 */
+  var link = $('consoleLink');
+  if(link){
+    if(state === 'noise'){
+      link.textContent = '🔗 联动状态：⚠ 检测到噪音 · 已强制切断实验室香氛';
+      link.classList.add('warn');
+    } else {
+      link.textContent = '🔗 联动状态：已与嗅觉实验室同步 (当前配方：' + aromaFootText() + ')';
+      link.classList.remove('warn');
+    }
+  }
 }
 
 function updateBpm(){
@@ -2048,6 +2135,7 @@ function enterNoise(triggerRms){
 
   log('err', 'MIC', 'RMS ' + Math.round(triggerRms) + ' &gt; 150 · 触发噪音门限');
   setTimeout(function(){ log('warn','HAL','检测到噪音，切入退让模式'); }, 120);
+  setTimeout(function(){ log('emg','EMERGENCY','⚠️ 香氛通道已被切断！'); }, 300);
   setTimeout(function(){ log('dim','I2S','声景音量 42% → 0%（阻尼 300ms）'); }, 260);
   setTimeout(function(){ log('dim','MOS','香氛通道切断 · 薰衣草 82% 暂停'); }, 400);
   setTimeout(function(){ log('dim','LED','WS2812 → 防守暗红 #FF1E1E'); }, 520);
@@ -2413,6 +2501,11 @@ window.addEventListener('aromaUpdate', function(e){
     scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · ' + aromaFootText();
     $('ftAroma').textContent = aromaFootText();
   }
+  /* 联动状态栏同步最新配方 */
+  var linkEl = $('consoleLink');
+  if(linkEl && state !== 'noise'){
+    linkEl.textContent = '🔗 联动状态：已与嗅觉实验室同步 (当前配方：' + aromaFootText() + ')';
+  }
 });
 
 /* 初始化 */
@@ -2548,7 +2641,12 @@ function labRender(){
   if(lq) lq.style.transform = 'translate(84px,' + (topY-12).toFixed(2) + 'px)';
 
   var c = blendRGB(shown);
-  var fill = labAlert ? 'rgb(150,140,132)' : 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+  /* cutMix: 0=正常颜色 · 1=灰白停香（紧急切断时瞬间置 1，恢复时 1.2s 插值回 0） */
+  var g = [168, 162, 155];
+  var fill = 'rgb(' +
+    Math.round(c[0] + (g[0]-c[0])*cutMix) + ',' +
+    Math.round(c[1] + (g[1]-c[1])*cutMix) + ',' +
+    Math.round(c[2] + (g[2]-c[2])*cutMix) + ')';
   var wf = $('waveF'), wb = $('waveB');
   if(wf){ wf.style.fill = fill; wb.style.fill = fill; }
 
@@ -2565,7 +2663,7 @@ function labRender(){
   });
 
   $('swatch').style.background = fill;
-  $('swatchHex').textContent = (labAlert ? '#968C84' : hex(c)) + ' · ' + Math.round(total) + ' ml';
+  $('swatchHex').textContent = (cutMix > 0 ? '#A8A29B' : hex(c)) + ' · ' + Math.round(total) + ' ml';
 
   var name = blendNameFor(pP, pC, pL, total);
   var sub = '松木 '+Math.round(pP)+'% ｜ 柑橘 '+Math.round(pC)+'% ｜ 薰衣草 '+Math.round(pL)+'%';
@@ -2714,27 +2812,44 @@ slider.addEventListener('input', function(){
 
 /* 噪音干扰（本地模拟按钮 + 控制台跨页面联动，共用同一套紧急停香动画） */
 var savedMix = null;
+var cutMix = 0;                                      /* 0=正常颜色 · 1=完全灰白停香 */
 
 function labAlertOn(){
   if(labAlert) return;
   labAlert = true;
   $('labNoise').disabled = true;
   $('labNoise').textContent = '⏳ 退让中…';
-  $('bwrap').classList.add('shake');                 /* 香瓶持续震荡 */
+  $('bwrap').classList.remove('shake');
+  $('bwrap').classList.add('quake');                 /* 视觉暴走：烈震 + 红色光晕 */
+  var cg = $('crackG');
+  if(cg) cg.style.opacity = '1';                     /* 红色裂痕显现 */
+  var badge = $('cutBadge'); if(badge) badge.classList.add('on');   /* 红色发光大字 */
+  var lb = $('labLink');
+  if(lb){ lb.textContent = '🔗 联动状态：与硬件感知同步 (当前状态：NOISE)'; lb.classList.add('warn'); }
   savedMix = { pine:mix.pine, citrus:mix.citrus, lavender:mix.lavender };
-  mix = { pine:0, citrus:0, lavender:0 };
-  labGoTo(mix, 320);                                 /* 液体退空 + 变灰白（紧急停香） */
+  cutMix = 1;                                        /* 液面保持 · fill 瞬间变灰白 */
   labRender();
 }
 
 function labAlertOff(){
   if(!labAlert) return;
   labAlert = false;
-  $('bwrap').classList.remove('shake');
-  mix = savedMix || { pine:5, citrus:5, lavender:90 };
-  labGoTo(mix, 1200);                                /* 液体颜色 1.2s 平滑恢复 */
+  $('bwrap').classList.remove('quake');
+  var cg = $('crackG');
+  if(cg) cg.style.opacity = '0';                     /* 裂痕淡出 */
+  var badge = $('cutBadge'); if(badge) badge.classList.remove('on');
+  var lb = $('labLink');
+  if(lb){ lb.textContent = '🔗 联动状态：与硬件感知同步 (当前状态：CALM)'; lb.classList.remove('warn'); }
   $('labNoise').disabled = false;
   $('labNoise').textContent = '⚠ 模拟翻身噪音';
+  /* 灰白 → 原配方颜色 1.2s 平滑插值恢复 */
+  var t0 = performance.now();
+  (function fade(t){
+    var p = Math.min((t - t0) / 1200, 1);
+    cutMix = 1 - easeInOut(p);
+    labRender();
+    if(p < 1) requestAnimationFrame(fade); else cutMix = 0;
+  })(t0);
   emitAroma();                                       /* 恢复后的配方同步回控制台 */
 }
 
@@ -2753,17 +2868,21 @@ $('labNoise').addEventListener('click', function(){
 /* 控制台状态广播 → 实验室联动（真实硬件 NOISE 或模拟拍手均生效） */
 window.addEventListener('ember:state', function(e){
   var st = e.detail && e.detail.state;
+  var lb = $('labLink');
   if(st === 'noise'){
     if(!labAlert){
       labAlertOn();
-      toast('检测到噪音 · 实验室同步紧急停香', '⚠', 'warn');
+      toast('🔗 联动触发：控制台监测到噪音，已强制切断香氛！', '⚠', 'warn');
+      try{ window.emergencyFlash(); }catch(e){}      /* 全屏红色紧急浮层 · 任意 Tab 可见 */
     }
   } else if(st === 'calming'){
     if(labAlert){
       labAlertOff();                                 /* 冷却缓冲期即开始恢复液体颜色 */
-      toast('噪音退场 · 液体颜色恢复中', '✧');
+      toast('🔗 联动解除：噪音退场 · 液体颜色恢复中', '✧');
     }
+    if(lb){ lb.textContent = '🔗 联动状态：与硬件感知同步 (当前状态：CALMING)'; lb.classList.remove('warn'); }
   } else if(st === 'calm'){
+    if(lb){ lb.textContent = '🔗 联动状态：与硬件感知同步 (当前状态：CALM)'; lb.classList.remove('warn'); }
     labAlertOff();
   }
 });
@@ -2772,7 +2891,8 @@ window.addEventListener('ember:state', function(e){
 window.addEventListener('deviceNoise', function(){
   if(labAlert) return;
   labAlertOn();                                      /* shake 类 + 灰白停香，与 ember:state 共用同一逻辑 */
-  toast('检测到噪音 · 实验室同步紧急停香', '⚠', 'warn');
+  toast('🔗 联动触发：控制台监测到噪音，已强制切断香氛！', '⚠', 'warn');
+  try{ window.emergencyFlash(); }catch(e){}
 });
 
 /* 真实时钟同步：滑块定位到当前时间，配方/颜色/情绪预测随之更新 */
