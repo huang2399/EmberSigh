@@ -472,6 +472,39 @@ footer{position:relative;z-index:2;margin-top:50px;
 .screen-meta{display:flex;justify-content:space-between;width:100%;font-family:var(--mono);
   font-size:8.5px;letter-spacing:.1em;color:var(--ink-faint);padding:0 3px;}
 
+/* ── 真实硬件串口接入栏 ── */
+.serial-bar{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:14px 22px;margin-bottom:20px;border-radius:18px;
+}
+.serial-btn{
+  flex:none;padding:10px 22px;border-radius:12px;cursor:pointer;
+  font-family:var(--serif);font-size:12px;font-weight:600;letter-spacing:.14em;
+  border:1px solid rgba(176,141,87,.4);
+  background:linear-gradient(150deg,#fffdf8,#f2e9d8);
+  color:var(--gold-d);transition:all .35s cubic-bezier(.22,1,.36,1);
+}
+.serial-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px -22px rgba(138,107,71,.75);
+  border-color:var(--gold);background:linear-gradient(150deg,#fffefb,#f5ecdb);}
+.serial-btn:active{transform:translateY(0);}
+.serial-status{display:flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--ink-soft);}
+.serial-dot{width:9px;height:9px;border-radius:50%;flex:none;background:#b7ab99;transition:background .4s;}
+.serial-dot.on{background:#4c9a58;animation:serialPulse 2s ease-in-out infinite;}
+@keyframes serialPulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(76,154,88,.2),0 0 12px rgba(76,154,88,.55);}
+  50%{box-shadow:0 0 0 7px rgba(76,154,88,.08),0 0 6px rgba(76,154,88,.35);}
+}
+.serial-hint{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--ink-faint);}
+
+/* 串口模式下：状态切换零过渡（蓝→红瞬时），数值平滑交给 JS 插值 */
+.screen.instant{transition:none !important;}
+.btn.hw-hint{
+  border-color:rgba(192,138,62,.6)!important;background:rgba(192,138,62,.12)!important;
+  color:#a8792a!important;
+}
+.stat-card .v, .breath-text .big{transition:color .3s;}
+
 /* 终端 · 纸质日志 */
 .term-card{display:flex;flex-direction:column;overflow:hidden;padding:0;min-height:600px;}
 .term-head{display:flex;align-items:center;justify-content:space-between;
@@ -1126,6 +1159,16 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
       </div>
     </section>
 
+    <!-- 真实硬件串口接入（Web Serial API） -->
+    <div class="serial-bar glass reveal">
+      <button class="serial-btn" id="serialBtn">🔌 连接真实设备（USB）</button>
+      <div class="serial-status">
+        <i class="serial-dot" id="serialDot"></i>
+        <span id="serialText">未连接 · 模拟数据模式</span>
+      </div>
+      <span class="serial-hint">WEB SERIAL · 115200 bps · 帧格式 DATA | RMS: n | STATE: X</span>
+    </div>
+
     <section class="console-grid">
       <!-- 左：手机呼吸实况 -->
       <div class="phone-col">
@@ -1134,7 +1177,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <div class="breath-ring"></div>
           <div class="breath-text">
             <div class="big" id="bpm">12.6 bpm</div>
-            <div class="small">BREATHING · 深蓝呼吸</div>
+            <div class="small" id="phoneSmall">BREATHING · 深蓝呼吸</div>
           </div>
           <div class="phone-nav"></div>
         </div>
@@ -1185,17 +1228,17 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <div class="stat-card">
             <div class="k">Battery 电量</div>
             <div class="v" id="battVal">87<small>%</small></div>
-            <div class="trend">▲ 充电中 · 280mA</div>
+            <div class="trend" id="battTrend">▲ 充电中 · 280mA</div>
           </div>
           <div class="stat-card">
             <div class="k">Scent 剩余香氛</div>
             <div class="v" id="scentVal">64<small>%</small></div>
-            <div class="trend">松木 · 柑橘混合</div>
+            <div class="trend" id="scentTrend">松木 · 柑橘混合</div>
           </div>
           <div class="stat-card">
             <div class="k">Temp 核心温度</div>
             <div class="v" id="tempVal">36.2<small>°C</small></div>
-            <div class="trend">正常范围</div>
+            <div class="trend" id="tempTrend">正常范围</div>
           </div>
         </div>
 
@@ -1912,6 +1955,7 @@ var lerp = function(a,b,t){ return a+(b-a)*t; };
 
 var state = 'calm';
 var rms = 42, volume = 42;
+var serialMode = false;   /* true = 数据源为真实硬件串口，假数据定时器全部让位 */
 var scr = $('screen'), scrMain = $('scrMain'), scrSub = $('scrSub'),
     scrFoot = $('scrFoot'), cdRing = $('cdRing'), termBody = $('termBody');
 if(!scr) return;   /* 视图存在性保护 */
@@ -1929,6 +1973,10 @@ function log(type, tag, msg){
 }
 
 /* 屏幕状态渲染（联动手机呼吸轮廓） */
+/* 香氛脚注：由实验室配方实时驱动（ember:aroma 事件更新），不再写死 */
+var aromaInfo = { name:'深夜安眠', pct:90 };
+function aromaFootText(){ return aromaInfo.name + ' ' + aromaInfo.pct + '%'; }
+
 function paintScreen(){
   scr.className = 'screen s-' + state;
   var ph = $('phoneShell');
@@ -1940,7 +1988,7 @@ function paintScreen(){
   if(state === 'calm'){
     scrMain.textContent = 'Calm';
     scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
-    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · 薰衣草 82%';
+    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · ' + aromaFootText();
   } else if(state === 'noise'){
     scrMain.textContent = 'Noise!';
     scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
@@ -1955,8 +2003,9 @@ function paintScreen(){
   $('ftState').className = state === 'calm' ? 'v-em' : (state === 'noise' ? 'v-rose' : 'v-amber');
 }
 
-/* RMS 呼吸式抖动 */
+/* RMS 呼吸式抖动（串口接入真实硬件后此模拟器让位） */
 setInterval(function(){
+  if(serialMode) return;
   var target;
   if(state === 'calm') target = 38 + Math.random()*9;
   else if(state === 'noise') target = 158 + Math.random()*32;
@@ -1968,65 +2017,407 @@ setInterval(function(){
   if(state === 'noise') scrSub.textContent = Math.round(rms) + ' dB · 突发噪音';
 }, 420);
 
-/* 触发噪音 */
-$('clapBtn').addEventListener('click', function(){
-  if(state !== 'calm') return;
+/* ── 状态迁移（模拟拍手与真实硬件共用） ── */
+/* 状态广播：控制台每次状态变化都通知全页（嗅觉实验室据此联动震荡/停香） */
+function emitState(){
+  try{
+    window.dispatchEvent(new CustomEvent('ember:state', {
+      detail:{ state: state, source: serialMode ? 'serial' : 'sim' }
+    }));
+    /* 硬件 NOISE 或模拟拍手触发时，向全页广播 deviceNoise（香氛实验室据此紧急停香） */
+    if(state === 'noise'){
+      window.dispatchEvent(new CustomEvent('deviceNoise', {
+        detail:{ source: serialMode ? 'serial' : 'sim' }
+      }));
+    }
+  }catch(e){}
+}
+
+function updateBpm(){
+  if(serialMode) return;   /* 串口模式下 bpm 位显示真实 RMS，由 paintRealNumbers 负责 */
+  var bpmEl = $('bpm');
+  var v = state === 'noise' ? 24.0 : (state === 'calming' ? 16.0 : 12.6);
+  if(bpmEl) bpmEl.textContent = v.toFixed(1) + ' bpm';
+}
+
+function enterNoise(triggerRms){
   state = 'noise';
-  $('clapBtn').disabled = true;
   paintScreen();
   scr.classList.add('shake');
   setTimeout(function(){ scr.classList.remove('shake'); }, 900);
 
-  log('err', 'MIC', 'RMS ' + Math.round(160+Math.random()*20) + ' &gt; 150 · 触发噪音门限');
+  log('err', 'MIC', 'RMS ' + Math.round(triggerRms) + ' &gt; 150 · 触发噪音门限');
   setTimeout(function(){ log('warn','HAL','检测到噪音，切入退让模式'); }, 120);
   setTimeout(function(){ log('dim','I2S','声景音量 42% → 0%（阻尼 300ms）'); }, 260);
   setTimeout(function(){ log('dim','MOS','香氛通道切断 · 薰衣草 82% 暂停'); }, 400);
   setTimeout(function(){ log('dim','LED','WS2812 → 防守暗红 #FF1E1E'); }, 520);
+  setTimeout(function(){ log('ok','LINK','实验室香水瓶已锁定 · 灰白停香 · 震荡中'); }, 640);
 
   volume = 0;
   $('ftVol').textContent = '0%';
   $('ftAroma').textContent = 'OFF';
   $('ftLed').textContent = '#FF1E1E';
   $('ftLed').className = 'v-rose';
+  updateBpm();
+  emitState();
+}
 
-  /* 1.4s 后进入 Calming 冷却态 */
+function cancelCooldown(){
+  if(cdAnim){ cancelAnimationFrame(cdAnim); cdAnim = null; }
+}
+
+function startCooldownRing(dur){
+  var DUR = dur || 3000;
+  cancelCooldown();
+  var t0 = performance.now();
+  cdAnim = requestAnimationFrame(function ring(t){
+    var p = Math.min((t - t0) / DUR, 1);
+    cdRing.style.background = 'conic-gradient(var(--amber) ' + (p*360) + 'deg, rgba(255,255,255,.05) 0deg)';
+    if(state === 'calming') scrSub.textContent = '冷却中 · ' + Math.max(1, Math.ceil((DUR/1000) - p*(DUR/1000))) + ' 秒';
+    if(p < 1 && state === 'calming') cdAnim = requestAnimationFrame(ring);
+  });
+}
+
+function enterCalming(dur){
+  dur = dur || 3000;
+  state = 'calming';
+  paintScreen();
+  log('warn','HAL', dur < 3000 ? '进入 Calming 缓冲态 · ' + Math.round(dur/100)/10 + 's' : '进入 Calming 冷却态 · 3.0s');
+  if(!serialMode){   /* 假倒计时日志仅模拟模式输出 */
+    setTimeout(function(){ if(state === 'calming') log('dim','TIMER','冷却 3s → 2s'); }, 1000);
+    setTimeout(function(){ if(state === 'calming') log('dim','TIMER','冷却 2s → 1s'); }, 2000);
+  }
+  startCooldownRing(dur);
+  updateBpm();
+  emitState();
+}
+
+function enterCalm(){
+  clearCalmHold();
+  cancelCooldown();
+  state = 'calm';
+  volume = 42;
+  paintScreen();
+  $('clapBtn').disabled = false;   /* 串口模式下保留可点，点击时提示"请对硬件发声" */
+  $('ftVol').textContent = '42%';
+  $('ftAroma').textContent = aromaFootText();
+  $('ftLed').textContent = '#1F3A5F';
+  $('ftLed').className = 'v-em';
+  cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
+  log('ok','HAL','环境恢复安静 · 平滑恢复');
+  setTimeout(function(){ log('dim','I2S','音量 0% → 42%'); }, 180);
+  setTimeout(function(){ log('ok','MOS','香氛恢复 · 配比 松木 5 / 柑橘 5 / 薰衣草 90'); }, 340);
+  setTimeout(function(){ log('ok','LINK','实验室香水瓶已解锁 · 液体颜色平滑恢复'); }, 480);
+  setTimeout(function(){ log('ok','SYS','三级状态机回到 Calm · 待机'); }, 620);
+  updateBpm();
+  emitState();
+}
+
+/* 模拟拍手（串口模式下点击只提示，不切换状态） */
+$('clapBtn').addEventListener('click', function(){
+  if(serialMode){
+    hintHardwareOnly();
+    return;
+  }
+  if(state !== 'calm') return;
+  enterNoise(160 + Math.random()*20);
+  setTimeout(function(){ if(state === 'noise') enterCalming(); }, 1400);
+  setTimeout(function(){ if(state === 'calming') enterCalm(); }, 4400);
+});
+
+/* 串口模式下点拍手 → 提示"请对硬件发声" */
+function hintHardwareOnly(){
+  log('warn', 'SYS', '串口模式 · 请对真实硬件发声触发噪音（拍手 / 说话）');
+  var b = $('clapBtn');
+  if(!b || b.dataset.hwHint) return;
+  b.dataset.hwHint = '1';
+  var old = b.textContent;
+  b.textContent = '🎤 请对硬件发声';
+  b.classList.add('hw-hint');
   setTimeout(function(){
-    state = 'calming';
+    b.textContent = old;
+    b.classList.remove('hw-hint');
+    delete b.dataset.hwHint;
+  }, 1600);
+}
+
+/* ═════════════════════════════════════════
+   Web Serial · 真实硬件接入（ESP32 · 115200）
+   帧格式：DATA | RMS: 17 | STATE: CALM
+   ═════════════════════════════════════════ */
+var serialPort = null, serialReader = null, serialBuf = '';
+var serialActive = false;      /* 串口会话存活标记（readLoop 唯一退出条件，防热点循环） */
+var cdAnim = null;
+var calmHoldTimer = null;      /* UI 状态缓冲：NOISE → CALM 之间的 1.5s 橙色缓冲 */
+var serialBtn = $('serialBtn'), serialDot = $('serialDot'), serialText = $('serialText');
+
+/* 帧解析：DATA | RMS: 17 | STATE: CALM（对空格容错） */
+var SERIAL_RE = /DATA\s*\|\s*RMS:\s*(\d+)\s*\|\s*STATE:\s*(\w+)/i;
+
+function portLabel(port){
+  try{
+    var info = port.getInfo();
+    if(info && info.usbVendorId){
+      var h = function(v){ return '0x' + v.toString(16).toUpperCase().padStart(4,'0'); };
+      return 'USB ' + h(info.usbVendorId) + ':' + h(info.usbProductId || 0);
+    }
+  }catch(e){}
+  return 'USB 串口';
+}
+
+function setSerialUI(on, msg){
+  if(serialDot) serialDot.classList.toggle('on', on);
+  if(serialText) serialText.textContent = msg;
+  if(serialBtn) serialBtn.textContent = on ? '⏻ 断开设备' : '🔌 连接真实设备（USB）';
+}
+
+/* 用真实数据驱动整套状态机
+   —— 状态切换（蓝/红/橙屏）由硬件帧实时触发，零过渡；
+   —— 数值（RMS/bpm 位）经 60fps 插值平滑，500ms 一帧不生硬 */
+var dispRms = null, lerpRaf = null;
+
+function paintRealNumbers(){
+  var v = Math.round(dispRms);
+  $('ftRms').textContent = v;
+  $('ftRms').className = dispRms > 150 ? 'v-rose' : '';
+  if(state === 'calm') scrSub.textContent = v + ' dB · 环境稳定';
+  if(state === 'noise') scrSub.textContent = v + ' dB · 突发噪音';
+  var bpmEl = $('bpm');
+  if(bpmEl) bpmEl.textContent = 'RMS: ' + v;   /* 无心率数据，用真实 RMS 填充 */
+}
+
+function ensureLerp(){
+  if(lerpRaf) return;
+  var step = function(){
+    var diff = rms - dispRms;
+    if(Math.abs(diff) < .5){
+      dispRms = rms;
+      lerpRaf = null;
+    }else{
+      dispRms += diff * .25;
+      lerpRaf = requestAnimationFrame(step);
+    }
+    paintRealNumbers();
+  };
+  lerpRaf = requestAnimationFrame(step);
+}
+
+function clearCalmHold(){
+  if(calmHoldTimer){ clearTimeout(calmHoldTimer); calmHoldTimer = null; }
+}
+
+function applyRealData(rmsVal, hwState){
+  rms = rmsVal;
+  if(dispRms === null) dispRms = rmsVal;   /* 首帧直接对齐，不从旧假值滑过来 */
+
+  var s = String(hwState || '').toLowerCase();
+  if(s && s !== state){
+    if(s === 'noise'){
+      /* 缓冲期内再闻噪音 → 取消缓冲，弹回红色 */
+      clearCalmHold();
+      enterNoise(rmsVal);
+    } else if(s === 'calming'){
+      clearCalmHold();
+      enterCalming();
+    } else if(s === 'calm'){
+      if(state === 'noise'){
+        /* UI 状态缓冲：不立刻变蓝，先进橙色 CALMING 1.5s；
+           期间若收到 NOISE 则弹回红色，否则平滑恢复蓝色 */
+        enterCalming(1500);
+        log('dim', 'SERIAL', '收到 CALM · 1.5s 状态缓冲中');
+        calmHoldTimer = setTimeout(function(){
+          calmHoldTimer = null;
+          if(state === 'calming') enterCalm();
+        }, 1500);
+      } else if(state === 'calming' && !calmHoldTimer){
+        enterCalm();   /* 硬件自己完成了 CALMING 冷却 → 直接恢复 */
+      }
+      /* state==='calming' 且缓冲中 / state==='calm' 重复帧 → 忽略 */
+    } else return;
+  }
+  log('dim', 'SERIAL', 'DATA | RMS: ' + rmsVal + ' | STATE: ' + s.toUpperCase());
+  ensureLerp();
+}
+
+function handleSerialLine(line){
+  var m = line.match(SERIAL_RE);
+  if(!m || !serialMode) return;
+  applyRealData(parseInt(m[1], 10), m[2]);
+}
+
+async function readLoop(){
+  var decoder = new TextDecoder();
+  var deadPort = null;
+  try{
+    while(serialActive && serialPort && serialPort.readable){
+      var reader = serialPort.readable.getReader();
+      serialReader = reader;
+      try{
+        while(serialActive){
+          var res = await reader.read();
+          if(res.done) break;            /* 流结束 → 立即退出，绝不重取 reader（防主线程热点循环死锁） */
+          serialBuf += decoder.decode(res.value, { stream:true });
+          var idx;
+          while((idx = serialBuf.indexOf('\n')) >= 0){
+            var line = serialBuf.slice(0, idx).replace(/\r$/, '').trim();
+            serialBuf = serialBuf.slice(idx + 1);
+            if(line) handleSerialLine(line);
+          }
+        }
+      } finally {
+        try{ reader.releaseLock(); }catch(e){}
+        if(serialReader === reader) serialReader = null;
+      }
+      if(!serialActive) break;           /* 会话已被主动关闭 → 到此为止 */
+      deadPort = serialPort;             /* 流提前结束但会话仍"活跃" → 端口异常，走中断恢复 */
+      break;
+    }
+  }catch(err){ /* 拔线 / 驱动错误从这里落到底部统一恢复 */ }
+  if(serialMode) onSerialDown('串口连接中断 · 自动恢复模拟数据模式');
+  try{ if(deadPort) await deadPort.close(); }catch(e){}   /* 兜底关闭，防止端口句柄泄漏 */
+}
+
+/* ── 遥测三卡：串口模式显示固定真实状态，断开恢复模拟值 ── */
+function applySerialTelemetry(){
+  $('battVal').innerHTML = '100<small>%</small>';
+  $('battTrend').textContent = 'USB 供电 · 持续在线';
+  $('scentTrend').textContent = '固件未上报 · 保持余量';
+  $('tempVal').textContent = 'ESP32-S3';
+  $('tempTrend').textContent = '在线 · 串口数据源';
+  var ps = $('phoneSmall');
+  if(ps) ps.textContent = 'MIC · 实时 RMS 读数';
+}
+
+function restoreTelemetry(){
+  $('battVal').innerHTML = '87<small>%</small>';
+  $('battTrend').textContent = '▲ 充电中 · 280mA';
+  $('scentTrend').textContent = '松木 · 柑橘混合';
+  $('tempVal').innerHTML = '36.2<small>°C</small>';
+  $('tempTrend').textContent = '正常范围';
+  var ps = $('phoneSmall');
+  if(ps) ps.textContent = 'BREATHING · 深蓝呼吸';
+  var bpmEl = $('bpm');
+  if(bpmEl) bpmEl.textContent = '12.6 bpm';
+}
+
+function onSerialDown(msg){
+  var wasActive = serialMode || serialActive;
+  serialActive = false;
+  serialMode = false;
+  serialPort = null;
+  serialReader = null;
+  clearCalmHold();
+  cancelCooldown();
+  dispRms = null;
+  if(scr) scr.classList.remove('instant');   /* 恢复模拟模式的柔和过渡 */
+  setSerialUI(false, '未连接 · 模拟数据模式');
+  $('clapBtn').disabled = false;
+  restoreTelemetry();
+  if(wasActive){
+    log('warn', 'SERIAL', msg);
+    log('dim', 'SYS', '假数据模拟器已恢复接管 · 可随时重新连接');
+  }
+  paintScreen();
+}
+
+async function connectSerial(){
+  if(!('serial' in navigator)){
+    log('err', 'SERIAL', '当前浏览器不支持 Web Serial · 请使用 Chrome / Edge 打开');
+    setSerialUI(false, '浏览器不支持 Web Serial · 请用 Chrome / Edge');
+    return;
+  }
+  if(serialMode || serialActive){ return; }   /* 防重复连接 */
+  try{
+    var port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    serialPort = port;
+    serialMode = true;
+    serialActive = true;
+    serialBuf = '';
+    dispRms = null;
+    setSerialUI(true, '已连接 · ' + portLabel(port) + ' · 115200 bps · 真实硬件数据');
+    scr.classList.add('instant');   /* 状态切换瞬时，不再 1.2s 渐变 */
+    applySerialTelemetry();
+    log('ok', 'SERIAL', '串口已连接 · 115200 bps · 数据源切换为真实硬件');
+    log('dim', 'SERIAL', '等待 DATA | RMS / STATE 帧 · 硬件 500ms 一帧');
+    log('dim', 'SYS', '所有模拟定时器已暂停 · 网页完全由硬件帧驱动');
     paintScreen();
-    log('warn','HAL','进入 Calming 冷却态 · 3.0s');
+    readLoop();
+  }catch(err){
+    serialMode = false;
+    serialActive = false;
+    setSerialUI(false, err && err.name === 'NotFoundError' ? '已取消选择端口 · 模拟数据模式' : '连接失败 · 模拟数据模式');
+    log('err', 'SERIAL', '连接失败：' + (err && err.message ? err.message : err) + ' · 已保持模拟模式');
+  }
+}
 
-    var t0 = performance.now(), DUR = 3000;
-    (function ring(t){
-      var p = Math.min((t-t0)/DUR, 1);
-      cdRing.style.background = 'conic-gradient(var(--amber) ' + (p*360) + 'deg, rgba(255,255,255,.05) 0deg)';
-      scrSub.textContent = '冷却中 · ' + Math.max(1, Math.ceil(3 - p*3)) + ' 秒';
-      if(p < 1) requestAnimationFrame(ring);
-    })(t0);
+/* 断开：先立刻复位 UI（状态灯/日志），再异步释放底层资源 —— 任何一步失败都不影响页面 */
+async function disconnectSerial(){
+  var reader = serialReader, port = serialPort;
+  serialActive = false;
+  serialMode = false;
+  onSerialDown('已手动断开 · 恢复模拟数据模式');
+  try{ if(reader) await reader.cancel(); }catch(e){}
+  await new Promise(function(r){ setTimeout(r, 60); });   /* 让 readLoop 的 finally 先跑完，释放读锁 */
+  try{ if(reader) reader.releaseLock(); }catch(e){}
+  try{ if(port) await port.close(); }catch(e){}
+  try{ if(port){ await port.close(); } }catch(e){}       /* 双保险：确保句柄释放，可立即二次连接 */
+}
 
-    setTimeout(function(){ log('dim','TIMER','冷却 3s → 2s'); }, 1000);
-    setTimeout(function(){ log('dim','TIMER','冷却 2s → 1s'); }, 2000);
+if(serialBtn) serialBtn.addEventListener('click', function(){
+  try{
+    if(serialMode) disconnectSerial(); else connectSerial();
+  }catch(e){
+    onSerialDown('串口操作异常 · 已恢复模拟数据模式');
+  }
+});
 
-    /* 3 秒后恢复 */
-    setTimeout(function(){
-      state = 'calm';
-      volume = 42;
-      paintScreen();
-      $('clapBtn').disabled = false;
-      $('ftVol').textContent = '42%';
-      $('ftAroma').textContent = '薰衣草 82%';
-      $('ftLed').textContent = '#1F3A5F';
-      $('ftLed').className = 'v-em';
-      cdRing.style.background = 'conic-gradient(var(--amber) 0deg, rgba(255,255,255,.05) 0deg)';
-      log('ok','HAL','环境恢复安静 · 平滑恢复');
-      setTimeout(function(){ log('dim','I2S','音量 0% → 42%'); }, 180);
-      setTimeout(function(){ log('ok','MOS','香氛恢复 · 配比 松木 5 / 柑橘 5 / 薰衣草 90'); }, 340);
-      setTimeout(function(){ log('ok','SYS','三级状态机回到 Calm · 待机'); }, 520);
-    }, 3000);
-  }, 1400);
+/* 系统级拔线事件：无论读到哪一步都能立刻感知 */
+if(navigator.serial && navigator.serial.addEventListener){
+  navigator.serial.addEventListener('disconnect', function(e){
+    if(e.target === serialPort && serialMode) onSerialDown('设备已拔出 · 自动恢复模拟数据模式');
+  });
+}
+
+/* 嗅觉实验室"模拟翻身噪音" → 控制台联动变红（反向联动） */
+window.addEventListener('ember:noise-request', function(){
+  if(state === 'noise') return;
+  clearCalmHold();
+  enterNoise(Math.max(rms, 165 + Math.random()*20));
+});
+
+/* 嗅觉实验室配方广播 → 控制台屏幕脚注 + LINK 日志（拖时间轴 / 切预设 / 滴精油 / 时钟同步均触发） */
+var aromaLogTimer = null;
+window.addEventListener('ember:aroma', function(e){
+  var d = e.detail || {};
+  if(d.zh) aromaInfo.name = d.zh;
+  if(typeof d.pct === 'number') aromaInfo.pct = d.pct;
+  if(state === 'calm'){
+    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · ' + aromaFootText();
+    $('ftAroma').textContent = aromaFootText();
+  }
+  clearTimeout(aromaLogTimer);
+  aromaLogTimer = setTimeout(function(){
+    log('ok', 'LINK', '实验室配方更新 · ' + aromaInfo.name + ' · 主调 ' + aromaInfo.pct + '%');
+  }, 500);
+});
+
+/* 实验室 aromaUpdate 事件（detail.text 如 "正午密林 58%"）→ 屏幕底部 AROMA 小字动态更新 */
+window.addEventListener('aromaUpdate', function(e){
+  var text = e.detail && e.detail.text;
+  if(!text) return;
+  aromaInfo.name = String(text).replace(/\s*\d+%$/, '').trim();
+  var m = String(text).match(/(\d+)\s*%/);
+  if(m) aromaInfo.pct = parseInt(m[1], 10);
+  if(state === 'calm'){
+    scrFoot.textContent = 'SCENE · 森林鸟鸣 42% ｜ AROMA · ' + aromaFootText();
+    $('ftAroma').textContent = aromaFootText();
+  }
 });
 
 /* 初始化 */
 paintScreen();
+$('ftAroma').textContent = aromaFootText();
 log('ok','SYS','EmberSigh 控制台已就绪 · LVGL v9.6');
 log('dim','MIC','ES8311 Codec 初始化完成 · 48kHz / 16bit / 左声道');
 log('dim','HAL','阈值 安静&lt;50 / 噪音&gt;150 · 迟滞区间启用');
@@ -2034,8 +2425,9 @@ log('dim','I2S','森林鸟鸣 WAV 已嵌入固件 · 12s / EMBED_FILES');
 log('dim','MOS','加湿器通道待命 · 目标配比 薰衣草 82%');
 log('dim','LED','WS2812 ×16 灯环 · RMT 通道就绪');
 
-/* 安静时周期性心跳日志（仅控制台视图可见时输出，避免隐藏视图积攒日志） */
+/* 安静时周期性心跳日志（仅控制台视图可见时输出，避免隐藏视图积攒日志；串口模式下让位给真实日志） */
 setInterval(function(){
+  if(serialMode) return;
   if(state === 'calm' && $('v-console').classList.contains('active')){
     var pool = [
       ['dim','MIC','RMS ' + Math.round(38+Math.random()*8) + ' · 环境稳定'],
@@ -2047,9 +2439,10 @@ setInterval(function(){
   }
 }, 9000);
 
-/* ── 遥测：呼吸 bpm / 电量 / 香氛余量 / 核心温度 ── */
+/* ── 遥测：呼吸 bpm / 电量 / 香氛余量 / 核心温度（串口接入后模拟遥测暂停） ── */
 var telBpm = 12.6, telBatt = 87, telTemp = 36.2;
 setInterval(function(){
+  if(serialMode) return;
   var target = state === 'noise' ? 24 + Math.random()*4 : (state === 'calming' ? 16 : 12.6);
   telBpm = lerp(telBpm, target, .3);
   var bpmEl = $('bpm');
@@ -2117,6 +2510,35 @@ function hex(c){
   return '#' + c.map(function(v){ return v.toString(16).padStart(2,'0'); }).join('').toUpperCase();
 }
 
+/* 按配方比例得出场景命名（labRender 与跨页联动共用） */
+function blendNameFor(pP, pC, pL, total){
+  if(total <= 0) return '空瓶待调 · Blank';
+  if(pL >= 55) return '深夜安眠 · Nocturne';
+  if(pP >= 55) return '正午密林 · Deep Forest';
+  if(pC >= 55) return '清晨山坡 · Morning Hill';
+  if(pP >= 35 && pC >= 30) return '黄昏暖室 · Dusk Room';
+  return '私人定制 · Bespoke';
+}
+
+/* 香氛状态广播 → 控制台（拖时间轴 / 切预设 / 滴精油 / 恢复时触发） */
+function emitAroma(){
+  var total = mix.pine + mix.citrus + mix.lavender;
+  var pP = total > 0 ? mix.pine/total*100 : 0;
+  var pC = total > 0 ? mix.citrus/total*100 : 0;
+  var pL = total > 0 ? mix.lavender/total*100 : 0;
+  var pct = Math.round(Math.max(pP, pC, pL));
+  var name = blendNameFor(pP, pC, pL, total);
+  try{
+    window.dispatchEvent(new CustomEvent('ember:aroma', {
+      detail:{ name: name, zh: name.split(' · ')[0], pct: pct }
+    }));
+    /* 指定事件名：控制台监听 aromaUpdate 并把 text 写入屏幕底部小字 */
+    window.dispatchEvent(new CustomEvent('aromaUpdate', {
+      detail:{ text: name.split(' · ')[0] + ' ' + pct + '%' }
+    }));
+  }catch(e){}
+}
+
 /* 渲染 */
 function labRender(){
   var total = shown.pine + shown.citrus + shown.lavender;
@@ -2145,12 +2567,8 @@ function labRender(){
   $('swatch').style.background = fill;
   $('swatchHex').textContent = (labAlert ? '#968C84' : hex(c)) + ' · ' + Math.round(total) + ' ml';
 
-  var name = '私人定制 · Bespoke', sub = '松木 '+Math.round(pP)+'% ｜ 柑橘 '+Math.round(pC)+'% ｜ 薰衣草 '+Math.round(pL)+'%';
-  if(total <= 0){ name='空瓶待调 · Blank'; }
-  else if(pL >= 55){ name='深夜安眠 · Nocturne'; }
-  else if(pP >= 55){ name='正午密林 · Deep Forest'; }
-  else if(pC >= 55){ name='清晨山坡 · Morning Hill'; }
-  else if(pP >= 35 && pC >= 30){ name='黄昏暖室 · Dusk Room'; }
+  var name = blendNameFor(pP, pC, pL, total);
+  var sub = '松木 '+Math.round(pP)+'% ｜ 柑橘 '+Math.round(pC)+'% ｜ 薰衣草 '+Math.round(pL)+'%';
   $('blendName').textContent = labAlert ? '紧急退让 · Fallback' : name;
   $('blendSub').textContent = labAlert ? '香氛通道已切断 · 3 秒后恢复' : sub;
 
@@ -2213,6 +2631,7 @@ function droplet(key, silent){
     mix = normalize(mix);
     labGoTo(mix, 720);
     document.querySelectorAll('.preset').forEach(function(p){ p.classList.remove('on'); });
+    emitAroma();
   };
 }
 
@@ -2245,6 +2664,7 @@ document.querySelectorAll('.preset').forEach(function(btn){
     mix = { pine:p.pine, citrus:p.citrus, lavender:p.lavender };
     labGoTo(mix, 1000);
     document.querySelectorAll('.preset').forEach(function(b){ b.classList.toggle('on', b===btn); });
+    emitAroma();
     var i = 0;
     Object.keys(p).forEach(function(k){
       if(p[k] > 0 && i < 3){
@@ -2289,36 +2709,96 @@ slider.addEventListener('input', function(){
   mix = { pine:rec.r.pine, citrus:rec.r.citrus, lavender:rec.r.lavender };
   labGoTo(mix, 420);
   document.querySelectorAll('.preset').forEach(function(p){ p.classList.remove('on'); });
+  emitAroma();
 });
 
-/* 噪音干扰 */
-$('labNoise').addEventListener('click', function(){
+/* 噪音干扰（本地模拟按钮 + 控制台跨页面联动，共用同一套紧急停香动画） */
+var savedMix = null;
+
+function labAlertOn(){
   if(labAlert) return;
   labAlert = true;
-  this.disabled = true;
-  this.textContent = '⏳ 退让中…';
-  var bwrap = $('bwrap');
-  bwrap.classList.add('shake');
-  var savedMix = { pine:mix.pine, citrus:mix.citrus, lavender:mix.lavender };
-
+  $('labNoise').disabled = true;
+  $('labNoise').textContent = '⏳ 退让中…';
+  $('bwrap').classList.add('shake');                 /* 香瓶持续震荡 */
+  savedMix = { pine:mix.pine, citrus:mix.citrus, lavender:mix.lavender };
   mix = { pine:0, citrus:0, lavender:0 };
-  labGoTo(mix, 320);
+  labGoTo(mix, 320);                                 /* 液体退空 + 变灰白（紧急停香） */
   labRender();
-  toast('检测到翻身噪音 · 已切断香氛释放', '⚠', 'warn');
+}
 
+function labAlertOff(){
+  if(!labAlert) return;
+  labAlert = false;
+  $('bwrap').classList.remove('shake');
+  mix = savedMix || { pine:5, citrus:5, lavender:90 };
+  labGoTo(mix, 1200);                                /* 液体颜色 1.2s 平滑恢复 */
+  $('labNoise').disabled = false;
+  $('labNoise').textContent = '⚠ 模拟翻身噪音';
+  emitAroma();                                       /* 恢复后的配方同步回控制台 */
+}
+
+$('labNoise').addEventListener('click', function(){
+  if(labAlert) return;
+  labAlertOn();
+  toast('检测到翻身噪音 · 已切断香氛释放', '⚠', 'warn');
+  /* 反向联动：通知控制台屏幕同步变红 */
+  try{ window.dispatchEvent(new CustomEvent('ember:noise-request', { detail:{ source:'lab' } })); }catch(e){}
   setTimeout(function(){
-    bwrap.classList.remove('shake');
-    labAlert = false;
-    mix = savedMix;
-    labGoTo(mix, 1200);
-    $('labNoise').disabled = false;
-    $('labNoise').textContent = '⚠ 模拟翻身噪音';
+    labAlertOff();
     toast('环境恢复安静 · 香氛缓缓回归', '✧');
   }, 3000);
 });
 
-/* 初始化（预设"深夜安眠"高亮） */
-document.querySelector('.preset[data-p="sleep"]').classList.add('on');
+/* 控制台状态广播 → 实验室联动（真实硬件 NOISE 或模拟拍手均生效） */
+window.addEventListener('ember:state', function(e){
+  var st = e.detail && e.detail.state;
+  if(st === 'noise'){
+    if(!labAlert){
+      labAlertOn();
+      toast('检测到噪音 · 实验室同步紧急停香', '⚠', 'warn');
+    }
+  } else if(st === 'calming'){
+    if(labAlert){
+      labAlertOff();                                 /* 冷却缓冲期即开始恢复液体颜色 */
+      toast('噪音退场 · 液体颜色恢复中', '✧');
+    }
+  } else if(st === 'calm'){
+    labAlertOff();
+  }
+});
+
+/* 控制台 deviceNoise 事件（Web Serial 硬件 NOISE 或模拟拍手触发）→ 香瓶震荡 + 液体灰白紧急停香 */
+window.addEventListener('deviceNoise', function(){
+  if(labAlert) return;
+  labAlertOn();                                      /* shake 类 + 灰白停香，与 ember:state 共用同一逻辑 */
+  toast('检测到噪音 · 实验室同步紧急停香', '⚠', 'warn');
+});
+
+/* 真实时钟同步：滑块定位到当前时间，配方/颜色/情绪预测随之更新 */
+function syncLabClock(){
+  var d = new Date();
+  var hh = d.getHours(), mm = d.getMinutes();
+  var h = hh + mm/60;
+  slider.value = h;
+  $('tlTime').textContent = String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  var rec = tlRecipe(h);
+  $('tlPhase').textContent = rec.label;
+  if(!labAlert){
+    mix = { pine:rec.r.pine, citrus:rec.r.citrus, lavender:rec.r.lavender };
+    labGoTo(mix, 800);
+  }
+  document.querySelectorAll('.preset').forEach(function(p){ p.classList.remove('on'); });
+  emitAroma();
+}
+
+/* 切换到实验室 Tab 时重新对齐真实时间（跨 Tab 联动不丢失） */
+window.addEventListener('hashchange', function(){
+  if(location.hash === '#lab') syncLabClock();
+});
+
+/* 初始化：时间轴对齐电脑真实时间（如 23:00 自动停在薰衣草高比例位） */
+syncLabClock();
 labRender();
 })();
 
