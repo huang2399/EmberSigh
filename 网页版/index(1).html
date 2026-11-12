@@ -968,6 +968,109 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .device-frame{width:190px;height:190px;}
   .hero-cta{flex-wrap:wrap;gap:10px;}
 }
+
+/* ═══════════════════════════════════════════════════════
+   动态呈现 · 视差 / 频谱 / 雾气 / 分层组装
+   ═══════════════════════════════════════════════════════ */
+
+/* ── A. 首页：鼠标 3D 视差（跟随光标透视偏移） ── */
+.hero-visual{perspective:1350px;perspective-origin:50% 44%;}
+.hero-stage{
+  position:relative;width:min(400px,76%);flex:none;transform-style:preserve-3d;
+  transform:translate3d(var(--px,0px),calc(var(--py,0px) + var(--sy,0px)),0)
+            rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--sc,1));
+  will-change:transform;
+}
+.hero-stage .hero-img{width:100%;}
+.hero-sheen{
+  position:absolute;inset:0;border-radius:36px;pointer-events:none;z-index:2;
+  background:radial-gradient(320px 320px at var(--gx,50%) var(--gy,28%),rgba(255,255,255,.5),rgba(255,255,255,.12) 42%,rgba(255,255,255,0) 66%);
+  mix-blend-mode:soft-light;opacity:.95;
+  transition:background .06s linear;
+}
+.hero-visual .float-card{will-change:transform;}
+@keyframes floaty{
+  0%,100%{transform:translate3d(var(--fx,0px),var(--fy,0px),0) translateY(0);}
+  50%{transform:translate3d(var(--fx,0px),var(--fy,0px),0) translateY(-9px);}
+}
+
+/* ── B. 控制台：Canvas 环形音频频谱（替代静态呼吸圈） ── */
+.viz-rig{position:relative;width:190px;height:190px;flex:none;display:grid;place-items:center;}
+.viz-rig .breath-ring{width:112px;height:112px;z-index:1;}
+.viz-cv{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;}
+
+/* ── C. 实验室：瓶底雾气粒子 ── */
+.mist-cv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+
+/* ── D. 开发者：分层爆炸组装 ── */
+.asm-card{padding:18px 22px 18px;margin-bottom:20px;}
+.asm-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:4px;}
+.asm-ctrl{display:flex;align-items:center;gap:12px;}
+.asm-state{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:rgba(238,245,242,.42);
+  transition:color .4s;}
+.asm-state.done{color:#7fe0b4;}
+.asm-btn{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;padding:6px 13px;border-radius:99px;cursor:pointer;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:rgba(238,245,242,.78);
+  transition:all .3s;
+}
+.asm-btn:hover{background:rgba(255,255,255,.15);border-color:rgba(160,205,255,.6);color:#fff;
+  box-shadow:0 0 18px -4px rgba(120,180,255,.55);}
+.asm-body{display:flex;gap:26px;align-items:center;}
+.asm-stage{flex:1 1 54%;min-width:0;display:grid;place-items:center;}
+.asm-stage svg{width:100%;max-width:440px;height:auto;display:block;overflow:visible;}
+.asm-legend{flex:1 1 46%;display:flex;flex-direction:column;gap:8px;min-width:190px;}
+.asm-leg{display:flex;align-items:center;gap:11px;opacity:0;transform:translateX(-14px);}
+.asm-card.play .asm-leg{animation:legIn .55s cubic-bezier(.22,1,.36,1) both;
+  animation-delay:calc(var(--i) * .11s + .62s);}
+@keyframes legIn{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:none;}}
+.asm-leg .dot{width:8px;height:8px;flex:none;border-radius:2px;transform:rotate(45deg);
+  box-shadow:0 0 10px -2px currentColor;}
+.asm-leg .txt{min-width:0;}
+.asm-leg .nm{font-family:var(--serif);font-size:11.5px;letter-spacing:.08em;color:rgba(238,245,242,.92);}
+.asm-leg .sp{font-family:var(--mono);font-size:8px;letter-spacing:.05em;color:rgba(238,245,242,.38);margin-top:3px;}
+.asm-leg .ix{margin-left:auto;font-family:var(--mono);font-size:8px;color:rgba(238,245,242,.24);letter-spacing:.1em;}
+/* SVG 零件：初始为"散开"位姿，play 后逐层飞入归位 */
+.asm-part{
+  transform-box:fill-box;transform-origin:50% 50%;opacity:0;
+  transform:translate(var(--dx,0px),var(--dy,0px)) rotate(var(--rot,0deg));
+}
+.asm-card.play .asm-part{animation:asmIn .92s cubic-bezier(.16,.9,.24,1) both;
+  animation-delay:calc(var(--i) * .11s);}
+@keyframes asmIn{
+  0%{opacity:0;transform:translate(calc(var(--dx) * 1.4),calc(var(--dy) * 1.4)) rotate(var(--rot)) scale(.84);}
+  55%{opacity:1;}
+  100%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1);}
+}
+.asm-machine{transform-box:fill-box;transform-origin:50% 100%;}
+.asm-card.play .asm-machine{animation:asmLock .62s cubic-bezier(.2,1.5,.36,1) 1.30s both;}
+@keyframes asmLock{0%{transform:none;}38%{transform:scale(1.018,.982);}72%{transform:scale(.995,1.005);}100%{transform:none;}}
+.asm-axis{opacity:0;transition:opacity .6s ease .3s;}
+.asm-card.play .asm-axis{opacity:.5;}
+.asm-scan{opacity:0;}
+.asm-card.play .asm-scan{animation:asmScan 3.4s ease-in-out 1.9s infinite;}
+@keyframes asmScan{
+  0%{opacity:0;transform:translateY(400px);}
+  14%{opacity:.9;}
+  82%{opacity:.55;}
+  100%{opacity:0;transform:translateY(58px);}
+}
+@media (max-width:760px){
+  .asm-body{flex-direction:column;align-items:stretch;gap:6px;}
+  .asm-legend{order:2;margin-top:2px;gap:6px;}
+  .asm-stage svg{max-width:330px;}
+}
+@media (max-width:640px){
+  .hero-stage{width:min(320px,88%);}
+  .viz-rig{width:168px;height:168px;}
+}
+@media (prefers-reduced-motion:reduce){
+  .asm-part{opacity:1;transform:none;animation:none!important;}
+  .asm-card.play .asm-part,.asm-card.play .asm-machine,.asm-card.play .asm-scan{animation:none!important;}
+  .asm-leg{opacity:1;transform:none;animation:none!important;}
+  .hero-stage{transform:none;}
+  .viz-cv,.mist-cv{display:none;}
+}
 </style>
 </head>
 <body>
@@ -1043,12 +1146,15 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
         </div>
       </div>
 
-      <div class="hero-visual">
-        <div class="float-card fc1">MIC · RMS <b>42</b> dB</div>
-        <div class="float-card fc2">AROMA · <b>3</b> CH</div>
-        <img class="hero-img" src="images/hero-product.jpg"
-             alt="EmberSigh One 产品渲染图" loading="eager"
-             onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+      <div class="hero-visual" id="heroVisual">
+        <div class="float-card fc1" data-depth="30">MIC · RMS <b>42</b> dB</div>
+        <div class="float-card fc2" data-depth="44">AROMA · <b>3</b> CH</div>
+        <div class="hero-stage" id="heroStage">
+          <img class="hero-img" src="images/hero-product.jpg"
+               alt="EmberSigh One 产品渲染图" loading="eager"
+               onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          <span class="hero-sheen" aria-hidden="true"></span>
+        </div>
         <div class="device-cap">
           <div class="n">EmberSigh One · 概念样机</div>
           <div class="s">ESP32-S3 · 240×240 · SOUNDSCAPE + AROMA</div>
@@ -1300,7 +1406,10 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
       <div class="phone-col">
         <div class="phone-shell" id="phoneShell">
           <div class="phone-status"><span>EmberSigh</span><span>5G ▮▮▮</span></div>
-          <div class="breath-ring"></div>
+          <div class="viz-rig" id="vizRig">
+            <div class="breath-ring"></div>
+            <canvas class="viz-cv" id="vizCv" width="380" height="380"></canvas>
+          </div>
           <div class="breath-text">
             <div class="big" id="bpm">12.6 bpm</div>
             <div class="small" id="phoneSmall">BREATHING · 深蓝呼吸</div>
@@ -1592,6 +1701,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
               <text x="160" y="274" text-anchor="middle" font-family="Noto Serif SC,serif"
                     font-size="8.5" fill="rgba(52,40,28,.24)" letter-spacing="5">嗅 觉 实 验 室</text>
             </svg>
+            <canvas class="mist-cv" id="mistCv" aria-hidden="true"></canvas>
           </div>
 
           <div class="link-status" id="labLink">🔗 联动状态：与硬件感知同步 (当前状态：CALM)</div>
@@ -1702,6 +1812,24 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <h2 style="margin-top:12px;">固件与调度算法，<b>完全开源</b>。</h2>
         </div>
         <div class="sub">Architecture · Pinout · Field Notes</div>
+      </div>
+    </section>
+
+    <!-- 自动组装 · 分层爆炸图（滚动进入视口时逐层飞入拼装） -->
+    <section class="dcard asm-card reveal" id="asmCard">
+      <div class="asm-head">
+        <div class="card-title"><span class="tick"></span>分层组装 · 从零件到整机</div>
+        <div class="asm-ctrl">
+          <span class="asm-state" id="asmState">STANDBY · 0/6</span>
+          <button class="asm-btn" id="asmReplay" type="button">↻ 重播</button>
+        </div>
+      </div>
+      <div class="asm-body">
+        <div class="asm-stage">
+          <svg id="asmSvg" viewBox="0 0 460 460" role="img"
+               aria-label="EmberSigh 六层结构从爆炸状态逐层飞入并拼装为整机的动画"></svg>
+        </div>
+        <div class="asm-legend" id="asmLegend"></div>
       </div>
     </section>
 
@@ -2219,6 +2347,14 @@ function paintScreen(){
   $('termState').textContent = 'STATE · ' + state.toUpperCase();
   $('ftState').textContent = state.toUpperCase();
   $('ftState').className = state === 'calm' ? 'v-em' : (state === 'noise' ? 'v-rose' : 'v-amber');
+  telSync();
+}
+
+/* 遥测快照：供页面其它动态模块（环形频谱 / 瓶底雾气）读取，避免模块间直接耦合 */
+window.__emberTel = window.__emberTel || { state:'calm', rms:42 };
+function telSync(){
+  window.__emberTel.state = state;
+  window.__emberTel.rms = rms;
 }
 
 /* RMS 呼吸式抖动（串口接入真实硬件后此模拟器让位） */
@@ -2229,6 +2365,7 @@ setInterval(function(){
   else if(state === 'noise') target = 158 + Math.random()*32;
   else target = Math.max(46, rms - 6 - Math.random()*8);
   rms = lerp(rms, target, .35);
+  telSync();
   $('ftRms').textContent = Math.round(rms);
   $('ftRms').className = rms > 150 ? 'v-rose' : '';
   if(state === 'calm') scrSub.textContent = Math.round(rms) + ' dB · 环境稳定';
@@ -2408,6 +2545,7 @@ var dispRms = null, lerpRaf = null;
 
 function paintRealNumbers(){
   var v = Math.round(dispRms);
+  telSync();
   $('ftRms').textContent = v;
   $('ftRms').className = dispRms > 150 ? 'v-rose' : '';
   if(state === 'calm') scrSub.textContent = v + ' dB · 环境稳定';
@@ -3086,6 +3224,404 @@ rows.forEach(function(row){
     if(ph) ph.classList.remove('hot');
   });
 });
+})();
+
+/* ═══════════════════════════════════════════
+   10. 动态呈现 · 视差 / 频谱 / 雾气 / 分层组装
+   ═══════════════════════════════════════════ */
+
+/* ── 10.1 首页：鼠标 3D 视差 + 滚动推进 ── */
+(function heroMotion(){
+  var vis = document.getElementById('heroVisual');
+  var stage = document.getElementById('heroStage');
+  if(!vis || !stage) return;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var hero = vis.closest ? vis.closest('.hero') : null;
+  var copy = hero ? hero.querySelector('.hero-copy') : null;
+  var sheen = stage.querySelector('.hero-sheen');
+  var cards = vis.querySelectorAll('.float-card');
+  var kids = copy ? copy.children : [];
+
+  var tx = 0, ty = 0, mx = 0, my = 0;   /* 光标偏移（-1 ~ 1）：目标 / 当前 */
+  var sp = 0, spc = 0;                   /* 滚动进度：目标 / 当前 */
+  var raf = 0;
+
+  function paint(){
+    stage.style.setProperty('--px', (mx * 15).toFixed(2) + 'px');
+    stage.style.setProperty('--py', (my * 11).toFixed(2) + 'px');
+    stage.style.setProperty('--rx', (-my * 5.4).toFixed(2) + 'deg');
+    stage.style.setProperty('--ry', (mx * 7.6).toFixed(2) + 'deg');
+    stage.style.setProperty('--sc', (1 + spc * .085).toFixed(4));
+    stage.style.setProperty('--sy', (-spc * 44).toFixed(2) + 'px');
+    if(sheen){
+      sheen.style.setProperty('--gx', (50 + mx * 24).toFixed(1) + '%');
+      sheen.style.setProperty('--gy', (30 + my * 22).toFixed(1) + '%');
+    }
+    for(var i = 0; i < cards.length; i++){
+      var d = parseFloat(cards[i].getAttribute('data-depth')) || 22;
+      cards[i].style.setProperty('--fx', (-mx * d).toFixed(2) + 'px');
+      cards[i].style.setProperty('--fy', (-my * d * .8).toFixed(2) + 'px');
+    }
+    for(var k = 0; k < kids.length; k++){
+      if(kids[k].classList && kids[k].classList.contains('reveal')) continue;
+      kids[k].style.transform = spc > .002
+        ? 'translate3d(0,' + (-spc * (12 + k * 9)).toFixed(2) + 'px,0)' : '';
+    }
+  }
+
+  function step(){
+    raf = 0;
+    var dx = tx - mx, dy = ty - my, ds = sp - spc;
+    mx += dx * .09; my += dy * .09; spc += ds * .1;
+    paint();
+    if(Math.abs(dx) > .0012 || Math.abs(dy) > .0012 || Math.abs(ds) > .0012) kick();
+  }
+  function kick(){ if(!raf) raf = requestAnimationFrame(step); }
+
+  function onMove(e){
+    if(e.pointerType === 'touch') return;
+    var r = vis.getBoundingClientRect();
+    if(!r.width) return;
+    tx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width * .62)));
+    ty = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (r.height * .62)));
+    kick();
+  }
+  function onLeave(){ tx = 0; ty = 0; kick(); }
+
+  var host = hero || vis;
+  host.addEventListener('pointermove', onMove, { passive:true });
+  host.addEventListener('pointerleave', onLeave, { passive:true });
+
+  function onScroll(){
+    var h = hero ? hero.offsetHeight : 700;
+    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var p = Math.max(0, Math.min(y / Math.max(h * .78, 1), 1));
+    if(Math.abs(p - sp) > .0008){ sp = p; kick(); }
+  }
+  window.addEventListener('scroll', onScroll, { passive:true });
+  window.addEventListener('resize', function(){ onScroll(); kick(); });
+  onScroll();
+  paint();
+})();
+
+/* ── 10.2 控制台：Canvas 环形音频频谱（CALM 轻波 / NOISE 炸裂） ── */
+(function spectrum(){
+  var cv = document.getElementById('vizCv');
+  if(!cv || !cv.getContext) return;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var ctx = cv.getContext('2d');
+  var rig = document.getElementById('vizRig') || cv.parentNode;
+
+  var N = 64, bars = new Float32Array(N), phases = new Float32Array(N);
+  for(var n = 0; n < N; n++){ bars[n] = .3 + Math.random() * .4; phases[n] = Math.random() * 6.28; }
+
+  var W = 190, H = 190, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var energy = .28, tick = 0, raf = 0, alive = false;
+  var PAL = { calm:[110,168,255], noise:[255,120,104], calming:[240,186,122] };
+
+  function size(){
+    var r = rig.getBoundingClientRect();
+    W = Math.round(r.width) || 190;
+    H = Math.round(r.height) || 190;
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw(){
+    raf = 0;
+    tick++;
+    var tel = window.__emberTel || { state:'calm', rms:42 };
+    var st = tel.state || 'calm';
+    var tgt = st === 'noise' ? 1 : (st === 'calming' ? .55 : .27);
+    energy += (tgt - energy) * (st === 'noise' ? .32 : .055);
+    var col = PAL[st] || PAL.calm, hot = st === 'noise';
+    var cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2;
+    var r0 = R * .42, span = R * .5;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineCap = 'round';
+
+    for(var i = 0; i < N; i++){
+      var ang = (i / N) * 6.28318 - 1.5708;
+      var wv = Math.sin(tick * .045 + phases[i] + i * .55) * .5 + .5;
+      var flick = hot ? (.25 + Math.random() * .85) : 1;
+      var amp = energy * span * (.3 + .7 * Math.pow(wv, 1.5)) * flick;
+      if(amp < 2.2) amp = 2.2;
+      bars[i] += (amp - bars[i]) * .28;
+      var a = bars[i];
+      var c1 = Math.cos(ang), s1 = Math.sin(ang);
+      ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' +
+                        (.3 + .55 * Math.min(a / (span * .9), 1)).toFixed(3) + ')';
+      ctx.lineWidth = 1.9;
+      ctx.beginPath();
+      ctx.moveTo(cx + c1 * r0, cy + s1 * r0);
+      ctx.lineTo(cx + c1 * (r0 + a), cy + s1 * (r0 + a));
+      ctx.stroke();
+      if(hot && a > span * .45){
+        ctx.fillStyle = 'rgba(255,196,186,' + (.45 + Math.random() * .4).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(cx + c1 * (r0 + a), cy + s1 * (r0 + a), 1.4, 0, 6.2832);
+        ctx.fill();
+      }
+    }
+
+    /* 外圈细环 + 缓慢旋转的扫描弧（仪表感） */
+    ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',.10)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R * .96, 0, 6.2832); ctx.stroke();
+    var sa = (tick * .012) % 6.2832;
+    ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, R * .96, sa, sa + .5); ctx.stroke();
+
+    if(alive) raf = requestAnimationFrame(draw);
+  }
+
+  function start(){ if(!raf && alive){ size(); raf = requestAnimationFrame(draw); } }
+
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(es){
+      es.forEach(function(e){ alive = e.isIntersecting; if(alive) start(); });
+    }, { threshold:0 }).observe(rig);
+  }else{ alive = true; start(); }
+  window.addEventListener('resize', function(){ if(alive) size(); });
+})();
+
+/* ── 10.3 实验室：瓶底雾气粒子（NOISE 停香时同步断雾） ── */
+(function mist(){
+  var cv = document.getElementById('mistCv');
+  var svg = document.getElementById('bottleSvg');
+  var wrap = document.getElementById('bwrap');
+  if(!cv || !svg || !wrap || !cv.getContext) return;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var ctx = cv.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0, ox = 0, oy = 0, sw = 0, sh = 0;
+  var P = [], raf = 0, alive = false, last = 0;
+
+  /* 预渲染柔和粒子贴图，避免逐帧构造径向渐变 */
+  var sprite = document.createElement('canvas');
+  sprite.width = sprite.height = 64;
+  var sc = sprite.getContext('2d');
+  var gd = sc.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gd.addColorStop(0, 'rgba(255,255,255,.9)');
+  gd.addColorStop(.4, 'rgba(255,255,255,.32)');
+  gd.addColorStop(1, 'rgba(255,255,255,0)');
+  sc.fillStyle = gd;
+  sc.fillRect(0, 0, 64, 64);
+
+  function size(){
+    var r = wrap.getBoundingClientRect(), s = svg.getBoundingClientRect();
+    W = Math.round(r.width); H = Math.round(r.height);
+    if(!W || !H) return;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ox = s.left - r.left; oy = s.top - r.top;
+    sw = s.width || 240; sh = s.height || 330;
+  }
+
+  function spawn(){
+    P.push({
+      x: .5 + (Math.random() - .5) * .32,
+      y: .87 + Math.random() * .05,
+      r: .010 + Math.random() * .018,
+      vx: (Math.random() - .5) * .012,
+      vy: -(.012 + Math.random() * .015),
+      life: 0, ttl: 1.7 + Math.random() * 1.5, ph: Math.random() * 6.28
+    });
+  }
+
+  function draw(ts){
+    raf = 0;
+    if(!last) last = ts;
+    var dt = Math.min((ts - last) / 16.67, 2.4);
+    last = ts;
+    var tel = window.__emberTel || { state:'calm' };
+    var density = tel.state === 'noise' ? 0 : 1;
+
+    ctx.clearRect(0, 0, W, H);
+
+    /* 底部雾源：柔和呼吸光斑 */
+    if(W && sh){
+      var gx = ox + sw * .5, gy = oy + sh * .9;
+      var rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, sw * .34);
+      rg.addColorStop(0, 'rgba(255,252,246,' + (.09 + .04 * Math.sin(ts / 900)).toFixed(3) + ')');
+      rg.addColorStop(1, 'rgba(255,252,246,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(gx, gy, sw * .34, 0, 6.2832); ctx.fill();
+    }
+
+    if(density > 0 && P.length < 26 && Math.random() < .5 * dt) spawn();
+
+    for(var i = P.length - 1; i >= 0; i--){
+      var p = P[i];
+      p.life += dt / 60;
+      p.x += (p.vx + Math.sin(p.life * 2 + p.ph) * .004) * dt;
+      p.y += p.vy * dt;
+      var k = p.life / p.ttl;
+      if(k >= 1 || p.y < .18){ P.splice(i, 1); continue; }
+      var rad = p.r * sw * (1 + k * 1.6);
+      var px = ox + p.x * sw, py = oy + p.y * sh;
+      ctx.globalAlpha = Math.sin(Math.PI * Math.min(k, 1)) * .42;
+      ctx.drawImage(sprite, px - rad, py - rad, rad * 2, rad * 2);
+    }
+    ctx.globalAlpha = 1;
+    cv.dataset.count = P.length;
+
+    if(alive) raf = requestAnimationFrame(draw);
+  }
+
+  function start(){ if(!raf && alive){ size(); last = 0; raf = requestAnimationFrame(draw); } }
+
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(es){
+      es.forEach(function(e){ alive = e.isIntersecting; if(alive) start(); });
+    }, { threshold:0 }).observe(cv);
+  }else{ alive = true; start(); }
+  window.addEventListener('resize', function(){ if(alive) size(); });
+})();
+
+/* ── 10.4 开发者：分层爆炸图 → 逐层飞入拼装 ── */
+(function assembly(){
+  var svg = document.getElementById('asmSvg');
+  var card = document.getElementById('asmCard');
+  var legend = document.getElementById('asmLegend');
+  var stateEl = document.getElementById('asmState');
+  var replay = document.getElementById('asmReplay');
+  if(!svg || !card) return;
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* 自上而下：屏幕 → 支架 → 主板 → 喇叭 → 雾化舱 → 后盖 */
+  var PARTS = [
+    { nm:'屏幕面板 + 灯环', sp:'2.0″ ST7789 · WS2812 ×12',   w:126, d:96, t:12, c:'#9fc8ff' },
+    { nm:'屏幕支架',        sp:'ABS 注塑 · 四角定位柱',       w:118, d:90, t:8,  c:'#aab7c7' },
+    { nm:'主控主板',        sp:'ESP32-S3-EYE · 双核 240MHz',  w:112, d:84, t:7,  c:'#7fe0b4' },
+    { nm:'喇叭腔体',        sp:'3070 · MAX98357A · I²S',      w:86,  d:70, t:20, c:'#e2c07f' },
+    { nm:'雾化舱',          sp:'微孔雾化片 · 100ml 储液',      w:96,  d:76, t:16, c:'#c3b0e6' },
+    { nm:'后盖',            sp:'PC 磨砂 · Type-C 供电',        w:124, d:94, t:13, c:'#cbb79a' }
+  ];
+  var DX  = [-152, 136, -120, 168, -158, 118];
+  var ROT = [-9, 8, -7, 11, -13, 7];
+  var CX = 230, CY = [], cum = 0;
+  for(var i = 0; i < PARTS.length; i++){ CY[i] = 258 + cum; cum += PARTS[i].t + 3; }
+
+  function mk(tag, at){
+    var el = document.createElementNS(NS, tag);
+    for(var k in at) el.setAttribute(k, at[k]);
+    return el;
+  }
+  function pstr(a){
+    return a.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ');
+  }
+  function buildPart(p, i){
+    var g = mk('g', { class:'asm-part' });
+    g.setAttribute('style', '--i:' + i + ';--dx:' + DX[i] + 'px;--dy:' + (-i * 26) +
+                            'px;--rot:' + ROT[i] + 'deg;');
+    var w = p.w, d = p.d, t = p.t, cy = CY[i];
+    var ux = .433 * w, uy = .25 * w, vx = -.433 * d, vy = .25 * d;
+    var F = [CX + ux + vx, cy + uy + vy];
+    var R = [CX + ux - vx, cy + uy - vy];
+    var B = [CX - ux - vx, cy - uy - vy];
+    var L = [CX - ux + vx, cy - uy + vy];
+    /* 右侧面 / 左侧面（向下挤出厚度） */
+    g.appendChild(mk('polygon', {
+      points: pstr([F, R, [R[0], R[1] + t], [F[0], F[1] + t]]),
+      fill: p.c, 'fill-opacity':'0.13', stroke: p.c, 'stroke-opacity':'0.38', 'stroke-width':'1'
+    }));
+    g.appendChild(mk('polygon', {
+      points: pstr([F, L, [L[0], L[1] + t], [F[0], F[1] + t]]),
+      fill: p.c, 'fill-opacity':'0.06', stroke: p.c, 'stroke-opacity':'0.3', 'stroke-width':'1'
+    }));
+    /* 顶面 */
+    g.appendChild(mk('polygon', {
+      points: pstr([F, R, B, L]),
+      fill: p.c, 'fill-opacity':'0.22', stroke: p.c, 'stroke-opacity':'0.8', 'stroke-width':'1.2'
+    }));
+    /* 前棱高光 */
+    g.appendChild(mk('polyline', {
+      points: pstr([R, F, L]), fill:'none',
+      stroke:'rgba(255,255,255,0.5)', 'stroke-width':'1.2', 'stroke-linejoin':'round'
+    }));
+    return g;
+  }
+
+  /* 组装顺序：先画最底层，后画最上层 */
+  var machine = mk('g', { class:'asm-machine' });
+  for(var j = PARTS.length - 1; j >= 0; j--) machine.appendChild(buildPart(PARTS[j], j));
+
+  var defs = mk('defs', {});
+  var gr = mk('linearGradient', { id:'asmGlow', x1:'0', y1:'0', x2:'1', y2:'0' });
+  gr.appendChild(mk('stop', { offset:'0',   'stop-color':'#9fc8ff', 'stop-opacity':'0' }));
+  gr.appendChild(mk('stop', { offset:'.5',  'stop-color':'#d6e8ff', 'stop-opacity':'.85' }));
+  gr.appendChild(mk('stop', { offset:'1',   'stop-color':'#9fc8ff', 'stop-opacity':'0' }));
+  defs.appendChild(gr);
+
+  var shadow = mk('ellipse', { cx:CX, cy:408, rx:112, ry:15, fill:'rgba(120,180,255,0.09)' });
+
+  var axis = mk('g', { class:'asm-axis' });
+  [-98, 98].forEach(function(dx){
+    axis.appendChild(mk('line', { x1:CX + dx, y1:64, x2:CX + dx, y2:404,
+      stroke:'rgba(150,200,255,0.4)', 'stroke-width':'1', 'stroke-dasharray':'2 7' }));
+  });
+
+  var scan = mk('g', { class:'asm-scan' });
+  scan.appendChild(mk('rect', { x:CX - 150, y:0, width:300, height:1.4, fill:'url(#asmGlow)' }));
+
+  svg.appendChild(defs);
+  svg.appendChild(shadow);
+  svg.appendChild(axis);
+  svg.appendChild(machine);
+  svg.appendChild(scan);
+
+  if(legend){
+    PARTS.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'asm-leg';
+      row.style.setProperty('--i', i);
+      row.innerHTML = '<i class="dot" style="background:' + p.c + ';color:' + p.c + '"></i>' +
+                      '<div class="txt"><div class="nm">' + p.nm + '</div>' +
+                      '<div class="sp">' + p.sp + '</div></div>' +
+                      '<div class="ix">L' + (i + 1) + '</div>';
+      legend.appendChild(row);
+    });
+  }
+
+  var timers = [];
+  function play(){
+    timers.forEach(clearTimeout);
+    timers = [];
+    card.classList.remove('play');
+    void card.offsetWidth;            /* 强制重排，让 CSS 动画可重播 */
+    card.classList.add('play');
+    if(stateEl){ stateEl.classList.remove('done'); stateEl.textContent = 'ASSEMBLING · 0/' + PARTS.length; }
+    PARTS.forEach(function(p, i){
+      timers.push(setTimeout(function(){
+        if(!stateEl) return;
+        if(i === PARTS.length - 1){
+          stateEl.textContent = 'ASSEMBLED · ' + PARTS.length + '/' + PARTS.length;
+          stateEl.classList.add('done');
+        }else{
+          stateEl.textContent = 'ASSEMBLING · ' + (i + 1) + '/' + PARTS.length;
+        }
+      }, 700 + i * 110));
+    });
+  }
+
+  if(replay) replay.addEventListener('click', play);
+
+  var fired = false;
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting && !fired){ fired = true; play(); }
+      });
+    }, { threshold:.25 }).observe(card);
+  }else{ play(); }
 })();
 
 })();
