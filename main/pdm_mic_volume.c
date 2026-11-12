@@ -32,6 +32,7 @@
 #include "hal_hardware.h"
 #include "audio_player.h"
 #include "embersigh_fonts.h"
+#include "hal/usb_serial_jtag_ll.h"   /* 直接读 USB Serial/JTAG RX FIFO 取串口指令 */
 
 static const char *TAG = "dreamstate";
 
@@ -69,10 +70,23 @@ static const char *TAG = "dreamstate";
 #define NOISE_INSTANT_RATIO     1.6f  /* smooth 超过阈值 1.6 倍：持续强噪音，立即触发 */
 #define NOISE_INSTANT_RAW_RATIO 1.3f  /* raw 超过阈值 1.3 倍：拍手尖峰，立即触发 */
 
+/* ---- 异常帧过滤 ----
+ * 实测 I2S/ES8311 偶发读到与声音无关的垃圾帧（raw 上千~上万），
+ * 真人拍手/说话的 raw 上限只有一两百。超过该值一律丢弃。 */
+#define RMS_SANE_MAX        1200.0f
+
 /* ---- 时间参数 ---- */
 #define NOISE_SUSTAIN_MS    300     /* 高音量维持 300ms 即判定（原 2000ms，演示太难触发） */
-#define QUIET_CONFIRM_MS    400     /* 安静确认时长，避免边界抖动 */
+#define QUIET_CONFIRM_MS    10000   /* 恢复信心：必须连续安静 10 秒才允许进入 RECOVER */
 #define RECOVER_MS          3000    /* 恢复态持续时间 */
+
+/* ---- 睡前仪式（RITUAL）----
+ * 串口输入 ritual 开启；目标音量每 1 分钟递减 10%，总时长 15 分钟。
+ * 仪式期间一旦判定 NOISE，立即打断仪式并转入 RETREAT。 */
+#define RITUAL_TOTAL_MS     (15 * 60 * 1000)   /* 仪式总时长 15 分钟 */
+#define RITUAL_STEP_MS      (60 * 1000)        /* 每 1 分钟一档 */
+#define RITUAL_STEP_DROP    0.10f              /* 每档递减 10% */
+#define RITUAL_CMD_MAX      32                 /* 串口指令行缓冲长度 */
 
 /* ---- 基线自适应（CALM 下缓慢跟踪环境） ---- */
 #define BASE_ADAPT_ALPHA    0.06f   /* 每秒向环境均值靠近 6% */
@@ -90,6 +104,7 @@ typedef enum {
     ST_RETREAT,     /* 退让     — 紫红 */
     ST_RECOVER,     /* 恢复     — 橙色 */
     ST_IDLE,        /* 待机     — 极暗（预留） */
+    ST_RITUAL,      /* 睡前仪式 — 暖紫，音量逐分钟淡出 */
 } sys_state_t;
 
 static const char *state_name(sys_state_t s)
@@ -99,6 +114,7 @@ static const char *state_name(sys_state_t s)
     case ST_RETREAT: return "RETREAT";
     case ST_RECOVER: return "RECOVER";
     case ST_IDLE:    return "IDLE";
+    case ST_RITUAL:  return "RITUAL";
     default:         return "?";
     }
 }
@@ -111,6 +127,7 @@ static const char *web_state_name(sys_state_t s)
     case ST_RETREAT: return "NOISE";
     case ST_RECOVER: return "RECOVER";
     case ST_IDLE:    return "IDLE";
+    case ST_RITUAL:  return "RITUAL";
     default:         return "UNKNOWN";
     }
 }
@@ -141,6 +158,11 @@ static void state_colors(sys_state_t s,
         /* 极暗：待机 */
         *r = 0x05; *g = 0x05; *b = 0x08;
         *text = 0x1A1A22; *bar = 0x1A1A22;
+        break;
+    case ST_RITUAL:
+        /* 暖紫：睡前仪式，比 CALM 更暖、比 RECOVER 更沉 */
+        *r = 0x1C; *g = 0x10; *b = 0x28;
+        *text = 0xC0A0E0; *bar = 0x9B6BD6;
         break;
     }
 }
@@ -188,6 +210,82 @@ static void update_thresholds(float base, float *noise_thr, float *quiet_thr)
         *noise_thr = NOISE_THR_FLOOR;
     }
     *quiet_thr = fmaxf(base * QUIET_RATIO, base + QUIET_DELTA_MIN);
+}
+
+/* ============================================================
+ * 串口指令（睡前仪式的开关）
+ *
+ * 背景：sdkconfig 里 console 主通道是 UART0，USB Serial/JTAG 只作为
+ * 「secondary」，而 ESP-IDF 的 secondary 通道只做输出、不接收输入
+ * （见 esp_system/Kconfig 的 help）。所以这里直接轮询 USB 端的
+ * RX FIFO，自己解析命令行，不依赖 VFS/stdin。
+ *
+ * 指令（不区分大小写，回车/换行结束）：
+ *   ritual  | ritual start | start   → 开启睡前仪式
+ *   stop    | ritual stop            → 提前结束仪式
+ * ============================================================ */
+typedef enum {
+    CMD_NONE = 0,
+    CMD_RITUAL_START,
+    CMD_RITUAL_STOP,
+} serial_cmd_t;
+
+static bool line_is(const char *line, const char *kw)
+{
+    while (*kw) {
+        char a = *line, b = *kw;
+        if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+        if (a != b) return false;
+        line++; kw++;
+    }
+    return *line == '\0';
+}
+
+static serial_cmd_t poll_serial_cmd(void)
+{
+    static char   line[RITUAL_CMD_MAX];
+    static size_t len = 0;
+    serial_cmd_t  out = CMD_NONE;
+
+    uint8_t chunk[24];
+    int avail = usb_serial_jtag_ll_rxfifo_data_available();
+    while (avail > 0) {
+        int want = avail > (int)sizeof(chunk) ? (int)sizeof(chunk) : avail;
+        uint32_t got = usb_serial_jtag_ll_read_rxfifo(chunk, (uint32_t)want);
+        if (got == 0) break;
+
+        for (uint32_t i = 0; i < got; i++) {
+            char c = (char)chunk[i];
+
+            if (c == '\r' || c == '\n') {
+                line[len] = '\0';
+                /* 去掉行尾空格 */
+                while (len > 0 && (line[len - 1] == ' ' || line[len - 1] == '\t')) {
+                    line[--len] = '\0';
+                }
+                if (len > 0) {
+                    if (line_is(line, "ritual") ||
+                        line_is(line, "ritual start") ||
+                        line_is(line, "start")) {
+                        out = CMD_RITUAL_START;
+                    } else if (line_is(line, "stop") ||
+                               line_is(line, "ritual stop")) {
+                        out = CMD_RITUAL_STOP;
+                    } else {
+                        printf("[CMD] 未知指令: \"%s\"（可用: ritual / stop）\n", line);
+                        fflush(stdout);
+                    }
+                }
+                len = 0;
+            } else if (c >= 32 && c < 127) {
+                if (len < RITUAL_CMD_MAX - 1) {
+                    line[len++] = c;
+                }
+            }
+        }
+        avail = usb_serial_jtag_ll_rxfifo_data_available();
+    }
+    return out;
 }
 
 /* ============================================================
@@ -514,6 +612,13 @@ void app_main(void)
     /* 恢复态起点 */
     TickType_t recover_start = 0;
 
+    /* 睡前仪式 */
+    TickType_t ritual_start = 0;
+    int        ritual_step  = 0;
+
+    /* 异常音频帧计数（诊断用） */
+    int bad_frames = 0;
+
     /* 周期任务 */
     TickType_t last_ui  = 0;
     TickType_t last_log = 0;
@@ -547,6 +652,21 @@ void app_main(void)
         }
 
         float raw      = calc_rms_left(buf, bytes / 2);
+
+        /* ---- 异常帧过滤 ----
+         * 实测 I2S/ES8311 会偶发读到与声音无关的垃圾帧（raw 上千甚至上万，
+         * 而真人拍手/说话的 raw 上限只有一两百）。这类帧若参与判定，
+         * 会立刻被瞬发触发误判成 NOISE，仪式也会被无故打断。
+         * 物理上不可能的数值直接丢弃，不参与任何阈值/计时/统计。 */
+        if (raw > RMS_SANE_MAX) {
+            bad_frames++;
+            if ((bad_frames % 20) == 1) {
+                ESP_LOGW(TAG, "丢弃异常音频帧 raw=%.0f（累计 %d 帧）", raw, bad_frames);
+            }
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+        }
+
         float sm       = smooth_rms(rms_window, &rms_win_idx, &rms_win_count, raw);
         ui_rms         = ui_rms * 0.8f + sm * 0.2f;
 
@@ -584,6 +704,35 @@ void app_main(void)
 
         bool trigger = sustained || instant;
 
+        /* ---------- 串口指令：开启 / 结束睡前仪式 ---------- */
+        serial_cmd_t cmd = poll_serial_cmd();
+        if (cmd == CMD_RITUAL_START) {
+            if (st == ST_RITUAL) {
+                printf("[RITUAL] 仪式已在进行中（第 %d 分钟）\n", ritual_step);
+                fflush(stdout);
+            } else {
+                st           = ST_RITUAL;
+                ritual_start = now;
+                ritual_step  = 0;
+                high_active  = false;
+                hal_set_audio_volume(1.0f);
+                printf("[RITUAL] 睡前仪式开启：总时长 15 分钟，目标音量每分钟 -10%%\n");
+                fflush(stdout);
+            }
+        } else if (cmd == CMD_RITUAL_STOP) {
+            if (st == ST_RITUAL) {
+                st = ST_CALM;
+                high_active = false;
+                quiet_since = 0;
+                hal_set_audio_volume(1.0f);
+                printf("[RITUAL] 仪式被指令提前结束 → 回到 CALM（音量 100%%）\n");
+                fflush(stdout);
+            } else {
+                printf("[RITUAL] 当前不在仪式中，无需结束\n");
+                fflush(stdout);
+            }
+        }
+
         /* ---------- 状态机 ---------- */
         switch (st) {
 
@@ -605,15 +754,19 @@ void app_main(void)
 
         /* ============ RETREAT：退让 ============ */
         case ST_RETREAT:
-            if (sm < quiet_thr) {
+            /* 恢复信心机制：必须连续安静 QUIET_CONFIRM_MS(10s) 才允许恢复。
+             * 期间只要再有任何一次噪音（持续判定或 raw 瞬态）就清零重来。 */
+            if (trigger || sm >= quiet_thr) {
+                quiet_since = 0;
+            } else {
                 if (quiet_since == 0) quiet_since = now;
 
                 if ((now - quiet_since) >= pdMS_TO_TICKS(QUIET_CONFIRM_MS)) {
-                    ESP_LOGI(TAG, ">>> 环境安静，进入 RECOVER（音量 %d ms 渐入）",
-                             RECOVER_MS);
+                    ESP_LOGI(TAG, ">>> 已连续安静 %d ms，进入 RECOVER（音量 %d ms 渐入）",
+                             QUIET_CONFIRM_MS, RECOVER_MS);
                     hal_set_audio_volume(0.0f);
                     hal_restore_fragrance_led();
-                    printf("[HAL] 音量渐入恢复\n");
+                    printf("[HAL] 恢复信心达成，音量渐入恢复\n");
                     fflush(stdout);
 
                     st = ST_RECOVER;
@@ -621,8 +774,6 @@ void app_main(void)
                     quiet_since = 0;
                     high_active = false;
                 }
-            } else {
-                quiet_since = 0;
             }
             break;
 
@@ -654,6 +805,54 @@ void app_main(void)
                 /* 线性渐入 0.0 → 1.0 */
                 float p = (float)elapsed / (float)pdMS_TO_TICKS(RECOVER_MS);
                 hal_set_audio_volume(clampf(p, 0.0f, 1.0f));
+            }
+            break;
+        }
+
+        /* ============ RITUAL：睡前仪式（音量逐分钟淡出） ============ */
+        case ST_RITUAL: {
+            /* 仪式期间一旦判定 NOISE → 立刻打断仪式，按正常退让处理 */
+            if (trigger) {
+                ESP_LOGI(TAG, ">>> 仪式期间检测到噪音 → 打断仪式，转入 RETREAT");
+                hal_lower_volume();
+                hal_stop_fragrance();
+                printf("[RITUAL] 仪式被噪音打断（第 %d 分钟），音量降低、暂停香氛\n",
+                       ritual_step);
+                fflush(stdout);
+
+                st = ST_RETREAT;
+                high_active = false;
+                quiet_since = 0;
+                break;
+            }
+
+            TickType_t rel = now - ritual_start;
+
+            /* 15 分钟到点 → 静默待机 */
+            if (rel >= pdMS_TO_TICKS(RITUAL_TOTAL_MS)) {
+                ESP_LOGI(TAG, ">>> 睡前仪式完成（%d 分钟）→ 进入 IDLE 静默待机",
+                         RITUAL_TOTAL_MS / 60000);
+                hal_set_audio_volume(0.0f);
+                printf("[RITUAL] 仪式完成，设备进入静默待机\n");
+                fflush(stdout);
+
+                st = ST_IDLE;
+                high_active = false;
+                break;
+            }
+
+            /* 每满 1 分钟把目标音量再降 10% */
+            int step = (int)(rel / pdMS_TO_TICKS(RITUAL_STEP_MS));
+            if (step != ritual_step) {
+                ritual_step = step;
+
+                float vol = 1.0f - RITUAL_STEP_DROP * (float)step;
+                if (vol < 0.0f) vol = 0.0f;
+                hal_set_audio_volume(vol);
+
+                printf("[RITUAL] 第 %d 分钟 → 目标音量 %.0f%%\n",
+                       step, (double)(vol * 100.0f));
+                fflush(stdout);
             }
             break;
         }

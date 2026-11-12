@@ -1,5 +1,5 @@
 idf_component_register(SRCS "pdm_mic_volume.c" "hal_hardware.c" "audio_player.c"
                             "fonts/embersigh_fonts.c"
-                     PRIV_REQUIRES esp32_s3_eye led_strip
+                     PRIV_REQUIRES esp32_s3_eye led_strip hal
                      INCLUDE_DIRS . fonts
                      EMBED_FILES forest_audio.wav)
