@@ -863,6 +863,14 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 @media (max-width:1180px){ .shot-row{grid-template-columns:1fr 1fr;} }
 @media (max-width:898px){ .shot-row{grid-template-columns:1fr;} }
 
+/* 全宽信息图（产品海报 / 结构爆炸图）：整幅展示不裁切，小字保持可读 */
+.infofig{margin:0;border:1px solid var(--line);border-radius:22px;overflow:hidden;
+  background:rgba(255,255,255,.55);box-shadow:0 30px 64px -36px rgba(96,76,48,.5);}
+.infofig img{width:100%;height:auto;display:block;aspect-ratio:auto;object-fit:contain;}
+.infofig figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-soft);
+  padding:13px 18px 15px;text-align:center;border-top:1px solid var(--line);background:rgba(255,255,255,.4);}
+.infofig figcaption b{color:var(--ink);font-weight:600;letter-spacing:.14em;}
+
 /* 实验室紧急停香 · 红色大字（瓶身上方闪烁，NOISE 时放大 + 红色发光背景） */.cut-badge{display:none;text-align:center;font-family:var(--mono);font-weight:700;font-size:15px;
   letter-spacing:.16em;color:#c23a2b;margin-bottom:6px;text-shadow:0 1px 0 rgba(255,255,255,.6);}
 .cut-badge.on{display:block;font-size:30px;letter-spacing:.12em;padding:10px 26px;border-radius:14px;
@@ -1016,6 +1024,19 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           <div class="s" style="margin-top:5px;color:var(--ink-faint);">*概念工业设计渲染，当前工程验证采用模块化方案</div>
         </div>
       </div>
+    </section>
+
+    <!-- 产品全景海报 -->
+    <section class="sec" id="poster">
+      <div class="sec-head reveal">
+        <h2>一台机器的<b>全貌</b>。</h2>
+        <div class="sub">Product Poster · 亮点 / 场景 / 尺寸一览</div>
+      </div>
+      <figure class="infofig reveal">
+        <img src="images/poster.jpg" alt="EmberSigh 产品海报：功能亮点、使用场景与整机尺寸" loading="lazy"
+             onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+        <figcaption><b>EmberSigh 产品海报</b> · 智能环境控制 / 习惯记忆 / 定时仪式 / 声景 / 健康自检 —— 睡前放松 · 专注工作 · 瑜伽冥想三大场景，整机约 70mm</figcaption>
+      </figure>
     </section>
 
     <!-- 三条设计原则 -->
@@ -1664,6 +1685,18 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           I2S 数字麦克风 · 三通道 MOS 雾化 · WS2812 灯环 · 240×240 LVGL 屏
         </div>
       </div>
+    </section>
+
+    <!-- 内部结构 · 爆炸视图 -->
+    <section class="dcard reveal" style="margin-bottom:20px;padding:20px 24px;">
+      <div class="card-title" style="margin-bottom:14px;"><span class="tick"></span>内部结构 · 爆炸视图</div>
+      <figure class="infofig" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);box-shadow:none;">
+        <img src="images/structure.jpg" alt="EmberSigh 内部结构爆炸图：屏幕面板、灯环、主板、喇叭、雾化舱与后盖分解" loading="lazy"
+             onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+        <figcaption style="background:rgba(255,255,255,.05);border-top-color:rgba(255,255,255,.14);color:rgba(238,245,242,.72);">
+          <b style="color:#eef5f2;">内部结构分解</b> · 屏幕面板+灯环 / 屏幕支架 / 主控主板（ESP32-S3-EYE）/ 喇叭（3070）/ 雾化舱（加速器）/ 后盖 —— 外观三视图 145×105×165mm
+        </figcaption>
+      </figure>
     </section>
 
     <!-- 系统架构：左拓扑树 + 右引脚接线图 -->
