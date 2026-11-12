@@ -937,6 +937,37 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .dash-grid{grid-template-columns:1fr;}
   .status,.clock{display:none;}
 }
+/* ── 手机端（≤640px）：导航压缩单行、页面留白收窄 ── */
+@media (max-width:640px){
+  .nav{padding:0 12px;}
+  .brand{gap:9px;}
+  .brand .logo svg{width:17px;height:17px;}
+  .brand .nm{gap:6px;font-size:17px;}
+  .brand .nm span.zh,.brand .ver{display:none;}
+  .tabs{gap:0;padding:0;}
+  .tab{padding:13px 7px;font-size:11px;letter-spacing:.05em;gap:4px;white-space:nowrap;}
+  .nav-right{gap:8px;flex:none;}
+  .gh-link{padding:7px 9px;font-size:0;gap:0;}   /* 只留 GitHub 图标 */
+  .gh-link svg{width:15px;height:15px;}
+  .page{padding:calc(var(--nav-h) + 16px) 14px 0;}
+  .sec{padding-top:34px;}
+  .device-frame{width:210px;height:210px;}
+  .phone-shell{width:216px;height:446px;}
+  .board-img{height:220px;width:100%;}
+  .infofig figcaption{font-size:9px;padding:10px 12px 12px;line-height:1.7;}
+  .shot-row{gap:12px;}
+  .hero-img{width:min(320px,88%);}
+  .emergency .emg-box{font-size:20px;padding:22px 26px;margin:0 18px;}
+}
+/* ── 小屏手机（≤430px）：品牌只留 logo，导航彻底压缩 ── */
+@media (max-width:430px){
+  .brand .nm{display:none;}
+  .tab{padding:12px 6px;font-size:10.5px;letter-spacing:.02em;}
+  .sec-head{flex-direction:column;align-items:flex-start;gap:6px;}
+  .serial-hint{margin-left:0;width:100%;}
+  .device-frame{width:190px;height:190px;}
+  .hero-cta{flex-wrap:wrap;gap:10px;}
+}
 </style>
 </head>
 <body>
