@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmberSigh 听眠 · 全功能数字孪生模拟器</title>
+<meta name="description" content="EmberSigh 听眠 —— 懂得主动退让的智能环境调节器。全功能网页数字孪生模拟器。">
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true">
+  <div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<div class="toplight" aria-hidden="true"></div>
+
+<!-- ══════════════ 顶部导航 ══════════════ -->
+<header class="nav">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 15.5c3.2-4.8 6-7 8.2-7 2.3 0 3.7 2 7.8 4.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4 19c3.4-4.2 6.2-6 8.3-6 2.4 0 4 1.8 7.7 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">EmberSigh <em>听眠</em></div>
+      <div class="brand-sub">INTELLIGENT AMBIENT REGULATOR</div>
+    </div>
+  </div>
+  <div class="nav-center">
+    <span class="status-pill" id="navStatusPill"><i class="dot" id="navStatusDot"></i><span id="navStatusText">SYSTEM READY</span></span>
+    <span class="virtual-badge">VIRTUAL DEVICE</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎">暂停</button>
+    <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
+    <button class="btn btn-ghost" id="btnReset">重置</button>
+  </div>
+</header>
+
+<main class="page">
+
+<!-- ══════════════ 1. 产品主视觉 ══════════════ -->
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow"><span class="eyebrow-line"></span> DIGITAL TWIN · VIRTUAL HARDWARE</div>
+    <h1>最高级的智能，<br>是懂得<span class="em">退让</span>。</h1>
+    <p class="hero-lead">EmberSigh 不是会播放白噪音的音箱。它用一支麦克风倾听房间，在噪声到来时安静地让出空间，在一切平息后温柔地回来。</p>
+    <div class="hero-tags">
+      <span>本地模拟引擎</span><span>算法真实运行</span><span>三执行器统一协调</span>
+    </div>
+    <div class="hero-state-card">
+      <div class="hero-state-head">
+        <span class="hero-state-label">CURRENT STATE</span>
+        <span class="hero-state-chip" id="heroStateChip">QUIET</span>
+      </div>
+      <div class="hero-state-name" id="heroStateName">环境安静</div>
+      <p class="hero-state-desc" id="heroStateDesc">声景低声播放，香氛持续释放，灯环保持柔和暖光。系统正在守护睡眠。</p>
+      <div class="hero-metrics">
+        <div><span>RAW RMS</span><b id="heroRms">42</b></div>
+        <div><span>EMA</span><b id="heroEma">42</b></div>
+        <div><span>安静确认</span><b id="heroQuiet">0.0s</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="product-stage state-quiet" id="productStage">
+      <div class="stage-halo" id="stageHalo"></div>
+      <div class="device-wrap" id="deviceWrap">
+        <img class="device-img" src="__HERO__" alt="EmberSigh 听眠概念产品">
+        <div class="mist-layer" id="mistLayer" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="light-ring" id="lightRing" aria-hidden="true"></div>
+        <!-- 叠加在设备照片屏幕区域上的动态 TFT 屏 -->
+        <div class="screen-overlay">
+          <div class="tft-screen" data-tft>
+            <div class="tft-head"><span class="tft-state"><i></i><b data-tft-state>QUIET</b></span><span data-tft-time>22:30</span></div>
+            <div class="tft-rule"></div>
+            <div class="tft-center"><div class="tft-moon" data-tft-icon>☾</div><div class="tft-mode" data-tft-mode>SLEEP</div></div>
+            <div class="tft-row"><span>RMS</span><b data-tft-rms>042</b><span>dB</span><span class="tft-spacer"></span><span data-tft-env>CALM</span></div>
+            <div class="tft-meter"><i data-tft-meter></i></div>
+            <div class="tft-rows">
+              <div><span>♪ FOREST</span><b data-tft-audio>62%</b></div>
+              <div><span>≋ AROMA</span><b data-tft-aroma>ON</b></div>
+              <div><span>◉ LIGHT</span><b data-tft-light>WARM</b></div>
+            </div>
+            <div class="tft-foot">ESP32-S3-EYE · VIRTUAL</div>
+          </div>
+        </div>
+      </div>
+      <div class="stage-caption"><i></i> LIVE VIRTUAL RENDER · 状态与数据均由模拟引擎驱动</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 2. 环境模拟控制台 ══════════════ -->
+<section class="section" id="environment">
+  <div class="section-head">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> 01 / ENVIRONMENT</div><h2>环境模拟控制台</h2></div>
+    <p>选择场景或自定义噪声强度。输入会真正进入模拟麦克风，驱动后续全部算法与执行器。</p>
+  </div>
+  <div class="panel env-panel">
+    <div class="scenario-grid" id="scenarioGrid">
+      <button class="scenario" data-scenario="bedroom"><span class="sc-ico">☾</span><span class="sc-name">安静卧室</span><span class="sc-val">≈ 42 RMS</span></button>
+      <button class="scenario" data-scenario="talk"><span class="sc-ico">◖◗</span><span class="sc-name">轻声交谈</span><span class="sc-val">≈ 95 RMS</span></button>
+      <button class="scenario" data-scenario="continuous"><span class="sc-ico">≈</span><span class="sc-name">持续环境噪声</span><span class="sc-val">≈ 165 RMS</span></button>
+      <button class="scenario" data-scenario="sudden"><span class="sc-ico">!</span><span class="sc-name">突发噪声</span><span class="sc-val">≈ 210 RMS</span></button>
+      <button class="scenario" data-scenario="cough"><span class="sc-ico">◇</span><span class="sc-name">咳嗽</span><span class="sc-val">≈ 230 RMS</span></button>
+      <button class="scenario" data-scenario="turnover"><span class="sc-ico">↻</span><span class="sc-name">翻身</span><span class="sc-val">≈ 120 RMS</span></button>
+      <button class="scenario" data-scenario="door"><span class="sc-ico">▣</span><span class="sc-name">关门声</span><span class="sc-val">≈ 250 RMS</span></button>
+      <button class="scenario" data-scenario="custom"><span class="sc-ico">＋</span><span class="sc-name">自定义噪声</span><span class="sc-val">手动设定</span></button>
+    </div>
+    <div class="env-controls">
+      <div class="control-block">
+        <label for="rmsSlider">自定义 RMS 强度 <output id="rmsValue">120</output></label>
+        <input type="range" id="rmsSlider" min="0" max="300" value="120" step="1">
+        <div class="range-scale"><span>0</span><span>50 安静阈</span><span>150 噪声阈</span><span>300</span></div>
+      </div>
+      <div class="control-block">
+        <label for="durationSlider">噪声持续时间 <output id="durationValue">6.0 s</output></label>
+        <input type="range" id="durationSlider" min="0.5" max="30" value="6" step="0.5">
+        <div class="range-scale"><span>0.5s</span><span>瞬态</span><span>持续</span><span>30s</span></div>
+      </div>
+      <div class="env-buttons">
+        <button class="btn btn-primary" id="btnApplyCustom">应用自定义噪声</button>
+        <button class="btn btn-ghost" id="btnStopEnv">恢复安静卧室</button>
+      </div>
+    </div>
+    <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="env-remaining" id="envRemaining">持续输入</span></div>
+  </div>
+</section>
+
+<!-- ══════════════ 3. AI 决策引擎 & 数据可视化 ══════════════ -->
+<section class="section" id="engine">
+  <div class="section-head">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> 02 / DECISION ENGINE</div><h2>AI 决策引擎</h2></div>
+    <p>信号从模拟麦克风进入：滑动平均 → EMA 平滑 → 迟滞状态机。所有参数实时可调、事件可追踪。</p>
+  </div>
+  <div class="engine-grid">
+    <div class="panel param-panel">
+      <div class="panel-title"><span>算法参数</span><small>实时生效</small></div>
+      <div class="param-row"><label>EMA α</label><input type="number" id="alphaInput" value="0.2" min="0.01" max="1" step="0.01"></div>
+      <div class="param-row"><label>安静阈值</label><input type="number" id="quietThInput" value="50" min="0" max="300" step="1"></div>
+      <div class="param-row"><label>噪声阈值</label><input type="number" id="noiseThInput" value="150" min="0" max="300" step="1"></div>
+      <div class="param-row"><label>安静确认 (s)</label><input type="number" id="quietSecInput" value="3" min="0.5" max="20" step="0.5"></div>
+      <div class="param-row"><label>触发保持 (s)</label><input type="number" id="holdInput" value="0.4" min="0" max="5" step="0.1"></div>
+      <div class="param-row"><label>滑动窗口</label><input type="number" id="windowInput" value="12" min="2" max="120" step="1"></div>
+      <button class="btn btn-primary full" id="btnApplyParams">应用参数</button>
+      <div class="formula-box">
+        <div>FORMULA</div>
+        <code>EMA = α · AVG + (1−α) · EMA<sub>prev</sub></code>
+        <small>α = 0.2 · 阈值 50 / 150 · 迟滞三态</small>
+      </div>
+      <div class="decision-box" id="decisionReason">等待环境输入…</div>
+    </div>
+    <div class="panel chart-panel">
+      <div class="panel-title"><span>实时信号曲线</span><div class="chart-legend"><i class="lg raw"></i>Raw RMS<i class="lg avg"></i>Sliding Avg<i class="lg ema"></i>EMA</div></div>
+      <div id="chart" class="chart"></div>
+      <div class="chart-foot">
+        <div class="state-timeline-wrap"><span>状态时间线</span><div class="state-timeline" id="stateTimeline"></div></div>
+        <div class="live-values"><span>RAW <b id="mRaw">0</b></span><span>AVG <b id="mAvg">0</b></span><span>EMA <b id="mEma">0</b></span><span>STATE <b id="mState">QUIET</b></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 4. 执行模块 ══════════════ -->
+<section class="section" id="actuators">
+  <div class="section-head">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> 03 / ACTUATORS</div><h2>声 · 香 · 光 执行模块</h2></div>
+    <p>三个模块均由统一协调器驱动，始终保持状态一致；不允许单个组件自行决定执行器状态。</p>
+  </div>
+  <div class="actuator-grid">
+
+    <div class="panel actuator" id="audioCard">
+      <div class="act-head"><span class="act-ico">♪</span><div><h3>森林声景</h3><small>MAX98357A + 3070 喇叭</small></div><span class="act-badge" id="audioStatus">PLAYING</span></div>
+      <div class="audio-wave" id="audioWave" aria-hidden="true"></div>
+      <div class="act-row"><span>目标音量</span><b id="audioTarget">62%</b></div>
+      <div class="act-row"><span>当前音量</span><b id="audioVolValue">62%</b></div>
+      <input type="range" id="audioVolSlider" min="0" max="100" value="62" step="1" aria-label="目标音量">
+      <div class="act-buttons"><button class="btn btn-ghost" id="btnAudioPlay">暂停播放</button><button class="btn btn-ghost" id="btnAudioMute">静音</button></div>
+      <div class="act-note" id="audioNote">虚拟音频状态 · 波形由实时音量驱动，非真实录音</div>
+    </div>
+
+    <div class="panel actuator" id="aromaCard">
+      <div class="act-head"><span class="act-ico">≋</span><div><h3>香氛雾化器</h3><small>光耦 MOS + D11 加湿器</small></div><span class="act-badge" id="aromaStatus">ON</span></div>
+      <div class="aroma-visual">
+        <div class="aroma-mist" id="aromaMist"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="aroma-device"><div class="aroma-top"></div><div class="aroma-body"></div></div>
+      </div>
+      <div class="gpio-row"><span>GPIO 逻辑电平</span><b id="gpioLevel" class="gpio-low">LOW</b></div>
+      <div class="act-row"><span>MOS 状态</span><b id="gpioLabel">导通 · 雾化器开启</b></div>
+      <div class="act-row"><span>本次运行</span><b id="aromaRuntime">00:00</b></div>
+      <div class="act-note" id="aromaNote">LOW = MOS 导通 = 开启 · HIGH = MOS 断开 = 关闭</div>
+    </div>
+
+    <div class="panel actuator" id="lightCard">
+      <div class="act-head"><span class="act-ico">◉</span><div><h3>氛围灯环</h3><small>WS2812 × 16 RGB</small></div><span class="act-badge" id="ledStatus">WARM</span></div>
+      <div class="led-stage"><div class="led-ring" id="ledRing"></div><div class="led-center"><b id="ledBrightnessValue">70%</b><span>BRIGHTNESS</span></div></div>
+      <input type="range" id="ledBrightness" min="0" max="100" value="70" step="1" aria-label="灯环亮度">
+      <div class="act-buttons"><button class="btn btn-ghost" id="btnBreath">呼吸效果：开</button><span class="led-count">16 / 16 LEDs</span></div>
+      <div class="act-note">每颗灯珠独立颜色与亮度 · 退让时平滑过渡至暗红，无突变闪烁</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 5. 演示与诊断 ══════════════ -->
+<section class="section" id="diagnostics">
+  <div class="section-head">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> 04 / DEMO & DIAGNOSTICS</div><h2>路演演示与故障诊断</h2></div>
+    <p>一键运行完整路演脚本，真正调用模拟引擎；故障注入只影响对应模块，其余模块继续工作。</p>
+  </div>
+  <div class="diag-grid">
+    <div class="panel demo-panel">
+      <div class="panel-title"><span>Demo Mode · 30s</span><small id="demoCountdown">READY</small></div>
+      <div class="demo-stage-name" id="demoStage">待机</div>
+      <p class="demo-desc" id="demoDesc">点击「开始路演演示」运行完整 30 秒脚本。演示严格遵循真实算法与 3 秒安静确认逻辑。</p>
+      <div class="demo-progress"><i id="demoProgress"></i></div>
+      <div class="demo-timeline" id="demoTimeline">
+        <div data-step="0"><b>00–06s</b><span>安静卧室</span></div>
+        <div data-step="1"><b>06–12s</b><span>说话声</span></div>
+        <div data-step="2"><b>12–18s</b><span>触发退让</span></div>
+        <div data-step="3"><b>18–24s</b><span>安静确认</span></div>
+        <div data-step="4"><b>24–30s</b><span>平滑恢复</span></div>
+      </div>
+      <div class="demo-reason" id="demoReason">判断依据：—</div>
+      <button class="btn btn-primary full" id="btnDemoStart">开始路演演示</button>
+    </div>
+
+    <div class="panel fault-panel">
+      <div class="panel-title"><span>虚拟故障注入</span><small>独立作用</small></div>
+      <div class="fault-grid">
+        <label class="fault"><input type="checkbox" id="faultMic"><span><b>麦克风失效</b><small>停止产生有效采样</small></span></label>
+        <label class="fault"><input type="checkbox" id="faultAudio"><span><b>音频模块失效</b><small>MAX98357A 离线</small></span></label>
+        <label class="fault"><input type="checkbox" id="faultAroma"><span><b>香氛模块失效</b><small>MOS 通道无响应</small></span></label>
+        <label class="fault"><input type="checkbox" id="faultLight"><span><b>灯环失效</b><small>WS2812 无响应</small></span></label>
+        <label class="fault"><input type="checkbox" id="faultBattery"><span><b>低电量</b><small>系统降额运行</small></span></label>
+        <label class="fault"><input type="checkbox" id="faultSensor"><span><b>传感器数据异常</b><small>RMS 输入冻结</small></span></label>
+      </div>
+      <div class="fault-summary" id="faultSummary">所有模块正常</div>
+    </div>
+
+    <div class="panel log-panel">
+      <div class="panel-title"><span>系统日志</span><button class="link-btn" id="btnClearLog">清空</button></div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <span>EmberSigh 听眠 · Intelligent Ambient Regulator</span>
+  <span>VIRTUAL HAL · 算法与执行器均为本地模拟 · 无真实硬件连接</span>
+</footer>
+</main>
+
+<script>
+/*__ECHARTS__*/
+</script>
+<script>
+/*__JS__*/
+</script>
+</body>
+</html>
