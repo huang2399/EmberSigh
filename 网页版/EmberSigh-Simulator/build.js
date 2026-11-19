@@ -18,6 +18,7 @@ const MODULES = [
   '20-simulators.js',
   '30-coordinator.js',
   '40-demo.js',
+  '50-io.js',
   '60-ui.js',
   '70-main.js'
 ];

@@ -325,12 +325,10 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 }
 
 /* ═══════════════════════════════════════════════
-   50-io.js 配套样式 · 硬件连接态 / 声景启动提示
-   仅新增固定浮层与按钮状态，不改变既有栅格与间距
+   50-io.js 配套样式 · 真实麦克风状态 / 声景启动提示
    ═══════════════════════════════════════════════ */
-#btnConnect.connected{border-color:rgba(47,74,60,.36);background:rgba(126,154,131,.16);color:var(--forest)}
-#btnConnect.connected:hover{background:rgba(126,154,131,.25);border-color:var(--forest-soft)}
-#btnConnect.busy{opacity:.72;cursor:progress}
+#btnMic.connected{border-color:rgba(47,74,60,.36);background:rgba(126,154,131,.18);color:var(--forest)}
+.mic-tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--forest);padding:4px 9px;border-radius:100px;background:rgba(47,74,60,.07);white-space:nowrap}
 .snd-hint{
   position:fixed;left:50%;bottom:26px;z-index:120;display:inline-flex;align-items:center;gap:10px;
   padding:11px 18px;border-radius:100px;background:rgba(255,253,249,.92);border:1px solid var(--line-hi);
@@ -345,18 +343,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .snd-hint.live i{background:var(--forest-soft);box-shadow:0 0 0 4px rgba(126,154,131,.16);animation:none}
 .snd-hint.live span{color:var(--forest)}
 @media(max-width:760px){
-  .nav-actions{gap:6px}
-  .nav-actions .btn{padding:8px 11px;font-size:11.5px}
+  .nav-actions{gap:6px}.nav-actions .btn{padding:8px 11px;font-size:11.5px}
   .snd-hint{bottom:18px;padding:10px 14px;font-size:11px}
-}
-/* 极窄视口：连接按钮收为图标，文案仍保留在 DOM 中供读屏与 tooltip 使用 */
-@media(max-width:575px){
-  .nav-actions{gap:5px}
-  .nav-actions .btn{padding:8px 9px}
-  #btnConnect{position:relative;width:36px;height:36px;padding:0;font-size:0;line-height:0;display:inline-flex;align-items:center;justify-content:center}
-  #btnConnect::before{content:'';width:17px;height:17px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f4a3c' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6.5V3.5M15 6.5V3.5M6.5 6.5h11v4.5a5.5 5.5 0 0 1-11 0V6.5zM12 16.5v4'/%3E%3C/svg%3E") center/17px 17px no-repeat}
-  #btnConnect.connected::after{content:'';position:absolute;top:5px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--forest);box-shadow:0 0 0 3px rgba(126,154,131,.22)}
-  #btnConnect.busy::before{opacity:.5}
+  .env-status{flex-wrap:wrap;gap:8px}
 }
 
 </style>
@@ -384,7 +373,6 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     <span class="virtual-badge">VIRTUAL DEVICE</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" id="btnConnect" title="通过 Web Serial 连接 ESP32（115200 波特率）">连接硬件</button>
     <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎">暂停</button>
     <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
     <button class="btn btn-ghost" id="btnReset">重置</button>
@@ -478,10 +466,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       </div>
       <div class="env-buttons">
         <button class="btn btn-primary" id="btnApplyCustom">应用自定义噪声</button>
+        <button class="btn btn-ghost" id="btnMic">启用真实麦克风</button>
         <button class="btn btn-ghost" id="btnStopEnv">恢复安静卧室</button>
       </div>
     </div>
-    <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="env-remaining" id="envRemaining">持续输入</span></div>
+    <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="mic-tag" id="micState">模拟输入</span><span class="env-remaining" id="envRemaining">持续输入</span></div>
   </div>
 </section>
 
@@ -608,7 +597,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 </footer>
 </main>
 
-<!-- 环境声景启动提示（固定浮层，不参与文档流，不影响布局） -->
+<!-- 环境声景启动提示（固定浮层，不参与文档流） -->
 <div class="snd-hint show" id="sndHint" role="status" aria-live="polite">
   <i></i><span>点击任意位置启动环境声景</span>
 </div>
@@ -1404,6 +1393,393 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 })(window);
 
 
+/* ===== 50-io.js ===== */
+/* ═══════════════════════════════════════════════
+   50-io.js · 物理联动层（主站串口代理 + 真实麦克风 + 声景）
+   A. 串口：不创建第二个 writer，只经主站 window.emberWriter / sendToHardware 下发
+   B. 麦克风：getUserMedia + AnalyserNode 实时 RMS，替代模拟场景输入
+   C. 声景：Web Audio 合成粉红噪音，GainNode 做状态渐变
+   ═══════════════════════════════════════════════ */
+(function (global) {
+  'use strict';
+  var ES = global.ES || {};
+  var STATE_CMD = { QUIET: 'CALM\n', TRANSITION: 'CALMING\n', DISTURBANCE: 'NOISE\n' };
+  var currentState = 'QUIET';
+  var watchers = [];
+
+  function log(level, source, msg) {
+    if (ES.logger && typeof ES.logger[level] === 'function') ES.logger[level](source, msg);
+    else if (global.console) global.console.log('[' + source + '] ' + msg);
+  }
+  function notify(state) {
+    for (var i = 0; i < watchers.length; i++) {
+      try { watchers[i](state); }
+      catch (e) { if (global.console) global.console.error('[ES.io] watcher error', e); }
+    }
+  }
+  function watchState(fn) {
+    watchers.push(fn);
+    try { fn(currentState); } catch (e) { if (global.console) global.console.error('[ES.io] watcher error', e); }
+  }
+  function commitState(state) {
+    if (!STATE_CMD[state] || state === currentState) return;
+    currentState = state;
+    notify(state);
+  }
+  if (ES.bus && typeof ES.bus.on === 'function') {
+    ES.bus.on('state:change', function (d) { if (d && d.to) commitState(d.to); });
+  }
+  global.setInterval(function () {
+    var api = global.EmberSighSim, sm = api && api.ctx && api.ctx.sm;
+    if (sm && sm.state) commitState(sm.state);
+  }, 250);
+
+  /* ═══════════════════════════════════════════════
+     A. 串口代理：全系统唯一指令出口
+     ═══════════════════════════════════════════════ */
+  var SerialLink = (function () {
+    var connected = false;
+    function send(text) {
+      var cmd = String(text || '').trim().toUpperCase();
+      if (!cmd) return false;
+      var sent = false;
+      /* 首选：主站统一全局函数（唯一 writer 在主站） */
+      try {
+        if (global.parent && typeof global.parent.sendToHardware === 'function') {
+          global.parent.sendToHardware(cmd);
+          sent = true;
+        }
+      } catch (e) { /* file:// 跨域时退到 postMessage */ }
+      if (!sent) {
+        try { global.parent.postMessage({ type: 'embersigh:command', command: cmd }, '*'); }
+        catch (e) {}
+      }
+      log('info', 'SERIAL', '→ ESP32 ' + cmd.replace(/\n$/, '') + (sent ? ' · 主站串口' : ' · 消息通道'));
+      return sent;
+    }
+    global.addEventListener('message', function (e) {
+      var d = e && e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === 'embersigh:serial') {
+        connected = !!d.connected;
+        log(connected ? 'ok' : 'info', 'SERIAL',
+          connected ? '主站串口已连接 · 指令通道就绪' : '主站串口已断开 · 指令通道关闭');
+      }
+      if (d.type === 'embersigh:ack') {
+        log('ok', 'HW', '收到硬件物理响应信号 · ' + (d.line || 'ACK'));
+      }
+    });
+    watchState(function (state) { send(STATE_CMD[state]); });
+    return { send: send, isConnected: function () { return connected; } };
+  })();
+
+  /* ═══════════════════════════════════════════════
+     B. 真实麦克风：getUserMedia + AnalyserNode RMS
+     ═══════════════════════════════════════════════ */
+  var MicInput = (function () {
+    var stream = null, ctx = null, analyser = null, samples = null;
+    var active = false, starting = false;
+    var parentMode = false, parentRms = 0;
+    var SCALE = 1600;   /* 归一化 RMS → 0..300 的 UI 量程 */
+    var btn = document.getElementById('btnMic');
+    var tag = document.getElementById('micState');
+
+    /* 主站推送的实时 RMS（顶层 getUserMedia，iframe 直接申请会被 file:// 拦截） */
+    global.addEventListener('message', function (e) {
+      var d = e && e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === 'embersigh:rms' && parentMode) parentRms = Number(d.value) || 0;
+    });
+
+    function requestParentMic() {
+      return new Promise(function (resolve) {
+        var done = false, timer = null;
+        function finish(ok) {
+          if (done) return;
+          done = true;
+          global.clearTimeout(timer);
+          global.removeEventListener('message', onAck);
+          resolve(ok);
+        }
+        function onAck(e) {
+          var d = e && e.data;
+          if (!d || d.type !== 'embersigh:mic' || d.action !== 'started') return;
+          finish(!!d.ok);
+        }
+        global.addEventListener('message', onAck);
+        try { global.parent.postMessage({ type:'embersigh:mic', action:'start' }, '*'); }
+        catch (e) { finish(false); return; }
+        timer = global.setTimeout(function () { finish(false); }, 1200);
+      });
+    }
+
+    function rawRms() {
+      if (parentMode) return parentRms;
+      if (!analyser || !samples) return 0;
+      analyser.getFloatTimeDomainData(samples);
+      var sum = 0;
+      for (var i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+      return Math.sqrt(sum / samples.length);
+    }
+    function scaledRms() { return Math.min(300, rawRms() * SCALE); }
+    function paint() {
+      if (btn) {
+        btn.textContent = active ? '关闭真实麦克风' : '启用真实麦克风';
+        btn.classList.toggle('connected', active);
+      }
+      if (tag) tag.textContent = active ? '真实麦克风输入' : '模拟输入';
+    }
+    function install() {
+      if (install.done) return;
+      install.done = true;
+      var proto = ES.VirtualMicrophone && ES.VirtualMicrophone.prototype;
+      if (!proto) return;
+      var original = proto.sample;
+      proto.sample = function (dt) {
+        if (!active) return original.call(this, dt);
+        var v = scaledRms();
+        this.level = v;
+        this.lastValid = v;
+        this.invalid = false;
+        return v;
+      };
+    }
+    async function startLocal() {
+      if (!global.navigator.mediaDevices || !global.navigator.mediaDevices.getUserMedia) {
+        throw new Error('当前浏览器不支持 getUserMedia');
+      }
+      stream = await global.navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+      var AC = global.AudioContext || global.webkitAudioContext;
+      ctx = new AC();
+      var src = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      samples = new Float32Array(analyser.fftSize);
+      src.connect(analyser);   /* 不接 destination，避免扬声器回授 */
+      if (ctx.state === 'suspended' && ctx.resume) await ctx.resume();
+    }
+
+    async function start() {
+      if (active || starting) return;
+      starting = true;
+      try {
+        var embedded = !!(global.parent && global.parent !== global);
+        if (embedded && await requestParentMic()) {
+          parentMode = true;
+          log('ok', 'MIC', '真实麦克风已启用 · 主站采集并推送实时 RMS');
+        } else {
+          await startLocal();
+          log('ok', 'MIC', '真实麦克风已启用 · RMS 由 AnalyserNode 实时计算');
+        }
+        active = true;
+        install();
+        paint();
+      } catch (err) {
+        log('err', 'MIC', '麦克风启动失败 · ' + ((err && err.message) ? err.message : err));
+      } finally { starting = false; }
+    }
+    function stop() {
+      if (!active) return;
+      if (parentMode) {
+        try { global.parent.postMessage({ type:'embersigh:mic', action:'stop' }, '*'); } catch (e) {}
+      }
+      parentMode = false;
+      parentRms = 0;
+      active = false;
+      try { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+      try { if (ctx && ctx.close) ctx.close(); } catch (e) {}
+      stream = null; ctx = null; analyser = null; samples = null;
+      paint();
+      log('info', 'MIC', '真实麦克风已关闭 · 恢复模拟场景输入');
+    }
+    if (btn) btn.addEventListener('click', function () { active ? stop() : start(); });
+    paint();
+    return {
+      start: start, stop: stop, rawRms: rawRms, scaledRms: scaledRms,
+      isActive: function () { return active; }
+    };
+  })();
+
+  /* ═══════════════════════════════════════════════
+     B. Web Audio 粉红噪音声景
+     ═══════════════════════════════════════════════ */
+  var Soundscape = (function () {
+    /* 状态 → 目标增益 / 渐变时长（秒） */
+    var PROFILE = {
+      QUIET: { gain: 0.5, fade: 3.0 },
+      TRANSITION: { gain: 0.2, fade: 2.0 },
+      DISTURBANCE: { gain: 0.0, fade: 0.2 }
+    };
+
+    var ctx = null;
+    var master = null;      /* GainNode：唯一的音量控制节点 */
+    var highpass = null;
+    var source = null;
+    var ready = false;
+    var booting = false;
+    var hint = document.getElementById('sndHint');
+    var hideTimer = 0;
+
+    /* -----------------------------------------------------------
+       粉红噪音生成函数
+       1) Paul Kellet 滤波器组把白噪声整形为 -3dB/oct 粉红频谱
+       2) 多生成一段尾音折叠回开头做交叉淡化，循环点无爆音
+       ----------------------------------------------------------- */
+    function createPinkNoise(audioCtx, seconds) {
+      var rate = audioCtx.sampleRate;
+      var frames = Math.max(1, Math.floor(rate * seconds));
+      var fade = Math.min(Math.floor(rate * 0.35), Math.floor(frames / 4));
+      var raw = new Float32Array(frames + fade);
+
+      var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      var peak = 0;
+      var i, white, pink, abs;
+
+      for (i = 0; i < raw.length; i++) {
+        white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+        raw[i] = pink;
+        abs = pink < 0 ? -pink : pink;
+        if (abs > peak) peak = abs;
+      }
+
+      var norm = peak > 0 ? 0.92 / peak : 1;
+      var buffer = audioCtx.createBuffer(1, frames, rate);
+      var data = buffer.getChannelData(0);
+
+      for (i = 0; i < frames; i++) {
+        var mix = i < fade ? (i / fade) : 1;
+        var head = i < fade ? raw[frames + i] : 0;
+        data[i] = (raw[i] * mix + head * (1 - mix)) * norm;
+      }
+      return buffer;
+    }
+
+    /* 平滑渐变：从当前值线性推进到目标值 */
+    function rampTo(target, seconds) {
+      if (!ctx || !master) return;
+      var t = ctx.currentTime;
+      var param = master.gain;
+      var from = param.value;
+      param.cancelScheduledValues(t);
+      param.setValueAtTime(from, t);
+      if (!seconds || seconds <= 0.01) param.setValueAtTime(target, t);
+      else param.linearRampToValueAtTime(target, t + seconds);
+    }
+
+    function applyState(state) {
+      var profile = PROFILE[state] || PROFILE.QUIET;
+      rampTo(profile.gain, profile.fade);
+    }
+
+    function setHintText(text) {
+      var label = hint && hint.querySelector('span');
+      if (label) label.textContent = text;
+    }
+
+    function paintHint(started) {
+      if (!hint) return;
+      if (!started) { hint.classList.add('show'); return; }
+      hint.classList.add('show', 'live');
+      setHintText('环境声景已启动 · 粉红噪音');
+      global.clearTimeout(hideTimer);
+      hideTimer = global.setTimeout(function () {
+        hint.classList.remove('show');
+        global.setTimeout(function () { hint.style.display = 'none'; }, 520);
+      }, 2600);
+    }
+
+    /* 首次用户手势内初始化 AudioContext（浏览器自动播放策略要求） */
+    function boot() {
+      if (ready || booting) return;
+      var AC = global.AudioContext || global.webkitAudioContext;
+      if (!AC) {
+        log('warn', 'SOUND', 'Web Audio 不可用 · 环境声景无法启动');
+        setHintText('当前浏览器不支持 Web Audio');
+        return;
+      }
+      booting = true;
+      try {
+        ctx = new AC();
+
+        master = ctx.createGain();
+        master.gain.value = 0;                 /* 从静音开始，由状态渐变接管 */
+
+        highpass = ctx.createBiquadFilter();   /* 滤掉次声 / 直流漂移 */
+        highpass.type = 'highpass';
+        highpass.frequency.value = 22;
+        highpass.Q.value = 0.7;
+
+        source = ctx.createBufferSource();
+        source.buffer = createPinkNoise(ctx, 6);
+        source.loop = true;                    /* 6 秒无缝循环，无需任何 mp3 */
+
+        source.connect(highpass);
+        highpass.connect(master);
+        master.connect(ctx.destination);
+        source.start(0);
+
+        if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
+
+        ready = true;
+        booting = false;
+
+        log('ok', 'SOUND', '环境声景已启动 · Web Audio 实时合成粉红噪音（6.0s 无缝循环）');
+        applyState(currentState);
+        paintHint(true);
+      } catch (err) {
+        ready = false;
+        booting = false;
+        if (ctx && ctx.state !== 'closed') { try { ctx.close(); } catch (e) {} }
+        ctx = null; master = null; source = null; highpass = null;
+        log('warn', 'SOUND', '声景初始化失败 · ' + ((err && err.message) ? err.message : err));
+        setHintText('环境声景启动失败 · 请检查浏览器音频权限');
+      }
+    }
+
+    /* 任意位置首次点击即启动；之后若上下文被挂起，任意点击恢复 */
+    document.addEventListener('pointerdown', function () {
+      if (!ready) { boot(); return; }
+      if (ctx && ctx.state !== 'running' && typeof ctx.resume === 'function') ctx.resume();
+    }, true);
+    document.addEventListener('keydown', function () {
+      if (!ready) boot();
+    }, true);
+
+    /* 状态机联动：QUIET→0.5/3s · TRANSITION→0.2/2s · DISTURBANCE→0/0.2s */
+    watchState(function (state) { if (ready) applyState(state); });
+
+    return {
+      start: boot,
+      applyState: applyState,
+      rampTo: rampTo,
+      createPinkNoise: createPinkNoise,
+      isReady: function () { return ready; },
+      context: function () { return ctx; },
+      level: function () { return master ? master.gain.value : 0; }
+    };
+  })();
+
+  /* 唯一对外句柄，便于调试与验收 */
+  global.EmberSighIO = {
+    serial: SerialLink,
+    soundscape: Soundscape,
+    mic: MicInput,
+    stateCommand: STATE_CMD,
+    currentState: function () { return currentState; }
+  };
+})(window);
+
+
 /* ===== 60-ui.js ===== */
 /* ═══════════════════════════════════════════════
    60-ui.js · 界面渲染与交互绑定
@@ -1766,345 +2142,6 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
     /* 图表（低频更新） */
     if (now - this.lastChart > 180) { this.lastChart = now; this.renderChart(); this.renderTimeline(); }
-  };
-})(window);
-
-
-/* ===== 50-io.js ===== */
-/* ═══════════════════════════════════════════════
-   50-io.js · 物理联动层（Web Serial + Web Audio）
-   A. Web Serial：115200 波特率连接 ESP32，状态机变化时下发 CALM / CALMING / NOISE
-   B. Web Audio：纯合成粉红噪音声景，用 GainNode 做状态渐变，无任何外部音频文件
-   所有变量与函数都封闭在本 IIFE 内，仅通过 ES.bus 的事件与页面联动，
-   对外只暴露一个 EmberSighIO 句柄，不污染既有全局命名空间。
-   ═══════════════════════════════════════════════ */
-(function (global) {
-  'use strict';
-
-  var ES = global.ES || {};
-
-  /* ---------------- 共享：状态 → 串口指令 ---------------- */
-  var STATE_CMD = { QUIET: 'CALM\n', TRANSITION: 'CALMING\n', DISTURBANCE: 'NOISE\n' };
-  var currentState = 'QUIET';
-  var watchers = [];
-
-  function log(level, source, msg) {
-    if (ES.logger && typeof ES.logger[level] === 'function') ES.logger[level](source, msg);
-    else if (global.console) global.console.log('[' + source + '] ' + msg);
-  }
-
-  function notify(state) {
-    for (var i = 0; i < watchers.length; i++) {
-      try { watchers[i](state); }
-      catch (e) { if (global.console) global.console.error('[ES.io] watcher error', e); }
-    }
-  }
-
-  /* 注册状态观察者：立即用当前状态回调一次，避免错过连接时刻 */
-  function watchState(fn) {
-    watchers.push(fn);
-    try { fn(currentState); } catch (e) { if (global.console) global.console.error('[ES.io] watcher error', e); }
-  }
-
-  function commitState(state) {
-    if (!STATE_CMD[state] || state === currentState) return;
-    currentState = state;
-    notify(state);
-  }
-
-  /* 主通道：监听状态机的 state:change 事件 */
-  if (ES.bus && typeof ES.bus.on === 'function') {
-    ES.bus.on('state:change', function (d) { if (d && d.to) commitState(d.to); });
-  }
-
-  /* 兜底通道：重置等不派发 state:change 的路径，用低频轮询对齐真实状态 */
-  global.setInterval(function () {
-    var api = global.EmberSighSim;
-    var sm = api && api.ctx && api.ctx.sm;
-    if (sm && sm.state) commitState(sm.state);
-  }, 250);
-
-  /* ═══════════════════════════════════════════════
-     A. Web Serial 硬件通信
-     ═══════════════════════════════════════════════ */
-  var SerialLink = (function () {
-    var BAUD = 115200;
-    var port = null;
-    var writer = null;
-    var queue = Promise.resolve();
-    var busy = false;
-    var encoder = (typeof global.TextEncoder === 'function') ? new global.TextEncoder() : null;
-
-    var btn = document.getElementById('btnConnect');
-    var serialApi = global.navigator && global.navigator.serial;
-    var supported = !!serialApi;
-
-    function paint() {
-      if (!btn) return;
-      var online = !!port;
-      btn.classList.toggle('connected', online);
-      btn.classList.toggle('busy', busy);
-      btn.textContent = busy ? '连接中…' : (online ? '硬件已连接' : '连接硬件');
-      btn.title = online
-        ? '已连接 ESP32 · ' + BAUD + ' baud · 点击断开'
-        : (supported
-            ? '通过 Web Serial 连接 ESP32（' + BAUD + ' 波特率）'
-            : '当前浏览器不支持 Web Serial · 请使用桌面版 Chrome / Edge');
-    }
-
-    /* 串行化写入：状态可能高频切换，保证指令不交错、不丢序 */
-    function send(text) {
-      if (!writer || !encoder) return;
-      var payload = encoder.encode(text);
-      queue = queue.then(function () {
-        return writer ? writer.write(payload) : null;
-      }).catch(function (err) {
-        log('warn', 'SERIAL', '串口写入失败 · ' + ((err && err.message) ? err.message : err));
-      });
-    }
-
-    async function connect() {
-      if (!supported) {
-        log('warn', 'SERIAL', 'Web Serial 不可用 · 需桌面版 Chrome / Edge，且页面运行在安全上下文');
-        return;
-      }
-      if (busy || port) return;
-      busy = true; paint();
-      try {
-        var picked = await serialApi.requestPort();
-        if (!picked) return;
-        await picked.open({ baudRate: BAUD });
-        port = picked;
-        writer = port.writable.getWriter();
-        log('ok', 'SERIAL', 'ESP32 已连接 · ' + BAUD + ' baud');
-        /* 连接后立刻同步一次当前状态 */
-        send(STATE_CMD[currentState]);
-        log('info', 'SERIAL', '当前状态已同步 → ' + STATE_CMD[currentState].trim());
-      } catch (err) {
-        if (port) { try { await port.close(); } catch (e) {} }
-        port = null; writer = null;
-        if (err && err.name === 'NotFoundError') log('info', 'SERIAL', '未选择串口设备 · 连接已取消');
-        else log('warn', 'SERIAL', '串口连接失败 · ' + ((err && err.message) ? err.message : err));
-      } finally {
-        busy = false; paint();
-      }
-    }
-
-    async function disconnect() {
-      if (busy) return;
-      busy = true; paint();
-      try {
-        if (writer) { try { writer.releaseLock(); } catch (e) {} writer = null; }
-        if (port) { try { await port.close(); } catch (e) {} }
-        log('info', 'SERIAL', 'ESP32 已断开 · 硬件联动停止');
-      } finally {
-        port = null; writer = null; busy = false; paint();
-      }
-    }
-
-    if (btn) {
-      btn.addEventListener('click', function () { port ? disconnect() : connect(); });
-    }
-    if (supported && typeof serialApi.addEventListener === 'function') {
-      serialApi.addEventListener('disconnect', function (e) {
-        if (port && e.target === port) {
-          port = null; writer = null; busy = false; paint();
-          log('warn', 'SERIAL', '串口设备已物理断开 · 硬件联动停止');
-        }
-      });
-    }
-
-    /* 状态机联动：QUIET→CALM / TRANSITION→CALMING / DISTURBANCE→NOISE */
-    watchState(function (state) {
-      if (!writer) return;
-      send(STATE_CMD[state]);
-      log('info', 'SERIAL', '→ ESP32 ' + STATE_CMD[state].trim() + ' · state ' + state);
-    });
-
-    paint();
-
-    return {
-      connect: connect,
-      disconnect: disconnect,
-      send: send,
-      isConnected: function () { return !!port; },
-      isSupported: function () { return supported; }
-    };
-  })();
-
-  /* ═══════════════════════════════════════════════
-     B. Web Audio 粉红噪音声景
-     ═══════════════════════════════════════════════ */
-  var Soundscape = (function () {
-    /* 状态 → 目标增益 / 渐变时长（秒） */
-    var PROFILE = {
-      QUIET: { gain: 0.5, fade: 3.0 },
-      TRANSITION: { gain: 0.2, fade: 2.0 },
-      DISTURBANCE: { gain: 0.0, fade: 0.2 }
-    };
-
-    var ctx = null;
-    var master = null;      /* GainNode：唯一的音量控制节点 */
-    var highpass = null;
-    var source = null;
-    var ready = false;
-    var booting = false;
-    var hint = document.getElementById('sndHint');
-    var hideTimer = 0;
-
-    /* -----------------------------------------------------------
-       粉红噪音生成函数
-       1) Paul Kellet 滤波器组把白噪声整形为 -3dB/oct 粉红频谱
-       2) 多生成一段尾音折叠回开头做交叉淡化，循环点无爆音
-       ----------------------------------------------------------- */
-    function createPinkNoise(audioCtx, seconds) {
-      var rate = audioCtx.sampleRate;
-      var frames = Math.max(1, Math.floor(rate * seconds));
-      var fade = Math.min(Math.floor(rate * 0.35), Math.floor(frames / 4));
-      var raw = new Float32Array(frames + fade);
-
-      var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-      var peak = 0;
-      var i, white, pink, abs;
-
-      for (i = 0; i < raw.length; i++) {
-        white = Math.random() * 2 - 1;
-        b0 = 0.99886 * b0 + white * 0.0555179;
-        b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        b3 = 0.86650 * b3 + white * 0.3104856;
-        b4 = 0.55000 * b4 + white * 0.5329522;
-        b5 = -0.7616 * b5 - white * 0.0168980;
-        pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-        b6 = white * 0.115926;
-        raw[i] = pink;
-        abs = pink < 0 ? -pink : pink;
-        if (abs > peak) peak = abs;
-      }
-
-      var norm = peak > 0 ? 0.92 / peak : 1;
-      var buffer = audioCtx.createBuffer(1, frames, rate);
-      var data = buffer.getChannelData(0);
-
-      for (i = 0; i < frames; i++) {
-        var mix = i < fade ? (i / fade) : 1;
-        var head = i < fade ? raw[frames + i] : 0;
-        data[i] = (raw[i] * mix + head * (1 - mix)) * norm;
-      }
-      return buffer;
-    }
-
-    /* 平滑渐变：从当前值线性推进到目标值 */
-    function rampTo(target, seconds) {
-      if (!ctx || !master) return;
-      var t = ctx.currentTime;
-      var param = master.gain;
-      var from = param.value;
-      param.cancelScheduledValues(t);
-      param.setValueAtTime(from, t);
-      if (!seconds || seconds <= 0.01) param.setValueAtTime(target, t);
-      else param.linearRampToValueAtTime(target, t + seconds);
-    }
-
-    function applyState(state) {
-      var profile = PROFILE[state] || PROFILE.QUIET;
-      rampTo(profile.gain, profile.fade);
-    }
-
-    function setHintText(text) {
-      var label = hint && hint.querySelector('span');
-      if (label) label.textContent = text;
-    }
-
-    function paintHint(started) {
-      if (!hint) return;
-      if (!started) { hint.classList.add('show'); return; }
-      hint.classList.add('show', 'live');
-      setHintText('环境声景已启动 · 粉红噪音');
-      global.clearTimeout(hideTimer);
-      hideTimer = global.setTimeout(function () {
-        hint.classList.remove('show');
-        global.setTimeout(function () { hint.style.display = 'none'; }, 520);
-      }, 2600);
-    }
-
-    /* 首次用户手势内初始化 AudioContext（浏览器自动播放策略要求） */
-    function boot() {
-      if (ready || booting) return;
-      var AC = global.AudioContext || global.webkitAudioContext;
-      if (!AC) {
-        log('warn', 'SOUND', 'Web Audio 不可用 · 环境声景无法启动');
-        setHintText('当前浏览器不支持 Web Audio');
-        return;
-      }
-      booting = true;
-      try {
-        ctx = new AC();
-
-        master = ctx.createGain();
-        master.gain.value = 0;                 /* 从静音开始，由状态渐变接管 */
-
-        highpass = ctx.createBiquadFilter();   /* 滤掉次声 / 直流漂移 */
-        highpass.type = 'highpass';
-        highpass.frequency.value = 22;
-        highpass.Q.value = 0.7;
-
-        source = ctx.createBufferSource();
-        source.buffer = createPinkNoise(ctx, 6);
-        source.loop = true;                    /* 6 秒无缝循环，无需任何 mp3 */
-
-        source.connect(highpass);
-        highpass.connect(master);
-        master.connect(ctx.destination);
-        source.start(0);
-
-        if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
-
-        ready = true;
-        booting = false;
-
-        log('ok', 'SOUND', '环境声景已启动 · Web Audio 实时合成粉红噪音（6.0s 无缝循环）');
-        applyState(currentState);
-        paintHint(true);
-      } catch (err) {
-        ready = false;
-        booting = false;
-        if (ctx && ctx.state !== 'closed') { try { ctx.close(); } catch (e) {} }
-        ctx = null; master = null; source = null; highpass = null;
-        log('warn', 'SOUND', '声景初始化失败 · ' + ((err && err.message) ? err.message : err));
-        setHintText('环境声景启动失败 · 请检查浏览器音频权限');
-      }
-    }
-
-    /* 任意位置首次点击即启动；之后若上下文被挂起，任意点击恢复 */
-    document.addEventListener('pointerdown', function () {
-      if (!ready) { boot(); return; }
-      if (ctx && ctx.state !== 'running' && typeof ctx.resume === 'function') ctx.resume();
-    }, true);
-    document.addEventListener('keydown', function () {
-      if (!ready) boot();
-    }, true);
-
-    /* 状态机联动：QUIET→0.5/3s · TRANSITION→0.2/2s · DISTURBANCE→0/0.2s */
-    watchState(function (state) { if (ready) applyState(state); });
-
-    return {
-      start: boot,
-      applyState: applyState,
-      rampTo: rampTo,
-      createPinkNoise: createPinkNoise,
-      isReady: function () { return ready; },
-      context: function () { return ctx; },
-      level: function () { return master ? master.gain.value : 0; }
-    };
-  })();
-
-  /* 唯一对外句柄，便于调试与验收 */
-  global.EmberSighIO = {
-    serial: SerialLink,
-    soundscape: Soundscape,
-    stateCommand: STATE_CMD,
-    currentState: function () { return currentState; }
   };
 })(window);
 

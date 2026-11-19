@@ -147,6 +147,15 @@ body{
 /* 视图路由：页内"跳页"切换（淡入 + 微模糊） */
 .view{display:none;}
 .view.active{display:block;animation:viewIn .6s cubic-bezier(.22,1,.36,1);}
+/* 数字孪生控制台：iframe 隔离模拟器 CSS/JS，主站样式不受污染 */
+#v-sim{padding-top:0;}
+.sim-caption{display:flex;align-items:center;gap:10px;padding:14px 2px 12px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--ink-faint);}
+.sim-caption i{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(176,141,87,.14);}
+.sim-frame{display:block;width:100%;height:calc(100vh - var(--nav-h) - 46px);min-height:820px;
+  border:0;border-radius:18px;background:#f7f4ee;
+  box-shadow:0 30px 80px -50px rgba(80,64,46,.6),inset 0 0 0 1px rgba(80,64,46,.08);}
+@media(max-width:640px){.sim-frame{min-height:760px;height:calc(100vh - var(--nav-h) - 40px);border-radius:12px;}}
 @keyframes viewIn{from{opacity:0;transform:translateY(16px);filter:blur(5px);}
   to{opacity:1;transform:none;filter:none;}}
 
@@ -514,7 +523,7 @@ footer{position:relative;z-index:2;margin-top:50px;
 .line .tag{flex:none;min-width:52px;}
 .line .msg{color:var(--ink-soft);overflow-wrap:anywhere;min-width:0;}
 .line.lg-info .tag{color:var(--sky);}
-.line.lg-ok .tag{color:#6f8c60;}
+.line.lg-ok .tag,.line.lg-ok .msg{color:#5f8252;}
 .line.lg-warn .tag{color:#b5872f;}
 .line.lg-err .tag{color:var(--danger);}
 .line.lg-err .msg{color:#8f3f2d;}
@@ -1105,7 +1114,8 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   <div class="tabs">
     <div class="glider" id="glider"></div>
     <a class="tab active" href="#top" data-view="vision">理念<em>Vision</em></a>
-    <a class="tab" href="#console" data-view="console">控制台<em>Console</em></a>
+    <a class="tab" href="#console" data-view="console">硬件台<em>Hardware</em></a>
+    <a class="tab" href="#sim" data-view="sim">控制台<em>Console</em></a>
     <a class="tab" href="#lab" data-view="lab">嗅觉实验室<em>Lab</em></a>
     <a class="tab" href="#dev" data-view="dev">开发者<em>Developer</em></a>
   </div>
@@ -1569,6 +1579,17 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
     </section>
 
   </div><!-- /v-console -->
+
+  <!-- ══════════════════════════════════════════
+       视图 02b · 控制台（全功能数字孪生模拟器，iframe 隔离）
+       ══════════════════════════════════════════ -->
+  <div class="view" id="v-sim">
+    <div class="sim-caption"><i></i>DIGITAL TWIN · VIRTUAL DEVICE · 真实麦克风 / 串口联动</div>
+    <iframe class="sim-frame" id="simFrame"
+            data-src="EmberSigh-Simulator/EmberSigh-全功能数字孪生模拟器.html"
+            title="EmberSigh 全功能数字孪生模拟器"
+            allow="microphone; autoplay"></iframe>
+  </div>
 
   <!-- ══════════════════════════════════════════
        视图 03 · 嗅觉实验室
@@ -2128,6 +2149,63 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 var $ = function(id){ return document.getElementById(id); };
 window.ES = { $: $ };
 
+/* ── 数字孪生 iframe 通道：只负责转发消息，不接管模拟器内部状态 ── */
+function postToSim(payload){
+  var f = $('simFrame');
+  if(f && f.contentWindow){ try{ f.contentWindow.postMessage(payload, '*'); }catch(e){} }
+}
+window.addEventListener('message', function(e){
+  var d = e && e.data;
+  if(!d || typeof d !== 'object') return;
+  if(d.type === 'embersigh:command'){ sendToHardware(d.command); return; }
+  if(d.type === 'embersigh:mic'){
+    if(d.action === 'start') realMicStart();
+    if(d.action === 'stop')  realMicStop();
+  }
+});
+
+/* ── 真实麦克风（顶层页面申请权限）
+   file:// 下 iframe 直接 getUserMedia 会被 Permissions Policy 拒绝，
+   因此由顶层申请一次，再把 AnalyserNode 的实时 RMS 推给 iframe。 ── */
+var micStream = null, micCtx = null, micAnalyser = null, micSamples = null, micTimer = null;
+function realMicStop(){
+  if(micTimer){ clearInterval(micTimer); micTimer = null; }
+  try{ if(micStream) micStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  try{ if(micCtx && micCtx.close) micCtx.close(); }catch(e){}
+  micStream = null; micCtx = null; micAnalyser = null; micSamples = null;
+}
+function realMicStart(){
+  if(micStream){ postToSim({ type:'embersigh:mic', action:'started', ok:true }); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    postToSim({ type:'embersigh:mic', action:'started', ok:false });
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({
+    audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+  }).then(function(stream){
+    micStream = stream;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    micCtx = new AC();
+    var src = micCtx.createMediaStreamSource(stream);
+    micAnalyser = micCtx.createAnalyser();
+    micAnalyser.fftSize = 2048;
+    micSamples = new Float32Array(micAnalyser.fftSize);
+    src.connect(micAnalyser);   /* 不接 destination，避免回授 */
+    if(micCtx.state === 'suspended' && micCtx.resume) micCtx.resume();
+    micTimer = setInterval(function(){
+      if(!micAnalyser || !micSamples) return;
+      micAnalyser.getFloatTimeDomainData(micSamples);
+      var sum = 0;
+      for(var i=0;i<micSamples.length;i++) sum += micSamples[i]*micSamples[i];
+      postToSim({ type:'embersigh:rms', value: Math.sqrt(sum/micSamples.length) });
+    }, 50);
+    postToSim({ type:'embersigh:mic', action:'started', ok:true });
+  }).catch(function(err){
+    log('err','MIC','真实麦克风权限被拒绝 · ' + ((err && err.message) ? err.message : err));
+    postToSim({ type:'embersigh:mic', action:'started', ok:false });
+  });
+}
+
 /* ── 6. Toast 提示条（先定义，实验室视图会用到） ── */
 window.toast = function(msg, ico, type){
   var el = $('toast');
@@ -2162,7 +2240,7 @@ window.imgFallback = function(img){
 /* ── 1. 视图路由：页内"跳页"，带独立 hash 地址 ──
    #top/#how/#specs/#faq → 理念视图（并滚动到对应区块）
    #console / #lab / #dev → 对应功能视图              */
-var VIEWS = ['vision','console','lab','dev'];
+var VIEWS = ['vision','console','sim','lab','dev'];
 var currentView = 'vision';
 
 function moveGlider(){
@@ -2176,6 +2254,13 @@ function showView(view, anchor){
   if(VIEWS.indexOf(view) < 0) view = 'vision';
   if(view === currentView && !anchor) return;
   currentView = view;
+
+  /* 首次进入控制台视图时才加载模拟器，避免首屏多载入 1.2MB */
+  if(view === 'sim'){
+    var sim = $('simFrame');
+    if(sim && !sim.src && sim.dataset.src) sim.src = sim.dataset.src;
+    postToSim({ type:'embersigh:serial', connected: !!(window.emberWriter && serialMode) });
+  }
 
   /* 切换视图容器 */
   document.querySelectorAll('.view').forEach(function(v){
@@ -2199,7 +2284,7 @@ function showView(view, anchor){
 
 function route(){
   var h = location.hash.replace('#','');
-  if(h === 'console' || h === 'lab' || h === 'dev'){
+  if(h === 'console' || h === 'sim' || h === 'lab' || h === 'dev'){
     showView(h);
   } else if(h === 'top' || h === 'how' || h === 'specs' || h === 'faq'){
     var needSwitch = currentView !== 'vision';
@@ -2531,6 +2616,28 @@ var serialBtn = $('serialBtn'), serialDot = $('serialDot'), serialText = $('seri
 /* 帧解析：DATA | RMS: 17 | STATE: CALM（对空格容错） */
 var SERIAL_RE = /DATA\s*\|\s*RMS:\s*(\d+)\s*\|\s*STATE:\s*(\w+)/i;
 
+/* ── 统一硬件指令出口：全站唯一 window.emberWriter ──
+   只在 connectSerial() 成功时创建一次；断开/异常时释放并清空。
+   主站与 iframe 模拟器都通过 window.sendToHardware('NOISE') 下发指令。 */
+var serialEncoder = (typeof TextEncoder === 'function') ? new TextEncoder() : null;
+window.sendToHardware = function(command){
+  var cmd = String(command || '').trim().toUpperCase();
+  if(!cmd) return false;
+  if(!window.emberWriter){
+    log('warn', 'SERIAL', '指令 ' + cmd + ' 未发送 · 硬件未连接');
+    return false;
+  }
+  cmd = cmd.replace(/\r?\n+$/, '') + '\n';
+  try{
+    window.emberWriter.write(serialEncoder ? serialEncoder.encode(cmd) : cmd);
+    log('info', 'SERIAL', '→ ESP32 ' + cmd.trim());
+    return true;
+  }catch(err){
+    log('err', 'SERIAL', '指令写入失败 · ' + ((err && err.message) ? err.message : err));
+    return false;
+  }
+};
+
 function portLabel(port){
   try{
     var info = port.getInfo();
@@ -2618,6 +2725,12 @@ function applyRealData(rmsVal, hwState){
 }
 
 function handleSerialLine(line){
+  /* 硬件物理响应：绿色成功日志，并同步到数字孪生模拟器日志区 */
+  if(/ACK/i.test(line)){
+    log('ok', 'HW', '收到硬件物理响应信号 · ' + line);
+    postToSim({ type:'embersigh:ack', line:line });
+    return;
+  }
   var m = line.match(SERIAL_RE);
   if(!m || !serialMode) return;
   applyRealData(parseInt(m[1], 10), m[2]);
@@ -2678,8 +2791,18 @@ function restoreTelemetry(){
   if(bpmEl) bpmEl.textContent = '12.6 bpm';
 }
 
+/* 释放全局唯一 writer；任何断开路径都必须经过这里 */
+function releaseWriter(){
+  if(window.emberWriter){
+    try{ window.emberWriter.releaseLock(); }catch(e){}
+    window.emberWriter = null;
+  }
+}
+
 function onSerialDown(msg){
   var wasActive = serialMode || serialActive;
+  releaseWriter();
+  postToSim({ type:'embersigh:serial', connected:false });
   serialActive = false;
   serialMode = false;
   serialPort = null;
@@ -2713,6 +2836,15 @@ async function connectSerial(){
     serialActive = true;
     serialBuf = '';
     dispRms = null;
+    /* 唯一全局 writer：模拟器不再自建连接，只经 sendToHardware 复用它 */
+    releaseWriter();
+    try{
+      window.emberWriter = port.writable.getWriter();
+      log('ok', 'SERIAL', '写入通道已挂载 · 控制台模拟器可下发 CALM / CALMING / NOISE');
+    }catch(err){
+      log('warn', 'SERIAL', '写入通道不可用 · 仅保留只读遥测 · ' + ((err && err.message) ? err.message : err));
+    }
+    postToSim({ type:'embersigh:serial', connected:true });
     setSerialUI(true, '已连接 · ' + portLabel(port) + ' · 115200 bps · 真实硬件数据');
     scr.classList.add('instant');   /* 状态切换瞬时，不再 1.2s 渐变 */
     applySerialTelemetry();
@@ -2724,6 +2856,8 @@ async function connectSerial(){
   }catch(err){
     serialMode = false;
     serialActive = false;
+    releaseWriter();
+    postToSim({ type:'embersigh:serial', connected:false });
     setSerialUI(false, err && err.name === 'NotFoundError' ? '已取消选择端口 · 模拟数据模式' : '连接失败 · 模拟数据模式');
     log('err', 'SERIAL', '连接失败：' + (err && err.message ? err.message : err) + ' · 已保持模拟模式');
   }

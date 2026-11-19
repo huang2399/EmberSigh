@@ -125,10 +125,11 @@
       </div>
       <div class="env-buttons">
         <button class="btn btn-primary" id="btnApplyCustom">应用自定义噪声</button>
+        <button class="btn btn-ghost" id="btnMic">启用真实麦克风</button>
         <button class="btn btn-ghost" id="btnStopEnv">恢复安静卧室</button>
       </div>
     </div>
-    <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="env-remaining" id="envRemaining">持续输入</span></div>
+    <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="mic-tag" id="micState">模拟输入</span><span class="env-remaining" id="envRemaining">持续输入</span></div>
   </div>
 </section>
 
@@ -254,6 +255,11 @@
   <span>VIRTUAL HAL · 算法与执行器均为本地模拟 · 无真实硬件连接</span>
 </footer>
 </main>
+
+<!-- 环境声景启动提示（固定浮层，不参与文档流） -->
+<div class="snd-hint show" id="sndHint" role="status" aria-live="polite">
+  <i></i><span>点击任意位置启动环境声景</span>
+</div>
 
 <script>
 /*__ECHARTS__*/

@@ -193,3 +193,35 @@ EmberSigh-Simulator/
 - 既有接线文档中的 GPIO 分配与安全注意事项 → 写入迁移建议。
 
 未复用既有原型中的随机抖动状态机（它用 `Math.random()` 直接产生 RMS 与状态），因为本任务明确要求算法真实可运行、数据来自模拟引擎。
+
+---
+
+## 九、融入主站 `index(1).html` 的集成说明
+
+主站 `网页版/index(1).html` 已新增第五个 Tab「控制台 Console」，通过 **iframe 隔离**加载本项目的单文件成品。
+
+### 9.1 样式与结构
+
+- 主站新增 `#v-sim` 视图与 `.sim-frame` 样式；模拟器全部 CSS 留在 iframe 内，不污染主站。
+- iframe 设 `allow="microphone; autoplay"`，并使用 `data-src` 懒加载：首次切到该 Tab 才载入 1.2 MB 成品。
+- 原「控制台 Console」Tab 改名为「硬件台 Hardware」，因为它承载主站原有的「连接真实设备（USB）」按钮。
+- 模拟器内原有的「连接硬件」按钮已移除，现在唯一入口是主站硬件台里的连接按钮。
+
+### 9.2 串口：全局唯一 writer
+
+- 主站 `connectSerial()` 成功后创建唯一的 `window.emberWriter`，断开或异常时由 `releaseWriter()` 释放并清空。
+- 主站新增 `window.sendToHardware(command)`，统一追加 `\n` 后调用该 writer。
+- 模拟器状态机切换时只发消息：`window.parent.sendToHardware('NOISE')`；跨域受限时自动退到 `postMessage({type:'embersigh:command'})`，由主站同一个函数写出。全系统不存在第二个 writer。
+- 主站 `readSerial` 收到含 `ACK` 的行时，打印绿色 `lg-ok` 日志「收到硬件物理响应信号」，同时通过 `postMessage` 在模拟器日志区同步一条成功日志。
+
+### 9.3 真实麦克风
+
+- 模拟器新增「启用真实麦克风」按钮与 `micState` 标签。
+- **顶层页面**调用 `navigator.mediaDevices.getUserMedia({audio:true})`，用 `AnalyserNode.getFloatTimeDomainData()` 计算 RMS（FFT 2048，50 ms 推送一次）。
+- `file://` 下 iframe 直接申请麦克风会被 Permissions Policy 拒绝，因此由主站申请权限后经 `postMessage({type:'embersigh:rms'})` 把真实 RMS 推给模拟器；独立打开单文件时自动回落到 iframe 内直接 `getUserMedia`。
+- 该 RMS 直接替代 `VirtualMicrophone.sample()` 的输出，驱动 `heroRms`、ECharts 曲线与迟滞状态机。EMA 越过 150 阈值并满足 0.4 s 保持后进入 DISTURBANCE，随即自动向串口发送 `NOISE\n`。
+- 灵敏度系数为 `SCALE = 1600`（归一化 RMS → 0..300 量程），可在 `src/js/50-io.js` 中调整。
+
+### 9.4 验证
+
+集成测试覆盖：Tab 切换 / iframe 懒加载 / 模拟器在 iframe 内启动 / 无连接按钮 / writer 唯一性与指令复用 / ACK 双端日志 / 真实 RMS 入引擎 / 零 JS 异常。共 **21/21 通过**。
