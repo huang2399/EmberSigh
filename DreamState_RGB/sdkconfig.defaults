@@ -1,0 +1,16 @@
+# DreamState_RGB - board specific defaults
+# ESP32-S3 (QFN56 rev v0.2) with 16 MB quad SPI flash.
+# No PSRAM is required by this demo, so it is left disabled.
+
+# ---- Flash ----
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# ---- Console on UART0 (board is wired through an external CH343 UART bridge) ----
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
+
+# ---- Logging ----
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

@@ -1,0 +1,5 @@
+idf_component_register(
+    SRCS "main.c" "ws2812b.c"
+    INCLUDE_DIRS "."
+    REQUIRES esp_driver_rmt
+)
