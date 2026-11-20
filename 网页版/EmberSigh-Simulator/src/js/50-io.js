@@ -84,6 +84,7 @@
     var stream = null, ctx = null, analyser = null, samples = null;
     var active = false, starting = false;
     var parentMode = false, parentRms = 0;
+    var serialMode = false, serialRms = 0;   /* ESP32-S3-EYE 串口真实 RMS（优先于麦克风与模拟场景） */
     var SCALE = 1600;   /* 归一化 RMS → 0..300 的 UI 量程 */
     var btn = document.getElementById('btnMic');
     var tag = document.getElementById('micState');
@@ -93,6 +94,22 @@
       var d = e && e.data;
       if (!d || typeof d !== 'object') return;
       if (d.type === 'embersigh:rms' && parentMode) parentRms = Number(d.value) || 0;
+      /* 主站 Web Serial 收到 ESP32-S3-EYE 的 DATA 帧 → 真实 RMS 直接喂进引擎 */
+      if (d.type === 'embersigh:serial-data') {
+        var v = Number(d.rms);
+        if (isFinite(v) && v >= 0) {
+          serialMode = true;
+          serialRms = Math.min(300, v);
+          install();
+          paint();
+        }
+      }
+      if (d.type === 'embersigh:serial' && d.connected === false && serialMode) {
+        serialMode = false;
+        serialRms = 0;
+        paint();
+        log('info', 'MIC', '串口已断开 · 恢复本地输入源');
+      }
     });
 
     function requestParentMic() {
@@ -131,7 +148,7 @@
         btn.textContent = active ? '关闭真实麦克风' : '启用真实麦克风';
         btn.classList.toggle('connected', active);
       }
-      if (tag) tag.textContent = active ? '真实麦克风输入' : '模拟输入';
+      if (tag) tag.textContent = serialMode ? 'ESP32-S3-EYE 串口数据' : (active ? '真实麦克风输入' : '模拟输入');
     }
     function install() {
       if (install.done) return;
@@ -140,8 +157,8 @@
       if (!proto) return;
       var original = proto.sample;
       proto.sample = function (dt) {
-        if (!active) return original.call(this, dt);
-        var v = scaledRms();
+        if (!active && !serialMode) return original.call(this, dt);
+        var v = serialMode ? serialRms : scaledRms();
         this.level = v;
         this.lastValid = v;
         this.invalid = false;
@@ -202,7 +219,9 @@
     paint();
     return {
       start: start, stop: stop, rawRms: rawRms, scaledRms: scaledRms,
-      isActive: function () { return active; }
+      isActive: function () { return active; },
+      isSerial: function () { return serialMode; },
+      serialValue: function () { return serialRms; }
     };
   })();
 

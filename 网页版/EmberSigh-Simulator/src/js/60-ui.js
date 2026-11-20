@@ -268,6 +268,11 @@
     stage.classList.add('state-' + state.toLowerCase());
     $('heroStateChip').textContent = state;
     $('heroStateChip').className = 'hero-state-chip ' + (state === 'DISTURBANCE' ? 'disturbance' : (state === 'TRANSITION' ? 'transition' : ''));
+    var pills = document.querySelectorAll('.hs-pill');
+    var activeKey = state === 'DISTURBANCE' ? 'noise' : (state === 'TRANSITION' ? 'calming' : 'calm');
+    for (var pi = 0; pi < pills.length; pi++) {
+      pills[pi].classList.toggle('on', pills[pi].dataset.hs === activeKey);
+    }
     $('heroStateName').textContent = info.zh;
     $('heroStateDesc').textContent = info.desc;
     $('heroRms').textContent = Math.round(snap.raw);

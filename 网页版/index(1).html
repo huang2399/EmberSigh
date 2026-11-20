@@ -1089,6 +1089,115 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .hero-stage{transform:none;}
   .viz-cv,.mist-cv{display:none;}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   统一控制台 · 3D 数字孪生主界面 + 可折叠 HAL 日志侧栏
+   ═══════════════════════════════════════════════════════════════ */
+.unified-console{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;align-items:start;margin-top:4px;transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
+.unified-console.log-collapsed{grid-template-columns:minmax(0,1fr) 0px}
+.uc-main{min-width:0;position:relative}
+.uc-main .sim-frame{height:calc(100vh - var(--nav-h) - 130px);min-height:860px;border-radius:18px}
+.uc-side{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:420px;overflow:hidden;transition:opacity .35s ease}
+.unified-console.log-collapsed .uc-side{opacity:0;pointer-events:none}
+.uc-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.uc-toggle,.uc-mini{
+  flex:none;padding:10px 16px;border-radius:10px;cursor:pointer;
+  font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.08em;
+  border:1px solid var(--line-hi);background:rgba(255,255,255,.62);color:var(--ink-soft);
+  transition:all .2s ease;
+}
+.uc-toggle:hover,.uc-mini:hover{border-color:var(--gold);color:var(--gold-d);background:#fffdf8}
+.uc-note{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-faint)}
+.uc-preview{display:flex;flex-direction:column;gap:12px}
+.uc-preview .screen-card{padding:16px 18px;gap:12px}
+.uc-preview .device-frame{width:236px;height:236px;border-radius:38px;padding:9px}
+.uc-preview .screen{border-radius:28px}
+.uc-preview .scr-main{font-size:48px}
+.uc-preview .phone-shell{width:212px;height:420px}
+.uc-preview .phone-col{flex-direction:row;align-items:flex-start;gap:14px}
+
+/* 黑底绿字 HAL 终端（模块 A 提取） */
+.hal-dock{border-radius:16px;overflow:hidden;background:#0a1015;border:1px solid rgba(126,178,140,.26);
+  box-shadow:0 26px 60px -38px rgba(0,0,0,.85);}
+.hal-dock .term-card{min-height:520px;background:#0a1015;border:0;border-radius:16px}
+.hal-dock .term-head{background:#111a21;border-bottom:1px solid rgba(126,178,140,.18)}
+.hal-dock .term-title{color:#a9d6b8}
+.hal-dock .term-dots i{background:rgba(126,178,140,.3)}
+.hal-dock .term-dots i:first-child{background:#d06a58}
+.hal-dock .term-dots i:nth-child(2){background:#d0a75e}
+.hal-dock .term-dots i:nth-child(3){background:#69b981}
+.hal-dock .card-note{color:#7fae91}
+.hal-dock .term-body{background:#0a1015;color:#b6d9c1}
+.hal-dock .term-body::-webkit-scrollbar-thumb{background:rgba(126,178,140,.3)}
+.hal-dock .line .t{color:#63826e}
+.hal-dock .line .msg{color:#b6d9c1}
+.hal-dock .line.lg-info .tag{color:#86c6ea}
+.hal-dock .line.lg-ok .tag,.hal-dock .line.lg-ok .msg{color:#79d69a}
+.hal-dock .line.lg-warn .tag{color:#e4b56d}
+.hal-dock .line.lg-err .tag,.hal-dock .line.lg-err .msg{color:#f08d7b}
+.hal-dock .line.lg-emg .tag{background:#b0442f;color:#fff}
+.hal-dock .line.lg-emg .msg{color:#ff9c88;text-shadow:0 0 12px rgba(240,110,80,.5)}
+.hal-dock .line.lg-dim .msg{color:#7c9a86}
+.hal-dock .term-foot{background:#111a21;border-top:1px solid rgba(126,178,140,.18);color:#87a894}
+.hal-dock .term-foot b{color:#c8e5d2}
+.hal-dock .term-foot .v-em{color:#79d69a}
+.hal-dock .term-foot .v-rose{color:#f08d7b}
+.hal-dock .term-foot .v-amber{color:#e4b56d}
+
+/* 串口已连接：绿色高亮提示 */
+.serial-status.hw-connected{
+  color:#237a3c;font-weight:700;font-size:18px;letter-spacing:.06em;
+  padding:8px 16px;border-radius:10px;
+  background:rgba(76,154,88,.13);border:1px solid rgba(76,154,88,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+/* ══════════════════════ 路演大字模式 ══════════════════════
+   大屏投影可读：基础 17px、导航 18px、状态 22px、日志 15px。 */
+body{font-size:17px}
+.tab{font-size:18px;padding:15px 20px 16px}
+.tab em{font-size:15px}
+.status{font-size:14px;padding:8px 15px}
+.clock{font-size:15px}
+.gh-link{font-size:14px}
+.serial-btn{font-size:17px;padding:12px 26px}
+.serial-status{font-size:17px}
+.serial-hint{font-size:13px}
+.sm-pill{font-size:22px;padding:12px 6px}
+.sm-arrow{font-size:16px}
+.scr-main{font-size:54px}
+.scr-sub{font-size:15px}
+.scr-foot{font-size:12px}
+.stat-card .k{font-size:13px}
+.stat-card .v{font-size:34px}
+.stat-card .v small{font-size:17px}
+.term-title{font-size:18px}
+.term-body{font-size:15px;line-height:1.9;padding:16px 20px}
+.line .tag{min-width:74px}
+.line.lg-emg .msg{font-size:19px}
+.term-foot{font-size:14px;gap:16px}
+.btn,.serial-btn,.uc-toggle,.uc-mini{letter-spacing:.1em}
+.sec-head h2{font-size:34px}
+.flow-card h3{font-size:26px}
+@media(max-width:1180px){
+  .unified-console{grid-template-columns:1fr}
+  .unified-console.log-collapsed{grid-template-columns:1fr}
+  .uc-side{max-width:none;order:2}
+  .uc-main .sim-frame{height:900px}
+}
+@media(max-width:760px){
+  body{font-size:15px}
+  .tab{font-size:14px;padding:11px 10px}
+  .tab em{font-size:11px}
+  .status,.clock,.gh-link{font-size:11px}
+  .serial-btn{font-size:14px;padding:10px 16px}
+  .serial-status{font-size:13px}
+  .sm-pill{font-size:15px;padding:9px 3px}
+  .scr-main{font-size:38px}
+  .term-body{font-size:12px}
+  .term-foot{font-size:11px}
+  .uc-main .sim-frame{height:760px;min-height:0}
+}
 </style>
 </head>
 <body>
@@ -1114,14 +1223,13 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   <div class="tabs">
     <div class="glider" id="glider"></div>
     <a class="tab active" href="#top" data-view="vision">理念<em>Vision</em></a>
-    <a class="tab" href="#console" data-view="console">硬件台<em>Hardware</em></a>
-    <a class="tab" href="#sim" data-view="sim">控制台<em>Console</em></a>
+    <a class="tab" href="#console" data-view="console">控制台<em>Console</em></a>
     <a class="tab" href="#lab" data-view="lab">嗅觉实验室<em>Lab</em></a>
     <a class="tab" href="#dev" data-view="dev">开发者<em>Developer</em></a>
   </div>
 
   <div class="nav-right">
-    <div class="status"><span class="dot"></span>ESP32-S3 · ONLINE</div>
+    <div class="status"><span class="dot"></span>ESP32-S3-EYE · HARDWARE IN THE LOOP</div>
     <div class="clock" id="clock">--:--:--</div>
     <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="GitHub 开源仓库">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.72c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05.8-.23 1.65-.34 2.5-.34s1.7.11 2.5.34c1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49C19.14 20.61 22 16.78 22 12.25 22 6.58 17.52 2 12 2z"/></svg>
@@ -1172,7 +1280,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
         </div>
         <div class="device-cap">
           <div class="n">EmberSigh One · 概念样机</div>
-          <div class="s">ESP32-S3 · 240×240 · SOUNDSCAPE + AROMA</div>
+          <div class="s">ESP32-S3-EYE · 240×240 · SOUNDSCAPE + AROMA</div>
           <div class="s" style="margin-top:5px;color:var(--ink-faint);">*概念工业设计渲染，当前工程验证采用模块化方案</div>
         </div>
       </div>
@@ -1409,13 +1517,50 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
     <!-- 真实硬件串口接入（Web Serial API） -->
     <div class="serial-bar glass reveal">
       <button class="serial-btn" id="serialBtn">🔌 连接真实设备（USB）</button>
-      <div class="serial-status">
+      <div class="serial-status" id="serialStatus">
         <i class="serial-dot" id="serialDot"></i>
         <span id="serialText">未连接 · 模拟数据模式</span>
       </div>
-      <span class="serial-hint">WEB SERIAL · 115200 bps · 帧格式 DATA | RMS: n | STATE: X</span>
+      <span class="serial-hint">ESP32-S3-EYE · WEB SERIAL 115200 bps · DATA | RMS: n | STATE: X</span>
     </div>
 
+    <div class="uc-tools">
+      <button class="uc-toggle" id="halToggle" aria-expanded="true">▣ 收起 HAL 日志</button>
+      <button class="uc-mini" id="previewToggle" aria-expanded="false">▣ 展开设备预览</button>
+      <span class="uc-note">数字孪生主界面 · 右侧终端为 ESP32-S3-EYE 真实回传日志</span>
+    </div>
+
+    <div class="unified-console" id="unifiedConsole">
+      <!-- 模块 B：数字孪生主界面（核心） -->
+      <div class="uc-main">
+        <div class="sim-caption"><i></i>DIGITAL TWIN · ESP32-S3-EYE · 真实 RMS / EMA 驱动</div>
+        <iframe class="sim-frame" id="simFrame"
+                data-src="EmberSigh-Simulator/EmberSigh-全功能数字孪生模拟器.html"
+                title="EmberSigh 数字孪生控制台"
+                allow="microphone; autoplay"></iframe>
+      </div>
+      <!-- 模块 A：HAL / SENSOR 黑底日志（可折叠侧栏） -->
+      <aside class="uc-side">
+        <div class="hal-dock glass">
+          <div class="term-card">
+            <div class="term-head">
+              <div class="term-title">
+                <div class="term-dots"><i></i><i></i><i></i></div>
+                HAL / SENSOR 实时日志
+              </div>
+              <div class="card-note" id="termState">STATE · CALM</div>
+            </div>
+            <div class="term-body" id="termBody"></div>
+            <div class="term-foot">
+              <span>RMS <b id="ftRms">42</b></span>
+              <span>状态 <b id="ftState" class="v-em">CALM</b></span>
+              <span>音量 <b id="ftVol">42%</b></span>
+              <span>香氛 <b id="ftAroma">薰衣草 82%</b></span>
+              <span>灯环 <b id="ftLed" class="v-em">#1F3A5F</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="uc-preview" id="ucPreview" style="display:none">
     <section class="console-grid">
       <!-- 左：手机呼吸实况 -->
       <div class="phone-col">
@@ -1493,25 +1638,11 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
           </div>
         </div>
 
-        <div class="glass term-card">
-          <div class="term-head">
-            <div class="term-title">
-              <div class="term-dots"><i></i><i></i><i></i></div>
-              HAL / SENSOR 实时日志
-            </div>
-            <div class="card-note" id="termState">STATE · CALM</div>
-          </div>
-          <div class="term-body" id="termBody"></div>
-          <div class="term-foot">
-            <span>RMS <b id="ftRms">42</b></span>
-            <span>状态 <b id="ftState" class="v-em">CALM</b></span>
-            <span>音量 <b id="ftVol">42%</b></span>
-            <span>香氛 <b id="ftAroma">薰衣草 82%</b></span>
-            <span>灯环 <b id="ftLed" class="v-em">#1F3A5F</b></span>
-          </div>
-        </div>
       </div>
     </section>
+        </div><!-- /uc-preview -->
+      </aside>
+    </div><!-- /unified-console -->
 
     <!-- 说明区 -->
     <section class="sec">
@@ -1579,17 +1710,6 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
     </section>
 
   </div><!-- /v-console -->
-
-  <!-- ══════════════════════════════════════════
-       视图 02b · 控制台（全功能数字孪生模拟器，iframe 隔离）
-       ══════════════════════════════════════════ -->
-  <div class="view" id="v-sim">
-    <div class="sim-caption"><i></i>DIGITAL TWIN · VIRTUAL DEVICE · 真实麦克风 / 串口联动</div>
-    <iframe class="sim-frame" id="simFrame"
-            data-src="EmberSigh-Simulator/EmberSigh-全功能数字孪生模拟器.html"
-            title="EmberSigh 全功能数字孪生模拟器"
-            allow="microphone; autoplay"></iframe>
-  </div>
 
   <!-- ══════════════════════════════════════════
        视图 03 · 嗅觉实验室
@@ -2129,7 +2249,7 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   <div class="foot-base">
     <div class="inner">
       <span>© 2026 EMBERSIGH 听眠 · 端侧睡眠环境管家</span>
-      <span>ESP32-S3 · FREERTOS · 100% ON-DEVICE</span>
+      <span>ESP32-S3-EYE · FREERTOS · 100% ON-DEVICE</span>
     </div>
   </div>
 </footer>
@@ -2240,7 +2360,7 @@ window.imgFallback = function(img){
 /* ── 1. 视图路由：页内"跳页"，带独立 hash 地址 ──
    #top/#how/#specs/#faq → 理念视图（并滚动到对应区块）
    #console / #lab / #dev → 对应功能视图              */
-var VIEWS = ['vision','console','sim','lab','dev'];
+var VIEWS = ['vision','console','lab','dev'];
 var currentView = 'vision';
 
 function moveGlider(){
@@ -2256,7 +2376,7 @@ function showView(view, anchor){
   currentView = view;
 
   /* 首次进入控制台视图时才加载模拟器，避免首屏多载入 1.2MB */
-  if(view === 'sim'){
+  if(view === 'console'){
     var sim = $('simFrame');
     if(sim && !sim.src && sim.dataset.src) sim.src = sim.dataset.src;
     postToSim({ type:'embersigh:serial', connected: !!(window.emberWriter && serialMode) });
@@ -2284,7 +2404,7 @@ function showView(view, anchor){
 
 function route(){
   var h = location.hash.replace('#','');
-  if(h === 'console' || h === 'sim' || h === 'lab' || h === 'dev'){
+  if(h === 'console' || h === 'lab' || h === 'dev'){
     showView(h);
   } else if(h === 'top' || h === 'how' || h === 'specs' || h === 'faq'){
     var needSwitch = currentView !== 'vision';
@@ -2652,6 +2772,8 @@ function portLabel(port){
 function setSerialUI(on, msg){
   if(serialDot) serialDot.classList.toggle('on', on);
   if(serialText) serialText.textContent = msg;
+  var status = $('serialStatus');
+  if(status) status.classList.toggle('hw-connected', on);
   if(serialBtn) serialBtn.textContent = on ? '⏻ 断开设备' : '🔌 连接真实设备（USB）';
 }
 
@@ -2721,6 +2843,8 @@ function applyRealData(rmsVal, hwState){
     } else return;
   }
   log('dim', 'SERIAL', 'DATA | RMS: ' + rmsVal + ' | STATE: ' + s.toUpperCase());
+  /* 真实串口 RMS 直接驱动数字孪生大字卡片（RAW RMS / EMA / 状态机） */
+  postToSim({ type:'embersigh:serial-data', rms: rmsVal, state: s.toUpperCase() });
   ensureLerp();
 }
 
@@ -2773,7 +2897,7 @@ function applySerialTelemetry(){
   $('battVal').innerHTML = '100<small>%</small>';
   $('battTrend').textContent = 'USB 供电 · 持续在线';
   $('scentTrend').textContent = '固件未上报 · 保持余量';
-  $('tempVal').textContent = 'ESP32-S3';
+  $('tempVal').textContent = 'ESP32-S3-EYE';
   $('tempTrend').textContent = '在线 · 串口数据源';
   var ps = $('phoneSmall');
   if(ps) ps.textContent = 'MIC · 实时 RMS 读数';
@@ -2845,7 +2969,7 @@ async function connectSerial(){
       log('warn', 'SERIAL', '写入通道不可用 · 仅保留只读遥测 · ' + ((err && err.message) ? err.message : err));
     }
     postToSim({ type:'embersigh:serial', connected:true });
-    setSerialUI(true, '已连接 · ' + portLabel(port) + ' · 115200 bps · 真实硬件数据');
+    setSerialUI(true, 'ESP32-S3-EYE 已连接 · 真实数据流模式');
     scr.classList.add('instant');   /* 状态切换瞬时，不再 1.2s 渐变 */
     applySerialTelemetry();
     log('ok', 'SERIAL', '串口已连接 · 115200 bps · 数据源切换为真实硬件');
@@ -2883,6 +3007,24 @@ if(serialBtn) serialBtn.addEventListener('click', function(){
     onSerialDown('串口操作异常 · 已恢复模拟数据模式');
   }
 });
+
+/* 统一控制台：HAL 日志 / 设备预览 折叠开关 */
+(function(){
+  var halBtn = $('halToggle'), previewBtn = $('previewToggle');
+  var box = $('unifiedConsole'), preview = $('ucPreview');
+  if(halBtn && box) halBtn.addEventListener('click', function(){
+    var collapsed = box.classList.toggle('log-collapsed');
+    halBtn.textContent = collapsed ? '▣ 展开 HAL 日志' : '▣ 收起 HAL 日志';
+    halBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    setTimeout(moveGlider, 60);
+  });
+  if(previewBtn && preview) previewBtn.addEventListener('click', function(){
+    var show = preview.style.display === 'none';
+    preview.style.display = show ? 'flex' : 'none';
+    previewBtn.textContent = show ? '▣ 收起设备预览' : '▣ 展开设备预览';
+    previewBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+  });
+})();
 
 /* 系统级拔线事件：无论读到哪一步都能立刻感知 */
 if(navigator.serial && navigator.serial.addEventListener){

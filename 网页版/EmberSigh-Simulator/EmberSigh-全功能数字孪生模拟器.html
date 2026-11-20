@@ -114,12 +114,12 @@ button{cursor:pointer}
 .hero-state-chip{font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:5px 10px;border-radius:6px;background:rgba(126,154,131,.15);color:var(--forest);transition:.4s}
 .hero-state-chip.transition{background:rgba(194,145,80,.16);color:var(--amber)}
 .hero-state-chip.disturbance{background:rgba(142,59,50,.14);color:var(--red)}
-.hero-state-name{font-family:var(--serif);font-size:22px;font-weight:600;margin:14px 0 6px}
+.hero-state-name{font-family:var(--serif);font-size:42px;font-weight:700;margin:8px 0 4px;line-height:1.24;letter-spacing:.04em}
 .hero-state-desc{font-size:12px;line-height:1.8;color:var(--ink-soft);min-height:44px}
 .hero-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
 .hero-metrics div{display:flex;flex-direction:column;gap:5px}
 .hero-metrics span{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--ink-faint)}
-.hero-metrics b{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--forest)}
+.hero-metrics b{font-family:var(--mono);font-size:38px;font-weight:800;color:var(--forest);line-height:1.1;font-variant-numeric:tabular-nums}
 
 .hero-visual{display:flex;justify-content:center}
 .product-stage{position:relative;width:100%;max-width:560px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;transition:.6s ease}
@@ -348,6 +348,58 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   .env-status{flex-wrap:wrap;gap:8px}
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   路演大字模式（ROADSHOW LARGE TYPE）
+   后排观众可读：基础字号 16px，核心数值 38px，状态大字 42px，
+   三级状态标签 22px，日志 14px。以覆盖方式集中管理，便于统一调档。
+   ═══════════════════════════════════════════════════════════════ */
+body{font-size:16px}
+.brand-name{font-size:26px}.brand-name em{font-size:20px}.brand-sub{font-size:12px}
+.status-pill{font-size:15px;padding:10px 18px}.virtual-badge{font-size:13px}
+.nav-actions .btn{font-size:15px;padding:10px 16px}
+.hero-copy h1{font-size:clamp(46px,4.6vw,72px);margin:12px 0 12px;line-height:1.2}
+.hero-lead{font-size:17px;max-width:620px;line-height:1.75}
+.hero-tags{margin:14px 0 18px}
+.hero-tags span{font-size:15px;padding:8px 14px}
+.hero-state-card{max-width:620px;padding:18px 24px}
+.hero-state-label{font-size:14px}
+.hero-state-chip{font-size:20px;padding:8px 16px;font-weight:700}
+.hero-state-desc{font-size:17px;line-height:1.8}
+.hero-metrics{gap:18px;margin-top:14px;padding-top:14px}
+.hero-metrics span{font-size:14px}
+.hero-metrics b{font-size:40px;font-weight:800}
+.hero-state-track{display:flex;align-items:center;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+.hs-pill{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:.08em;
+  padding:7px 15px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(255,255,255,.6);color:var(--ink-faint);transition:all .4s ease}
+.hs-arrow{font-size:18px;color:var(--ink-faint);opacity:.65}
+.hs-pill.on[data-hs="calm"]{color:var(--forest);border-color:rgba(47,74,60,.42);background:rgba(126,154,131,.2);box-shadow:0 0 0 3px rgba(126,154,131,.09)}
+.hs-pill.on[data-hs="noise"]{color:var(--red);border-color:rgba(142,59,50,.42);background:rgba(142,59,50,.14);box-shadow:0 0 0 3px rgba(142,59,50,.08)}
+.hs-pill.on[data-hs="calming"]{color:var(--amber);border-color:rgba(194,145,80,.5);background:rgba(194,145,80,.18);box-shadow:0 0 0 3px rgba(194,145,80,.1)}
+.section-head h2,.panel-title{font-size:20px}
+.panel-title small{font-size:14px}
+.scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}
+.env-status,.act-row,.demo-desc,.fault-summary,.act-note{font-size:15px}
+.param-row label,.live-values,.chart-legend,.state-timeline-wrap>span{font-size:14px}
+.live-values b{font-size:19px}
+.act-head h3{font-size:21px}.act-head small{font-size:13px}.act-badge{font-size:13px;padding:7px 12px}
+.act-row b{font-size:18px}.act-buttons .btn{font-size:15px;padding:11px 14px}
+.demo-stage-name{font-size:38px}
+.log-list{font-size:14px;line-height:1.8;padding:14px 20px}
+.log-list b{min-width:88px;font-size:14px}
+@media(max-width:1180px){
+  .hero-state-card{max-width:none}.hero-copy h1{font-size:46px}
+  /* 路演：窄容器下仍优先展示大字数值卡片，不让产品图挤到首屏之前 */
+  .hero-visual{order:0}
+  .hero{min-height:0;gap:18px;padding-top:4px}
+  .product-stage{max-width:420px}
+}
+@media(max-width:560px){
+  body{font-size:15px}.hero-copy h1{font-size:36px}.hero-state-name{font-size:34px}
+  .hero-metrics b{font-size:30px}.hs-pill{font-size:16px;padding:5px 9px}
+  .status-pill,.nav-actions .btn{font-size:12px}
+}
+
 </style>
 </head>
 <body>
@@ -394,6 +446,13 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <div class="hero-state-head">
         <span class="hero-state-label">CURRENT STATE</span>
         <span class="hero-state-chip" id="heroStateChip">QUIET</span>
+      </div>
+      <div class="hero-state-track" id="heroStateTrack">
+        <span class="hs-pill on" data-hs="calm">CALM</span>
+        <span class="hs-arrow">→</span>
+        <span class="hs-pill" data-hs="noise">NOISE</span>
+        <span class="hs-arrow">→</span>
+        <span class="hs-pill" data-hs="calming">CALMING</span>
       </div>
       <div class="hero-state-name" id="heroStateName">环境安静</div>
       <p class="hero-state-desc" id="heroStateDesc">声景低声播放，香氛持续释放，灯环保持柔和暖光。系统正在守护睡眠。</p>
@@ -1480,6 +1539,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     var stream = null, ctx = null, analyser = null, samples = null;
     var active = false, starting = false;
     var parentMode = false, parentRms = 0;
+    var serialMode = false, serialRms = 0;   /* ESP32-S3-EYE 串口真实 RMS（优先于麦克风与模拟场景） */
     var SCALE = 1600;   /* 归一化 RMS → 0..300 的 UI 量程 */
     var btn = document.getElementById('btnMic');
     var tag = document.getElementById('micState');
@@ -1489,6 +1549,22 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       var d = e && e.data;
       if (!d || typeof d !== 'object') return;
       if (d.type === 'embersigh:rms' && parentMode) parentRms = Number(d.value) || 0;
+      /* 主站 Web Serial 收到 ESP32-S3-EYE 的 DATA 帧 → 真实 RMS 直接喂进引擎 */
+      if (d.type === 'embersigh:serial-data') {
+        var v = Number(d.rms);
+        if (isFinite(v) && v >= 0) {
+          serialMode = true;
+          serialRms = Math.min(300, v);
+          install();
+          paint();
+        }
+      }
+      if (d.type === 'embersigh:serial' && d.connected === false && serialMode) {
+        serialMode = false;
+        serialRms = 0;
+        paint();
+        log('info', 'MIC', '串口已断开 · 恢复本地输入源');
+      }
     });
 
     function requestParentMic() {
@@ -1527,7 +1603,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
         btn.textContent = active ? '关闭真实麦克风' : '启用真实麦克风';
         btn.classList.toggle('connected', active);
       }
-      if (tag) tag.textContent = active ? '真实麦克风输入' : '模拟输入';
+      if (tag) tag.textContent = serialMode ? 'ESP32-S3-EYE 串口数据' : (active ? '真实麦克风输入' : '模拟输入');
     }
     function install() {
       if (install.done) return;
@@ -1536,8 +1612,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       if (!proto) return;
       var original = proto.sample;
       proto.sample = function (dt) {
-        if (!active) return original.call(this, dt);
-        var v = scaledRms();
+        if (!active && !serialMode) return original.call(this, dt);
+        var v = serialMode ? serialRms : scaledRms();
         this.level = v;
         this.lastValid = v;
         this.invalid = false;
@@ -1598,7 +1674,9 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     paint();
     return {
       start: start, stop: stop, rawRms: rawRms, scaledRms: scaledRms,
-      isActive: function () { return active; }
+      isActive: function () { return active; },
+      isSerial: function () { return serialMode; },
+      serialValue: function () { return serialRms; }
     };
   })();
 
@@ -2051,6 +2129,11 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     stage.classList.add('state-' + state.toLowerCase());
     $('heroStateChip').textContent = state;
     $('heroStateChip').className = 'hero-state-chip ' + (state === 'DISTURBANCE' ? 'disturbance' : (state === 'TRANSITION' ? 'transition' : ''));
+    var pills = document.querySelectorAll('.hs-pill');
+    var activeKey = state === 'DISTURBANCE' ? 'noise' : (state === 'TRANSITION' ? 'calming' : 'calm');
+    for (var pi = 0; pi < pills.length; pi++) {
+      pills[pi].classList.toggle('on', pills[pi].dataset.hs === activeKey);
+    }
     $('heroStateName').textContent = info.zh;
     $('heroStateDesc').textContent = info.desc;
     $('heroRms').textContent = Math.round(snap.raw);
