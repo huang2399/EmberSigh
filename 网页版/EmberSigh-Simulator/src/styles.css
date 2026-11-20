@@ -386,8 +386,15 @@ body{font-size:16px}
   .hero{min-height:0;gap:18px;padding-top:4px}
   .product-stage{max-width:420px}
 }
+/* 手机视口同样保持路演大字：不再缩小核心数值与状态文字 */
 @media(max-width:560px){
-  body{font-size:15px}.hero-copy h1{font-size:36px}.hero-state-name{font-size:34px}
-  .hero-metrics b{font-size:30px}.hs-pill{font-size:16px;padding:5px 9px}
-  .status-pill,.nav-actions .btn{font-size:12px}
+  body{font-size:17px}
+  .hero-copy h1{font-size:40px}.hero-state-name{font-size:42px}
+  .hero-state-desc{font-size:16px}.hero-lead{font-size:16px}
+  .hero-metrics b{font-size:38px;font-weight:800}.hero-metrics span{font-size:13px}
+  .hs-pill{font-size:20px;padding:6px 9px;font-weight:700}
+  .status-pill,.nav-actions .btn{font-size:14px}
+  .panel-title,.section-head h2{font-size:19px}
+  .scenario .sc-name{font-size:16px}.log-list{font-size:14px}
+  .act-head h3{font-size:19px}.demo-stage-name{font-size:30px}
 }
