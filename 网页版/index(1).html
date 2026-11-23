@@ -1081,6 +1081,58 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .asm-legend{order:2;margin-top:2px;gap:6px;}
   .asm-stage svg{max-width:330px;}
 }
+/* ═══════════════════════════════════════════════════════
+   呼吸轮播 · 独立命名空间 ebreath（不与 hero / 大字卡片冲突）
+   纯 CSS 交叉淡入淡出：每张停 4s，过渡 2s，周期 18s
+   ═══════════════════════════════════════════════════════ */
+.ebreath{margin:28px 0 6px;padding:0;background:transparent;}
+.ebreath__stage{position:relative;width:100%;max-width:1080px;margin:0 auto;
+  aspect-ratio:16/8.4;overflow:hidden;border-radius:22px;background:#F7F5F0;
+  box-shadow:0 26px 70px -56px rgba(80,64,46,.55),inset 0 0 0 1px rgba(80,64,46,.07);}
+.ebreath__slide{position:absolute;inset:0;margin:0;opacity:0;
+  animation:ebreathFade 18s ease-in-out infinite both;}
+.ebreath__slide--1{animation-delay:-2s;}
+.ebreath__slide--2{animation-delay:-14s;}
+.ebreath__slide--3{animation-delay:-8s;}
+.ebreath__media{position:absolute;inset:0;}
+.ebreath__media--scene{background:
+  radial-gradient(58% 48% at 76% 32%,rgba(255,244,222,.9),transparent 70%),
+  linear-gradient(178deg,#dfe5e3 0%,#eee3d0 58%,#e5d6bf 100%);}
+.ebreath__media--state{background:
+  radial-gradient(52% 60% at 22% 40%,rgba(236,198,190,.5),transparent 72%),
+  linear-gradient(120deg,#f2ebe3 0%,#e9d8d2 58%,#e6ded4 100%);}
+.ebreath__media--product{background:
+  radial-gradient(48% 56% at 66% 34%,rgba(255,255,255,.72),transparent 72%),
+  linear-gradient(125deg,#eeeae1 0%,#e2dbce 52%,#d6d0c4 100%);}
+.ebreath__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.ebreath__scrim{position:absolute;inset:38% 0 0;pointer-events:none;
+  background:linear-gradient(to top,rgba(247,245,240,.94),rgba(247,245,240,.5) 46%,transparent);}
+.ebreath__cap{position:absolute;left:clamp(20px,4.2vw,56px);bottom:clamp(20px,3.6vw,44px);z-index:2;}
+.ebreath__no{font-family:var(--mono);font-size:11px;letter-spacing:.34em;color:var(--ink-soft);}
+.ebreath__title{font-family:var(--serif);font-size:clamp(24px,3vw,42px);font-weight:500;
+  line-height:1.5;letter-spacing:.16em;color:var(--ink);margin-top:12px;}
+.ebreath__ph{position:absolute;right:18px;top:16px;z-index:2;font-family:var(--mono);
+  font-size:9px;letter-spacing:.12em;color:rgba(111,98,84,.46);}
+@keyframes ebreathFade{
+  0%{opacity:0;}
+  11.111%{opacity:1;}   /* 2s 淡入 */
+  33.333%{opacity:1;}   /* 停留 4s */
+  44.444%{opacity:0;}   /* 2s 淡出 */
+  100%{opacity:0;}
+}
+@media(max-width:768px){
+  .ebreath{margin:20px 0 4px;}
+  .ebreath__stage{aspect-ratio:4/3;border-radius:16px;}
+  .ebreath__cap{left:22px;bottom:22px;right:22px;}
+  .ebreath__no{font-size:10px;letter-spacing:.22em;}
+  .ebreath__title{font-size:clamp(21px,6vw,30px);letter-spacing:.08em;line-height:1.55;margin-top:8px;}
+  .ebreath__scrim{inset:28% 0 0;}
+  .ebreath__ph{font-size:8px;right:12px;top:12px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .ebreath__slide{animation:none!important;opacity:0;}
+  .ebreath__slide--1{opacity:1;}
+}
 /* hero-stage / viz-rig 的移动端尺寸统一在「响应式兜底」的 640px 段维护 */
 @media (prefers-reduced-motion:reduce){
   .asm-part{opacity:1;transform:none;animation:none!important;}
@@ -1286,6 +1338,46 @@ body{font-size:17px}
           <div class="s">ESP32-S3-EYE · 240×240 · SOUNDSCAPE + AROMA</div>
           <div class="s" style="margin-top:5px;color:var(--ink-faint);">*概念工业设计渲染，当前工程验证采用模块化方案</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ 呼吸轮播 · 交叉淡入淡出（纯 CSS，4s 停留 / 2s 过渡，无 JS） ═══ -->
+    <!-- 插入位置：Hero 之后、产品全景海报之前；后续换图只需把注释内的 img 放出来并删掉占位角标 -->
+    <section class="ebreath" aria-label="EmberSigh 场景轮播">
+      <div class="ebreath__stage">
+        <figure class="ebreath__slide ebreath__slide--1">
+          <div class="ebreath__media ebreath__media--scene">
+            <!-- 换图：<img class="ebreath__img" src="images/placeholder-sea.jpg" alt="海边的黄昏"> -->
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">01 / 沉浸场景</div>
+            <div class="ebreath__title">从一片海，到一片森林。</div>
+          </figcaption>
+          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 海边的黄昏</span>
+        </figure>
+        <figure class="ebreath__slide ebreath__slide--2">
+          <div class="ebreath__media ebreath__media--state">
+            <!-- 换图：<img class="ebreath__img" src="images/placeholder-console-red.jpg" alt="控制台红色状态"> -->
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">02 / 主动退让</div>
+            <div class="ebreath__title">当环境变吵，它懂得安静。</div>
+          </figcaption>
+          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 控制台红色状态</span>
+        </figure>
+        <figure class="ebreath__slide ebreath__slide--3">
+          <div class="ebreath__media ebreath__media--product">
+            <!-- 换图：<img class="ebreath__img" src="images/placeholder-render.jpg" alt="产品 3D 渲染图"> -->
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">03 / 恰到好处</div>
+            <div class="ebreath__title">最高级的智能，是懂得退让。</div>
+          </figcaption>
+          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 产品 3D 渲染图</span>
+        </figure>
       </div>
     </section>
 
