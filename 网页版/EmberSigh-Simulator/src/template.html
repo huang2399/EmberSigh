@@ -40,11 +40,13 @@
 
 <main class="page">
 
+<div class="console-stage-wrap">
+<div class="cs-main">
 <!-- ══════════════ 1. 产品主视觉 ══════════════ -->
 <section class="hero">
   <div class="hero-copy">
     <div class="eyebrow"><span class="eyebrow-line"></span> DIGITAL TWIN · VIRTUAL HARDWARE</div>
-    <h1>最高级的智能，<br>是懂得<span class="em">退让</span>。</h1>
+    <h1>让睡前环境，<br><span class="em">恰到好处</span>。</h1>
     <p class="hero-lead">EmberSigh 不是会播放白噪音的音箱。它用一支麦克风倾听房间，在噪声到来时安静地让出空间，在一切平息后温柔地回来。</p>
     <div class="hero-tags">
       <span>本地模拟引擎</span><span>算法真实运行</span><span>三执行器统一协调</span>
@@ -71,35 +73,7 @@
     </div>
   </div>
 
-  <div class="hero-visual">
-    <div class="product-stage state-quiet" id="productStage">
-      <div class="stage-halo" id="stageHalo"></div>
-      <div class="device-wrap" id="deviceWrap">
-        <img class="device-img" src="__HERO__" alt="EmberSigh 听眠概念产品">
-        <div class="mist-layer" id="mistLayer" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-        </div>
-        <div class="light-ring" id="lightRing" aria-hidden="true"></div>
-        <!-- 叠加在设备照片屏幕区域上的动态 TFT 屏 -->
-        <div class="screen-overlay">
-          <div class="tft-screen" data-tft>
-            <div class="tft-head"><span class="tft-state"><i></i><b data-tft-state>QUIET</b></span><span data-tft-time>22:30</span></div>
-            <div class="tft-rule"></div>
-            <div class="tft-center"><div class="tft-moon" data-tft-icon>☾</div><div class="tft-mode" data-tft-mode>SLEEP</div></div>
-            <div class="tft-row"><span>RMS</span><b data-tft-rms>042</b><span>dB</span><span class="tft-spacer"></span><span data-tft-env>CALM</span></div>
-            <div class="tft-meter"><i data-tft-meter></i></div>
-            <div class="tft-rows">
-              <div><span>♪ FOREST</span><b data-tft-audio>62%</b></div>
-              <div><span>≋ AROMA</span><b data-tft-aroma>ON</b></div>
-              <div><span>◉ LIGHT</span><b data-tft-light>WARM</b></div>
-            </div>
-            <div class="tft-foot">ESP32-S3-EYE · VIRTUAL</div>
-          </div>
-        </div>
-      </div>
-      <div class="stage-caption"><i></i> LIVE VIRTUAL RENDER · 状态与数据均由模拟引擎驱动</div>
-    </div>
-  </div>
+
 </section>
 
 <!-- ══════════════ 2. 环境模拟控制台 ══════════════ -->
@@ -139,6 +113,39 @@
     <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="mic-tag" id="micState">模拟输入</span><span class="env-remaining" id="envRemaining">持续输入</span></div>
   </div>
 </section>
+
+</div>
+
+  <div class="hero-visual">
+    <div class="product-stage state-quiet" id="productStage">
+      <div class="stage-halo" id="stageHalo"></div>
+      <div class="device-wrap" id="deviceWrap">
+        <img class="device-img" src="__HERO__" alt="EmberSigh 听眠概念产品">
+        <div class="mist-layer" id="mistLayer" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="light-ring" id="lightRing" aria-hidden="true"></div>
+        <!-- 叠加在设备照片屏幕区域上的动态 TFT 屏 -->
+        <div class="screen-overlay">
+          <div class="tft-screen" data-tft>
+            <div class="tft-head"><span class="tft-state"><i></i><b data-tft-state>QUIET</b></span><span data-tft-time>22:30</span></div>
+            <div class="tft-rule"></div>
+            <div class="tft-center"><div class="tft-moon" data-tft-icon>☾</div><div class="tft-mode" data-tft-mode>SLEEP</div></div>
+            <div class="tft-row"><span>RMS</span><b data-tft-rms>042</b><span>dB</span><span class="tft-spacer"></span><span data-tft-env>CALM</span></div>
+            <div class="tft-meter"><i data-tft-meter></i></div>
+            <div class="tft-rows">
+              <div><span>♪ FOREST</span><b data-tft-audio>62%</b></div>
+              <div><span>≋ AROMA</span><b data-tft-aroma>ON</b></div>
+              <div><span>◉ LIGHT</span><b data-tft-light>WARM</b></div>
+            </div>
+            <div class="tft-foot">ESP32-S3-EYE · VIRTUAL</div>
+          </div>
+        </div>
+      </div>
+      <div class="stage-caption"><i></i> LIVE VIRTUAL RENDER · 状态与数据均由模拟引擎驱动</div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════ 3. AI 决策引擎 & 数据可视化 ══════════════ -->
 <section class="section" id="engine">

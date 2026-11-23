@@ -398,3 +398,23 @@ body{font-size:16px}
   .scenario .sc-name{font-size:16px}.log-list{font-size:14px}
   .act-head h3{font-size:19px}.demo-stage-name{font-size:30px}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   控制台并列布局：香氛机屏幕常驻右侧，下方情景模拟滚动时仍可见
+   ═══════════════════════════════════════════════════════════════ */
+.console-stage-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,1.05fr);gap:36px;align-items:start;padding-bottom:96px}
+.cs-main{min-width:0}
+.console-stage-wrap .hero{display:block;min-height:0;gap:0}
+.console-stage-wrap .hero-copy{margin-bottom:6px}
+.console-stage-wrap .hero-state-card{max-width:none}
+.console-stage-wrap .hero-visual{position:sticky;top:calc(var(--nav-h) + 16px);z-index:6;align-self:start;padding-top:10px}
+.console-stage-wrap .product-stage{max-width:400px}
+.console-stage-wrap .stage-caption{bottom:-14px}
+@media(max-width:980px){
+  .console-stage-wrap{display:flex;flex-direction:column;gap:12px}
+  .console-stage-wrap .hero-visual{position:static;order:-1;align-self:center;width:100%;padding:0}
+  .console-stage-wrap .product-stage{max-width:360px;margin:0 auto}
+}
+@media(max-width:560px){
+  .console-stage-wrap .product-stage{max-width:300px}
+}

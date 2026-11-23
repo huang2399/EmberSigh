@@ -1095,9 +1095,8 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 .ebreath__slide--2{animation-delay:-14s;}
 .ebreath__slide--3{animation-delay:-8s;}
 .ebreath__media{position:absolute;inset:0;}
-.ebreath__media--scene{background:
-  radial-gradient(58% 48% at 76% 32%,rgba(255,244,222,.9),transparent 70%),
-  linear-gradient(178deg,#dfe5e3 0%,#eee3d0 58%,#e5d6bf 100%);}
+.ebreath__media--scene{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:#F7F5F0;}
+.ebreath__tri{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.88) brightness(1.05);}
 .ebreath__media--state{background:
   radial-gradient(52% 60% at 22% 40%,rgba(236,198,190,.5),transparent 72%),
   linear-gradient(120deg,#f2ebe3 0%,#e9d8d2 58%,#e6ded4 100%);}
@@ -1304,7 +1303,7 @@ body{font-size:17px}
     <section class="hero" id="top">
       <div class="hero-copy">
         <div class="eyebrow">Vision · 端侧睡眠环境管家</div>
-        <h1>最高级的智能，<br>是<b>懂得退让</b>。</h1>
+        <h1>让睡前环境，<br><b>恰到好处</b>。</h1>
         <div class="kicker">The highest intelligence is knowing when to recede.</div>
         <p>
           EmberSigh 不佩戴、不拍摄，只用一支麦克风<b>「听」</b>你的房间。<br>
@@ -1342,41 +1341,40 @@ body{font-size:17px}
     </section>
 
     <!-- ═══ 呼吸轮播 · 交叉淡入淡出（纯 CSS，4s 停留 / 2s 过渡，无 JS） ═══ -->
-    <!-- 插入位置：Hero 之后、产品全景海报之前；后续换图只需把注释内的 img 放出来并删掉占位角标 -->
+    <!-- 插入位置：Hero 之后、产品全景海报之前 -->
     <section class="ebreath" aria-label="EmberSigh 场景轮播">
       <div class="ebreath__stage">
         <figure class="ebreath__slide ebreath__slide--1">
           <div class="ebreath__media ebreath__media--scene">
-            <!-- 换图：<img class="ebreath__img" src="images/placeholder-sea.jpg" alt="海边的黄昏"> -->
+            <img class="ebreath__tri" src="images/scene-sea.jpg" alt="海边黄昏的沉浸场景" loading="lazy">
+            <img class="ebreath__tri" src="images/scene-forest.jpg" alt="晨光森林的沉浸场景" loading="lazy">
+            <img class="ebreath__tri" src="images/scene-rain.jpg" alt="雨夜卧室的沉浸场景" loading="lazy">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
             <div class="ebreath__no">01 / 沉浸场景</div>
-            <div class="ebreath__title">从一片海，到一片森林。</div>
+            <div class="ebreath__title">沉浸场景，随心切换。</div>
           </figcaption>
-          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 海边的黄昏</span>
         </figure>
         <figure class="ebreath__slide ebreath__slide--2">
           <div class="ebreath__media ebreath__media--state">
-            <!-- 换图：<img class="ebreath__img" src="images/placeholder-console-red.jpg" alt="控制台红色状态"> -->
+            <img class="ebreath__img" src="images/scene-recede.jpg" alt="环境变吵时香氛机主动退让的红色状态" loading="lazy">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
             <div class="ebreath__no">02 / 主动退让</div>
             <div class="ebreath__title">当环境变吵，它懂得安静。</div>
           </figcaption>
-          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 控制台红色状态</span>
         </figure>
         <figure class="ebreath__slide ebreath__slide--3">
           <div class="ebreath__media ebreath__media--product">
-            <!-- 换图：<img class="ebreath__img" src="images/placeholder-render.jpg" alt="产品 3D 渲染图"> -->
+            <img class="ebreath__img" src="images/scene-product.jpg" alt="EmberSigh 香氛机产品渲染图" loading="lazy">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
             <div class="ebreath__no">03 / 恰到好处</div>
-            <div class="ebreath__title">最高级的智能，是懂得退让。</div>
+            <div class="ebreath__title">让睡前环境，恰到好处。</div>
           </figcaption>
-          <span class="ebreath__ph" aria-hidden="true">PLACEHOLDER · 产品 3D 渲染图</span>
         </figure>
       </div>
     </section>
