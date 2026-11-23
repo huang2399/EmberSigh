@@ -139,6 +139,9 @@ body{
   box-shadow:0 10px 24px -14px rgba(176,141,87,.7);transform:translateY(-1px);
 }
 .gh-link:hover svg{transform:translateY(-1px);}
+/* GitHub 入口优先可见：导航变窄时先收状态/时钟，不收仓库按钮 */
+@media(max-width:1280px){.nav-right .status{display:none;}}
+@media(max-width:1080px){.nav-right .clock{display:none;}}
 
 /* ═══════════ 页面容器（可滚动） ═══════════ */
 .page{position:relative;z-index:2;padding:calc(var(--nav-h) + 26px) 42px 0;}
@@ -605,12 +608,12 @@ footer{position:relative;z-index:2;margin-top:50px;
 .dash-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;
   border-bottom:1px solid var(--line);margin-bottom:14px;flex:none;}
 .dash-head .l{display:flex;align-items:baseline;gap:14px;}
-.dash-head h2{font-size:14px;font-weight:600;letter-spacing:.2em;color:var(--ink);}
-.dash-head small{font-family:var(--display);font-style:italic;font-size:11px;
+.dash-head h2{font-size:18px;font-weight:600;letter-spacing:.16em;color:var(--ink);}
+.dash-head small{font-family:var(--display);font-style:italic;font-size:13px;
   color:var(--ink-faint);letter-spacing:.1em;}
 .dash-grid{display:grid;grid-template-columns:228px 1fr 258px;gap:24px;min-height:640px;}
 .col{display:flex;flex-direction:column;min-height:0;gap:11px;}
-.col-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--ink-faint);text-transform:uppercase;}
+.col-label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;}
 
 .vial{
   display:flex;align-items:center;gap:13px;padding:7px 11px;border-radius:16px;cursor:pointer;
@@ -620,16 +623,16 @@ footer{position:relative;z-index:2;margin-top:50px;
   box-shadow:0 12px 24px -20px rgba(96,76,48,.5);}
 .vial:active{transform:translateX(2px) scale(.985);}
 .vial svg{height:62px;width:auto;flex:none;filter:drop-shadow(0 7px 9px rgba(96,76,48,.16));}
-.vial .vn{font-size:13px;font-weight:600;letter-spacing:.12em;display:flex;align-items:baseline;gap:7px;color:var(--ink);}
-.vial .vn i{font-style:italic;font-family:var(--display);font-size:11px;font-weight:500;color:var(--ink-faint);}
-.vial .vm{font-size:10px;color:var(--ink-faint);margin-top:4px;letter-spacing:.08em;}
-.vial .vm b{color:var(--ink-soft);font-family:var(--display);font-size:13px;font-weight:600;}
+.vial .vn{font-size:16px;font-weight:600;letter-spacing:.08em;display:flex;align-items:baseline;gap:7px;color:var(--ink);}
+.vial .vn i{font-style:italic;font-family:var(--display);font-size:13px;font-weight:500;color:var(--ink-faint);}
+.vial .vm{font-size:12.5px;color:var(--ink-faint);margin-top:4px;letter-spacing:.05em;}
+.vial .vm b{color:var(--ink-soft);font-family:var(--display);font-size:16px;font-weight:600;}
 
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .preset{
   cursor:pointer;padding:8px 10px;border-radius:99px;text-align:left;font-family:var(--serif);
   background:rgba(255,255,255,.45);border:1px solid var(--line);
-  color:var(--ink-soft);font-size:10.5px;letter-spacing:.08em;
+  color:var(--ink-soft);font-size:13px;letter-spacing:.05em;
   transition:all .18s ease;display:flex;align-items:center;gap:7px;
 }
 .preset:hover{background:#fffdf8;border-color:rgba(176,141,87,.5);color:var(--ink);transform:translateY(-2px);}
@@ -637,7 +640,7 @@ footer{position:relative;z-index:2;margin-top:50px;
 .preset.on{border-color:rgba(176,141,87,.65);background:rgba(255,253,246,.95);color:var(--ink);font-weight:600;}
 .btn-noise{
   margin-top:auto;padding:11px;border-radius:99px;cursor:pointer;font-family:var(--serif);
-  font-size:11px;font-weight:600;letter-spacing:.16em;
+  font-size:14px;font-weight:600;letter-spacing:.12em;
   border:1px solid rgba(176,68,47,.3);color:var(--danger);
   background:rgba(176,68,47,.04);transition:all .35s;
 }
@@ -645,9 +648,9 @@ footer{position:relative;z-index:2;margin-top:50px;
 .btn-noise:disabled{opacity:.45;pointer-events:none;}
 
 .bottle-col{align-items:center;justify-content:center;gap:4px;}
-.bottle-name{font-family:var(--display);font-style:italic;font-size:23px;font-weight:600;
-  letter-spacing:.06em;color:var(--ink);text-align:center;}
-.bottle-sub{font-size:9.5px;letter-spacing:.16em;color:var(--ink-faint);text-align:center;margin-bottom:2px;}
+.bottle-name{font-family:var(--display);font-style:italic;font-size:28px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);text-align:center;}
+.bottle-sub{font-size:12px;letter-spacing:.1em;color:var(--ink-faint);text-align:center;margin-bottom:2px;}
 .bwrap{position:relative;display:grid;place-items:center;min-height:0;}
 .bwrap svg{height:min(41vh,340px);width:auto;filter:drop-shadow(0 28px 30px rgba(96,76,48,.22));}
 .bwrap.shake{animation:bottleShake .4s ease-in-out infinite;}
@@ -665,7 +668,7 @@ footer{position:relative;z-index:2;margin-top:50px;
 .tl{width:100%;max-width:370px;padding:0 6px;}
 .tl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;}
 .tl-time{font-family:var(--display);font-size:26px;font-weight:600;color:var(--ink);letter-spacing:.03em;line-height:1;}
-.tl-phase{font-size:9.5px;letter-spacing:.14em;color:var(--gold);}
+.tl-phase{font-size:12px;letter-spacing:.1em;color:var(--gold);}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;cursor:pointer;
   background:linear-gradient(90deg,#ddd3be,#c9bda2);
@@ -678,24 +681,24 @@ input[type=range]::-webkit-slider-thumb{
 input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#c9a86f;border:2px solid #fff;
   box-shadow:0 3px 10px rgba(120,95,60,.4);}
 .tl-ticks{display:flex;justify-content:space-between;margin-top:7px;
-  font-family:var(--mono);font-size:8px;color:var(--ink-faint);letter-spacing:.06em;}
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.04em;}
 
 .ratio-row{margin-bottom:9px;}
-.ratio-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.08em;}
-.ratio-top b{font-family:var(--display);font-weight:600;font-size:13px;}
-.rbar{height:4px;border-radius:9px;background:rgba(140,116,82,.14);overflow:hidden;}
+.ratio-top{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.05em;}
+.ratio-top b{font-family:var(--display);font-weight:600;font-size:16px;}
+.rbar{height:5px;border-radius:9px;background:rgba(140,116,82,.14);overflow:hidden;}
 .rbar i{display:block;height:100%;border-radius:9px;transition:width .8s cubic-bezier(.22,1,.36,1);}
 .pred-item{margin-bottom:8px;}
-.pred-top{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-bottom:4px;letter-spacing:.08em;}
-.pred-top b{font-family:var(--display);font-size:13px;color:var(--ink);font-weight:600;}
+.pred-top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;letter-spacing:.05em;}
+.pred-top b{font-family:var(--display);font-size:16px;color:var(--ink);font-weight:600;}
 .pbar{height:3px;border-radius:9px;background:rgba(140,116,82,.13);overflow:hidden;}
 .pbar i{display:block;height:100%;width:0;border-radius:9px;transition:width .9s cubic-bezier(.22,1,.36,1);}
 .swatch-box{display:flex;align-items:center;gap:12px;margin-top:auto;padding:11px 13px;border-radius:14px;
   border:1px solid var(--line);background:rgba(255,255,255,.5);}
 .swatch{width:34px;height:34px;border-radius:50%;flex:none;border:2px solid #fff;
   box-shadow:0 6px 14px -8px rgba(96,76,48,.6),inset 0 1px 3px rgba(255,255,255,.3);transition:background .8s;}
-.swatch-box .sc-l{font-size:9.5px;color:var(--ink-faint);letter-spacing:.12em;}
-.swatch-box .sc-v{font-family:var(--mono);font-size:10px;color:var(--ink-soft);margin-top:3px;letter-spacing:.04em;}
+.swatch-box .sc-l{font-size:12px;color:var(--ink-faint);letter-spacing:.08em;}
+.swatch-box .sc-v{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.03em;}
 
 /* ═══════════ 开发者档案视图 ═══════════ */
 .dev-arch{padding:16px 22px 12px;display:flex;flex-direction:column;overflow:hidden;}
@@ -942,7 +945,8 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .tabs{gap:0;padding:0;}
   .tab{padding:13px 7px;font-size:11px;letter-spacing:.05em;gap:4px;white-space:nowrap;}
   .nav-right{gap:8px;flex:none;}
-  .gh-link{padding:7px 9px;font-size:0;gap:0;}   /* 只留 GitHub 图标 */
+  .gh-link{padding:6px 9px;font-size:0;gap:4px;}   /* 手机端：图标 + Git 短标签，始终可见 */
+  .gh-link::after{content:'Git';font-size:11px;letter-spacing:.06em;}
   .gh-link svg{width:15px;height:15px;}
   .page{padding:calc(var(--nav-h) + 16px) 14px 0;}
   .sec{padding-top:34px;}
@@ -1174,16 +1178,89 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   box-shadow:0 18px 40px -28px rgba(80,64,46,.55);}
 .uc-device-shot::after{content:'';position:absolute;inset:auto 0 0;height:11%;pointer-events:none;
   background:linear-gradient(to top,rgba(247,245,240,.96),transparent);}
-.uc-device-shot img{width:100%;height:auto;display:block;transition:filter .55s ease,transform .55s ease;}
+.uc-device-shot>img{width:100%;height:auto;display:block;transition:filter .55s ease,transform .55s ease;}
 .uc-device-badge{position:absolute;right:10px;bottom:12px;z-index:3;padding:6px 13px;border-radius:999px;
   font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:#fff;
   background:rgba(31,58,95,.9);box-shadow:0 6px 18px rgba(0,0,0,.2);transition:background .4s ease;}
 .uc-device[data-state="noise"] .uc-device-badge{background:rgba(198,54,40,.94);}
 .uc-device[data-state="calming"] .uc-device-badge{background:rgba(184,126,48,.94);}
-.uc-device[data-state="noise"] .uc-device-shot img{animation:ucShake .42s ease-in-out 2;}
+.uc-device[data-state="noise"] .uc-device-shot>img{animation:ucShake .42s ease-in-out 2;}
 @keyframes ucShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 .uc-device-cap{font-family:var(--mono);font-size:11px;line-height:1.6;letter-spacing:.05em;
   color:var(--ink-faint);margin-top:11px;}
+/* ── 右侧展示 = 左侧数字孪生 product-stage 的 1:1 镜像 ──
+   状态由 iframe 逐帧 postMessage 推送，缩放系数由 JS 按容器宽度设置 */
+.uc-device-mirror{display:none;position:absolute;inset:0;width:100%;height:100%;overflow:hidden;
+  background:linear-gradient(135deg,#eef0ec 0%,#e9e3d9 100%);}
+#ucDevice[data-mirror="on"] .uc-device-shot{aspect-ratio:1/1;}
+#ucDevice[data-mirror="on"] .uc-device-shot::after{display:none;}
+#ucDevice[data-mirror="on"] .uc-device-shot>img{display:none;}
+#ucDevice[data-mirror="on"] .uc-device-mirror{display:block;}
+.uc-device-mirror .product-stage{position:absolute;left:0;top:0;width:560px;height:560px;max-width:none;aspect-ratio:auto;
+  display:flex;align-items:center;justify-content:center;transform:scale(var(--mir-scale,.57));
+  transform-origin:top left;transition:.6s ease;}
+.uc-device-mirror .stage-halo{position:absolute;inset:8%;border-radius:50%;
+  background:radial-gradient(circle,rgba(230,201,156,.42),transparent 62%);filter:blur(34px);transition:.8s ease}
+.uc-device-mirror .state-transition .stage-halo{background:radial-gradient(circle,rgba(194,145,80,.28),transparent 62%)}
+.uc-device-mirror .state-disturbance .stage-halo{background:radial-gradient(circle,rgba(142,59,50,.3),transparent 62%)}
+.uc-device-mirror .device-wrap{position:relative;width:100%;height:100%}
+.uc-device-mirror .device-img{width:100%;height:100%;object-fit:contain;display:block;
+  filter:drop-shadow(0 40px 46px rgba(50,55,45,.24));transition:filter .8s ease}
+.uc-device-mirror .state-disturbance .device-img{filter:drop-shadow(0 40px 46px rgba(90,40,35,.3)) saturate(.85)}
+.uc-device-mirror .screen-overlay{position:absolute;left:22.1%;top:43.6%;width:29%;height:35.6%;
+  border-radius:26%/18%;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 8px 24px rgba(0,0,0,.4);
+  transform:perspective(900px) rotateY(3deg);background:#0c1418}
+.uc-device-mirror .screen-overlay .tft-screen{transform:scale(.92);transform-origin:top left;width:108.7%;height:108.7%}
+.uc-device-mirror .tft-screen{width:240px;height:240px;background:radial-gradient(150% 120% at 20% 0%,#1b2b30 0%,#0c1418 56%,#080e12 100%);
+  color:#dfeae5;font-family:var(--mono);padding:15px 16px 12px;display:flex;flex-direction:column;position:relative;
+  overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.uc-device-mirror .tft-screen:before{content:'';position:absolute;top:-40%;left:-30%;width:80%;height:120%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.035),transparent);transform:rotate(18deg);pointer-events:none}
+.uc-device-mirror .tft-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.06em;color:#9fb4ab}
+.uc-device-mirror .tft-state{display:flex;align-items:center;gap:5px}
+.uc-device-mirror .tft-state i{width:5px;height:5px;border-radius:50%;background:#8fd3aa;box-shadow:0 0 8px #8fd3aa;transition:.4s}
+.uc-device-mirror .tft-state b{font-weight:500;color:#bfe2cd}
+.uc-device-mirror .tft-rule{height:1px;background:rgba(255,255,255,.1);margin:8px 0 2px}
+.uc-device-mirror .tft-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.uc-device-mirror .tft-moon{font-size:38px;line-height:1;color:#e9d8b6;text-shadow:0 0 18px rgba(233,216,182,.35);transition:.4s}
+.uc-device-mirror .tft-mode{font-size:9px;letter-spacing:.28em;color:#9fb4ab;margin-top:2px}
+.uc-device-mirror .tft-row{display:flex;align-items:center;gap:5px;font-size:9px;color:#8fa69d;letter-spacing:.04em}
+.uc-device-mirror .tft-row b{color:#e6f0ea;font-size:12px;font-weight:500}
+.uc-device-mirror .tft-spacer{flex:1}
+.uc-device-mirror .tft-meter{height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin:6px 0 8px;overflow:hidden}
+.uc-device-mirror .tft-meter i{display:block;height:100%;width:24%;background:linear-gradient(90deg,#7fb894,#e2c184);border-radius:2px;transition:width .3s ease}
+.uc-device-mirror .tft-rows{display:flex;flex-direction:column;gap:3px}
+.uc-device-mirror .tft-rows div{display:flex;justify-content:space-between;font-size:9px;color:#8fa69d;letter-spacing:.03em}
+.uc-device-mirror .tft-rows b{color:#dbe8e1;font-weight:500}
+.uc-device-mirror .tft-foot{margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08);font-size:7.5px;letter-spacing:.08em;color:#5f766d;text-align:center}
+.uc-device-mirror .tft-screen.s-disturbance .tft-state i{background:#d97566;box-shadow:0 0 8px #d97566}
+.uc-device-mirror .tft-screen.s-disturbance .tft-state b{color:#e9a99d}
+.uc-device-mirror .tft-screen.s-disturbance .tft-moon{color:#c07a6c;text-shadow:0 0 18px rgba(192,122,108,.3)}
+.uc-device-mirror .tft-screen.s-transition .tft-state i{background:#e2c184;box-shadow:0 0 8px #e2c184}
+.uc-device-mirror .tft-screen.s-transition .tft-state b{color:#e8d3a8}
+.uc-device-mirror .mist-layer{position:absolute;left:38%;top:29%;width:26%;height:30%;pointer-events:none;opacity:0;transition:opacity 1.2s ease}
+.uc-device-mirror .mist-layer.on{opacity:1}
+.uc-device-mirror .mist-layer span{position:absolute;bottom:0;width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.65);
+  filter:blur(7px);animation:mirMistRise 5s ease-out infinite}
+.uc-device-mirror .mist-layer span:nth-child(1){left:12%;animation-delay:0s}
+.uc-device-mirror .mist-layer span:nth-child(2){left:28%;animation-delay:.7s}
+.uc-device-mirror .mist-layer span:nth-child(3){left:44%;animation-delay:1.5s}
+.uc-device-mirror .mist-layer span:nth-child(4){left:60%;animation-delay:2.2s}
+.uc-device-mirror .mist-layer span:nth-child(5){left:74%;animation-delay:.4s}
+.uc-device-mirror .mist-layer span:nth-child(6){left:35%;animation-delay:3s}
+.uc-device-mirror .mist-layer span:nth-child(7){left:55%;animation-delay:3.7s}
+.uc-device-mirror .mist-layer span:nth-child(8){left:20%;animation-delay:4.3s}
+@keyframes mirMistRise{0%{transform:translateY(0) scale(.5);opacity:0}18%{opacity:.75}100%{transform:translateY(-150px) translateX(18px) scale(2.6);opacity:0}}
+.uc-device-mirror .light-ring{position:absolute;left:25%;right:23%;bottom:5%;height:6%;border-radius:50%;
+  background:radial-gradient(ellipse at center,transparent 38%,rgba(232,186,118,.95) 62%,rgba(232,186,118,0) 78%);
+  filter:blur(9px);opacity:.95;transition:background .8s ease,opacity .8s ease}
+.uc-device-mirror .state-transition .light-ring{opacity:.5;background:radial-gradient(ellipse at center,transparent 38%,rgba(194,145,80,.7) 62%,transparent 78%)}
+.uc-device-mirror .state-disturbance .light-ring{opacity:.42;background:radial-gradient(ellipse at center,transparent 38%,rgba(142,59,50,.85) 62%,transparent 78%)}
+.uc-device-mirror .device-wrap:after{content:'';position:absolute;left:24%;right:22%;bottom:3%;height:10%;border-radius:50%;
+  pointer-events:none;opacity:0;transition:opacity .8s ease,mix-blend-mode .8s;mix-blend-mode:multiply;
+  background:radial-gradient(ellipse at center,rgba(126,46,40,.95),rgba(126,46,40,0) 74%)}
+.uc-device-mirror .state-transition .device-wrap:after{opacity:.42;background:radial-gradient(ellipse at center,rgba(160,112,48,.8),rgba(160,112,48,0) 74%)}
+.uc-device-mirror .state-disturbance .device-wrap:after{opacity:.92}
 .uc-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .uc-toggle,.uc-mini{
   flex:none;padding:10px 16px;border-radius:10px;cursor:pointer;
@@ -1335,6 +1412,11 @@ body{font-size:19px}
   .faq-a p{font-size:14px}
   .uc-main .sim-frame{height:1180px;min-height:0}
 }
+/* 放在最后：确保窄屏下 GitHub 入口始终只占一个小按钮 */
+@media(max-width:640px){
+  .gh-link{font-size:0!important;gap:4px!important;padding:6px 9px!important;}
+  .gh-link::after{content:'Git';font-size:11px;letter-spacing:.06em;}
+}
 </style>
 </head>
 <body>
@@ -1366,12 +1448,12 @@ body{font-size:19px}
   </div>
 
   <div class="nav-right">
-    <div class="status"><span class="dot"></span>ESP32-S3-EYE · HARDWARE IN THE LOOP</div>
-    <div class="clock" id="clock">--:--:--</div>
-    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="GitHub 开源仓库">
+    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="打开 EmberSigh GitHub 仓库">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.72c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05.8-.23 1.65-.34 2.5-.34s1.7.11 2.5.34c1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49C19.14 20.61 22 16.78 22 12.25 22 6.58 17.52 2 12 2z"/></svg>
       GitHub 仓库
     </a>
+    <div class="status"><span class="dot"></span>ESP32-S3-EYE · HARDWARE IN THE LOOP</div>
+    <div class="clock" id="clock">--:--:--</div>
   </div>
 </nav>
 
@@ -1721,9 +1803,35 @@ body{font-size:19px}
       <aside class="uc-side">
         <div class="uc-device glass reveal" id="ucDevice" data-state="calm">
           <div class="uc-device-head"><span class="tick"></span>香氛机展示 · EmberSigh One</div>
-          <div class="uc-device-shot">
+          <div class="uc-device-shot" id="ucDeviceShot">
             <img id="ucDeviceImg" src="images/product-final.png" alt="EmberSigh 香氛机实时渲染：QUIET / SLEEP / 呼吸灯环"
                  loading="lazy" onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+            <!-- 与左侧数字孪生完全同源的产品画面镜像（由 iframe 逐帧推送状态） -->
+            <div class="uc-device-mirror" id="ucDeviceMirror" aria-hidden="true">
+              <div class="product-stage state-quiet" id="mirStage">
+                <div class="stage-halo"></div>
+                <div class="device-wrap">
+                  <img class="device-img" src="images/hero-product.jpg" alt="">
+                  <div class="mist-layer" id="mirMist"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                  <div class="light-ring"></div>
+                  <div class="screen-overlay">
+                    <div class="tft-screen s-quiet" id="mirTft">
+                      <div class="tft-head"><span class="tft-state"><i></i><b data-tft-state>QUIET</b></span><span data-tft-time>22:30</span></div>
+                      <div class="tft-rule"></div>
+                      <div class="tft-center"><div class="tft-moon" data-tft-icon>☾</div><div class="tft-mode" data-tft-mode>SLEEP</div></div>
+                      <div class="tft-row"><span>RMS</span><b data-tft-rms>042</b><span>dB</span><span class="tft-spacer"></span><span data-tft-env>CALM</span></div>
+                      <div class="tft-meter"><i data-tft-meter style="width:24%"></i></div>
+                      <div class="tft-rows">
+                        <div><span>♪ FOREST</span><b data-tft-audio>62%</b></div>
+                        <div><span>≋ AROMA</span><b data-tft-aroma>ON</b></div>
+                        <div><span>◉ LIGHT</span><b data-tft-light>WARM</b></div>
+                      </div>
+                      <div class="tft-foot">ESP32-S3-EYE · VIRTUAL</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <span class="uc-device-badge" id="ucDeviceBadge">QUIET</span>
           </div>
           <div class="uc-device-cap" id="ucDeviceCap">LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动</div>
@@ -2471,11 +2579,63 @@ window.addEventListener('message', function(e){
     if(m && window.paintDevice) window.paintDevice(m);
     return;
   }
+  /* 左侧 product-stage 逐帧镜像：右侧画面与左侧完全同源同变 */
+  if(d.type === 'embersigh:device-mirror'){
+    if(window.applyDeviceMirror) window.applyDeviceMirror(d);
+    return;
+  }
   if(d.type === 'embersigh:mic'){
     if(d.action === 'start') realMicStart();
     if(d.action === 'stop')  realMicStop();
   }
 });
+
+/* ── 右侧香氛机展示：1:1 镜像左侧数字孪生的 product-stage ──
+   模拟器每次 render 把状态与 TFT 数值推过来，这里逐字段套用，保证左边怎么变右边怎么变 */
+window.fitDeviceMirror = function(){
+  var mirror = $('ucDeviceMirror'), shot = $('ucDeviceShot');
+  if(!mirror || !shot) return;
+  var w = shot.clientWidth;
+  if(w) mirror.style.setProperty('--mir-scale', String(w / 560));
+};
+window.applyDeviceMirror = function(d){
+  var dev = $('ucDevice'), mirror = $('ucDeviceMirror');
+  if(!dev || !mirror || !d) return;
+  var s = String(d.state || 'quiet');
+  dev.dataset.mirror = 'on';
+  dev.dataset.state = s === 'disturbance' ? 'noise' : (s === 'transition' ? 'calming' : 'calm');
+  var stage = $('mirStage');
+  if(stage) stage.className = 'product-stage state-' + s;
+  var tft = $('mirTft');
+  if(tft && d.tft){
+    tft.className = 'tft-screen s-' + s;
+    var set = function(sel, val){
+      var el = tft.querySelector(sel);
+      if(el && val !== undefined && val !== null) el.textContent = val;
+    };
+    set('[data-tft-state]', d.tft.state);
+    set('[data-tft-time]', d.tft.time);
+    set('[data-tft-icon]', d.tft.icon);
+    set('[data-tft-mode]', d.tft.mode);
+    set('[data-tft-rms]', d.tft.rms);
+    set('[data-tft-env]', d.tft.env);
+    set('[data-tft-audio]', d.tft.audio);
+    set('[data-tft-aroma]', d.tft.aroma);
+    set('[data-tft-light]', d.tft.light);
+    var meter = tft.querySelector('[data-tft-meter]');
+    if(meter && d.tft.meter) meter.style.width = d.tft.meter;
+  }
+  var mist = $('mirMist');
+  if(mist) mist.classList.toggle('on', !!d.mist);
+  var badge = $('ucDeviceBadge');
+  if(badge) badge.textContent = s === 'disturbance' ? 'NOISE' : (s === 'transition' ? 'CALMING' : 'QUIET');
+  var cap = $('ucDeviceCap');
+  if(cap) cap.textContent = 'LIVE VIRTUAL RENDER · ' +
+    (s === 'disturbance' ? 'NOISE / YIELDING' : (s === 'transition' ? 'CALMING / CONFIRMING' : 'QUIET / SLEEP')) +
+    ' · 与左侧数字孪生实时同步';
+  window.fitDeviceMirror();
+};
+window.addEventListener('resize', function(){ if(window.fitDeviceMirror) window.fitDeviceMirror(); });
 
 /* ── 真实麦克风（顶层页面申请权限）
    file:// 下 iframe 直接 getUserMedia 会被 Permissions Policy 拒绝，

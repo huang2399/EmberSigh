@@ -310,6 +310,30 @@
       root.querySelector('[data-tft-light]').textContent = ES.faults.light ? 'ERR' : (ctx.light.mode === 'WARM' ? 'WARM' : 'DIM');
     }
 
+    /* 产品画面镜像：把左侧 product-stage 的实时状态推给顶层，右侧展示卡逐帧同步 */
+    var tftRoot = tfts[0];
+    if (tftRoot && global.parent && global.parent !== global && global.parent.postMessage) {
+      try {
+        global.parent.postMessage({
+          type: 'embersigh:device-mirror',
+          state: state.toLowerCase(),
+          mist: ctx.aroma.on && !ES.faults.aroma,
+          tft: {
+            state: state,
+            time: timeStr,
+            icon: tftRoot.querySelector('[data-tft-icon]').textContent,
+            mode: tftRoot.querySelector('[data-tft-mode]').textContent,
+            rms: tftRoot.querySelector('[data-tft-rms]').textContent,
+            env: tftRoot.querySelector('[data-tft-env]').textContent,
+            meter: tftRoot.querySelector('[data-tft-meter]').style.width,
+            audio: tftRoot.querySelector('[data-tft-audio]').textContent,
+            aroma: tftRoot.querySelector('[data-tft-aroma]').textContent,
+            light: tftRoot.querySelector('[data-tft-light]').textContent
+          }
+        }, '*');
+      } catch (e) { /* 顶层不可达时静默降级 */ }
+    }
+
     /* 环境输入 */
     $('envActive').textContent = ctx.mic.name();
     var rem = ctx.mic.remaining();
