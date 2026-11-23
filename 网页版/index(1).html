@@ -1095,15 +1095,28 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 .ebreath__slide--2{animation-delay:-14s;}
 .ebreath__slide--3{animation-delay:-8s;}
 .ebreath__media{position:absolute;inset:0;}
-.ebreath__media--scene{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:#F7F5F0;}
-.ebreath__tri{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.88) brightness(1.05);}
+/* 01：三张低分辨率场景图原比例完整显示，不拉伸、不放大（避免糊） */
+.ebreath__media--scene{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.4vw,16px);
+  align-items:center;padding:clamp(18px,4vw,52px);
+  background:linear-gradient(135deg,#eef0ec 0%,#e9e3d9 100%);}
+.ebreath__tri{width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;display:block;
+  border-radius:12px;background:#f7f5f0;filter:saturate(.95);
+  box-shadow:0 14px 32px -22px rgba(80,64,46,.5),inset 0 0 0 1px rgba(80,64,46,.08);}
+.ebreath__slide--1 .ebreath__scrim{inset:64% 0 0;}
+/* 02 / 03：同一台最终产品的两种状态（02 红色退让 / 03 安静入睡），画面明显不同 */
 .ebreath__media--state{background:
   radial-gradient(52% 60% at 22% 40%,rgba(236,198,190,.5),transparent 72%),
   linear-gradient(120deg,#f2ebe3 0%,#e9d8d2 58%,#e6ded4 100%);}
 .ebreath__media--product{background:
   radial-gradient(48% 56% at 66% 34%,rgba(255,255,255,.72),transparent 72%),
   linear-gradient(125deg,#eeeae1 0%,#e2dbce 52%,#d6d0c4 100%);}
-.ebreath__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.ebreath__img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+/* 02：红色防守态产品图，横向铺满并裁掉底部水印，画面与 03 的安静态明显不同 */
+.ebreath__slide--2 .ebreath__img{object-fit:cover;object-position:center 42%;}
+.ebreath__media--state::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(46% 52% at 52% 68%,rgba(176,68,47,.16),transparent 72%),
+    linear-gradient(180deg,rgba(24,16,12,.03),rgba(24,16,12,.14));}
+.ebreath__slide--2 .ebreath__scrim,.ebreath__slide--3 .ebreath__scrim{inset:60% 0 0;}
 .ebreath__scrim{position:absolute;inset:38% 0 0;pointer-events:none;
   background:linear-gradient(to top,rgba(247,245,240,.94),rgba(247,245,240,.5) 46%,transparent);}
 .ebreath__cap{position:absolute;left:clamp(20px,4.2vw,56px);bottom:clamp(20px,3.6vw,44px);z-index:2;}
@@ -1147,9 +1160,30 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 .unified-console{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;align-items:start;margin-top:4px;transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
 .unified-console.log-collapsed{grid-template-columns:minmax(0,1fr) 0px}
 .uc-main{min-width:0;position:relative}
-.uc-main .sim-frame{height:calc(100vh - var(--nav-h) - 130px);min-height:860px;border-radius:18px}
+.uc-main .sim-frame{height:calc(100vh - var(--nav-h) - 80px);min-height:1120px;border-radius:18px}
 .uc-side{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:420px;overflow:hidden;transition:opacity .35s ease}
-.unified-console.log-collapsed .uc-side{opacity:0;pointer-events:none}
+/* 收起日志：侧栏彻底脱离文档流，避免日志内容把网格行撑高造成大段空白 */
+.unified-console.log-collapsed .uc-side{opacity:0;pointer-events:none;position:absolute;width:0;height:0;overflow:hidden}
+/* 日志终端固定高度、内部滚动，杜绝日志累积时侧栏无限增高 */
+.hal-dock .term-card{height:620px;min-height:0}
+/* 香氛机展示卡（置于实时日志上方，随控制台状态机实时变化） */
+.uc-device{padding:16px 18px;border-radius:16px;text-align:center}
+.uc-device-head{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:15px;
+  font-weight:600;letter-spacing:.14em;color:var(--ink-soft);margin-bottom:12px;}
+.uc-device-shot{position:relative;width:100%;max-width:320px;margin:0 auto;border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 40px -28px rgba(80,64,46,.55);}
+.uc-device-shot::after{content:'';position:absolute;inset:auto 0 0;height:11%;pointer-events:none;
+  background:linear-gradient(to top,rgba(247,245,240,.96),transparent);}
+.uc-device-shot img{width:100%;height:auto;display:block;transition:filter .55s ease,transform .55s ease;}
+.uc-device-badge{position:absolute;right:10px;bottom:12px;z-index:3;padding:6px 13px;border-radius:999px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:#fff;
+  background:rgba(31,58,95,.9);box-shadow:0 6px 18px rgba(0,0,0,.2);transition:background .4s ease;}
+.uc-device[data-state="noise"] .uc-device-badge{background:rgba(198,54,40,.94);}
+.uc-device[data-state="calming"] .uc-device-badge{background:rgba(184,126,48,.94);}
+.uc-device[data-state="noise"] .uc-device-shot img{animation:ucShake .42s ease-in-out 2;}
+@keyframes ucShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.uc-device-cap{font-family:var(--mono);font-size:11px;line-height:1.6;letter-spacing:.05em;
+  color:var(--ink-faint);margin-top:11px;}
 .uc-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .uc-toggle,.uc-mini{
   flex:none;padding:10px 16px;border-radius:10px;cursor:pointer;
@@ -1230,27 +1264,76 @@ body{font-size:17px}
 .btn,.serial-btn,.uc-toggle,.uc-mini{letter-spacing:.1em}
 .sec-head h2{font-size:34px}
 .flow-card h3{font-size:26px}
+
+/* ══════════ 全站字体再放大（路演二轮） ══════════ */
+body{font-size:19px}
+.brand .nm{font-size:30px}
+.brand .nm span.zh{font-size:12px}
+.tab{font-size:20px;padding:16px 21px 17px}
+.tab em{font-size:17px}
+.status{font-size:15px}
+.clock{font-size:16px}
+.gh-link{font-size:15px}
+.hero-copy h1{font-size:clamp(36px,3.8vw,56px)}
+.kicker{font-size:18px}
+.hero-copy p{font-size:15px;line-height:2.2}
+.chip{font-size:13px}
+.chip .k{font-size:21px}
+.eyebrow{font-size:11px}
+.sec-head h2{font-size:38px}
+.sec-head .sub{font-size:16px}
+.sec-no{font-size:11px}
+.p-card h3{font-size:16px}
+.p-card p{font-size:14px;line-height:2}
+.p-card .tag{font-size:10px}
+.flow-card .f-step{font-size:11px}
+.flow-card h3{font-size:30px}
+.flow-card .f-en{font-size:12px}
+.flow-card p{font-size:14px;line-height:2}
+.spec-item .s-label{font-size:12px}
+.spec-item .s-value{font-size:15px}
+.spec-item .s-value small{font-size:12px}
+.faq-q{font-size:19px}
+.faq-a p{font-size:15px}
+.cta h2{font-size:clamp(34px,4vw,58px)}
+.card-title{font-size:15px}
+.card-note{font-size:11px}
+.device-cap .n{font-size:13px}
+.device-cap .s{font-size:10px}
+.ebreath__no{font-size:13px}
+.ebreath__title{font-size:clamp(27px,3.4vw,46px)}
+.uc-toggle,.uc-mini{font-size:15px}
+.uc-note{font-size:14px}
+.uc-device-head{font-size:17px}
+.uc-device-cap{font-size:12px}
 @media(max-width:1180px){
   .unified-console{grid-template-columns:1fr}
   .unified-console.log-collapsed{grid-template-columns:1fr}
   .uc-side{max-width:none;order:2}
-  .uc-main .sim-frame{height:900px}
+  .unified-console.log-collapsed .uc-side{position:static;width:auto;height:auto;overflow:hidden}
+  .uc-main .sim-frame{height:1160px}
 }
 @media(max-width:760px){
   /* 手机端同样保持路演大字，保证投影/小屏都清晰 */
-  body{font-size:17px}
-  .tab{font-size:16px;padding:12px 9px}
-  .tab em{font-size:13px}
-  .status,.clock,.gh-link{font-size:13px}
-  .serial-btn{font-size:16px;padding:11px 18px}
-  .serial-status{font-size:15px}
-  .serial-hint{font-size:12px}
-  .sm-pill{font-size:19px;padding:10px 3px}
-  .scr-main{font-size:46px}
-  .term-body{font-size:14px}
-  .term-foot{font-size:13px}
-  .line.lg-emg .msg{font-size:17px}
-  .uc-main .sim-frame{height:920px;min-height:0}
+  body{font-size:18px}
+  .tab{font-size:17px;padding:12px 9px}
+  .tab em{font-size:14px}
+  .status,.clock,.gh-link{font-size:14px}
+  .serial-btn{font-size:17px;padding:11px 18px}
+  .serial-status{font-size:16px}
+  .serial-hint{font-size:13px}
+  .sm-pill{font-size:21px;padding:10px 3px}
+  .scr-main{font-size:48px}
+  .term-body{font-size:15px}
+  .term-foot{font-size:14px}
+  .line.lg-emg .msg{font-size:18px}
+  .hero-copy h1{font-size:clamp(34px,9vw,46px)}
+  .hero-copy p{font-size:14px}
+  .sec-head h2{font-size:28px}
+  .p-card p,.flow-card p{font-size:13.5px}
+  .faq-q{font-size:17px}
+  .faq-a p{font-size:14px}
+  .uc-main .sim-frame{height:1180px;min-height:0}
 }
 </style>
 </head>
@@ -1358,7 +1441,8 @@ body{font-size:17px}
         </figure>
         <figure class="ebreath__slide ebreath__slide--2">
           <div class="ebreath__media ebreath__media--state">
-            <img class="ebreath__img" src="images/scene-recede.jpg" alt="环境变吵时香氛机主动退让的红色状态" loading="lazy">
+            <img class="ebreath__img" src="images/device-noise.png" alt="环境变吵时最终产品主动退让：屏幕 NOISE 警告、灯环转防守红、停止喷雾" loading="lazy"
+                 onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
@@ -1368,7 +1452,8 @@ body{font-size:17px}
         </figure>
         <figure class="ebreath__slide ebreath__slide--3">
           <div class="ebreath__media ebreath__media--product">
-            <img class="ebreath__img" src="images/scene-product.jpg" alt="EmberSigh 香氛机产品渲染图" loading="lazy">
+            <img class="ebreath__img" src="images/product-final.png" alt="EmberSigh One 最终产品渲染：QUIET / SLEEP · 呼吸灯环" loading="lazy"
+                 onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
@@ -1632,8 +1717,17 @@ body{font-size:17px}
                 title="EmberSigh 数字孪生控制台"
                 allow="microphone; autoplay"></iframe>
       </div>
-      <!-- 模块 A：HAL / SENSOR 黑底日志（可折叠侧栏） -->
+      <!-- 模块 A：香氛机展示（置于实时日志上方）+ HAL / SENSOR 黑底日志（可折叠侧栏） -->
       <aside class="uc-side">
+        <div class="uc-device glass reveal" id="ucDevice" data-state="calm">
+          <div class="uc-device-head"><span class="tick"></span>香氛机展示 · EmberSigh One</div>
+          <div class="uc-device-shot">
+            <img id="ucDeviceImg" src="images/product-final.png" alt="EmberSigh 香氛机实时渲染：QUIET / SLEEP / 呼吸灯环"
+                 loading="lazy" onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+            <span class="uc-device-badge" id="ucDeviceBadge">QUIET</span>
+          </div>
+          <div class="uc-device-cap" id="ucDeviceCap">LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动</div>
+        </div>
         <div class="hal-dock glass">
           <div class="term-card">
             <div class="term-head">
@@ -2371,6 +2465,12 @@ window.addEventListener('message', function(e){
   var d = e && e.data;
   if(!d || typeof d !== 'object') return;
   if(d.type === 'embersigh:command'){ sendToHardware(d.command); return; }
+  /* 左侧数字孪生状态变化 → 右侧香氛机展示同步（QUIET/TRANSITION/DISTURBANCE） */
+  if(d.type === 'embersigh:state'){
+    var m = { QUIET:'calm', TRANSITION:'calming', DISTURBANCE:'noise', CALM:'calm', CALMING:'calming', NOISE:'noise' }[String(d.state || '').toUpperCase()];
+    if(m && window.paintDevice) window.paintDevice(m);
+    return;
+  }
   if(d.type === 'embersigh:mic'){
     if(d.action === 'start') realMicStart();
     if(d.action === 'stop')  realMicStop();
@@ -2705,7 +2805,27 @@ function emitState(){
       link.classList.remove('warn');
     }
   }
+  paintDevice(state);
 }
+
+/* 右侧香氛机展示：与主站状态机 / 左侧数字孪生 iframe 共用同一套状态渲染 */
+function paintDevice(s){
+  var dev = $('ucDevice'), devImg = $('ucDeviceImg');
+  if(!dev || !devImg) return;
+  var cfg = {
+    calm:   { src:'images/product-final.png',  badge:'QUIET',   cap:'LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动', alt:'EmberSigh 香氛机：QUIET / SLEEP · 暖光呼吸灯环' },
+    noise:  { src:'images/device-noise.png',   badge:'NOISE',   cap:'LIVE VIRTUAL RENDER · NOISE / DEFEND · 香氛已切断，灯环转防守红', alt:'EmberSigh 香氛机：NOISE / DEFEND · 红色防守灯环' },
+    calming:{ src:'images/device-calming.png', badge:'CALMING', cap:'LIVE VIRTUAL RENDER · CALMING / COOLING · 冷却缓冲中，灯环转琥珀', alt:'EmberSigh 香氛机：CALMING / COOLING · 琥珀冷却灯环' }
+  }[s];
+  if(!cfg) return;
+  if(devImg.getAttribute('src') !== cfg.src) devImg.src = cfg.src;
+  devImg.alt = cfg.alt;
+  dev.dataset.state = s;
+  var dBadge = $('ucDeviceBadge'), dCap = $('ucDeviceCap');
+  if(dBadge) dBadge.textContent = cfg.badge;
+  if(dCap) dCap.textContent = cfg.cap;
+}
+window.paintDevice = paintDevice;   /* 供顶层 iframe 消息通道调用 */
 
 function updateBpm(){
   if(serialMode) return;   /* 串口模式下 bpm 位显示真实 RMS，由 paintRealNumbers 负责 */
@@ -3169,6 +3289,7 @@ window.addEventListener('aromaUpdate', function(e){
 
 /* 初始化 */
 paintScreen();
+emitState();   /* 右侧香氛机展示与左侧状态机首帧对齐 */
 $('ftAroma').textContent = aromaFootText();
 log('ok','SYS','EmberSigh 控制台已就绪 · LVGL v9.6');
 log('dim','MIC','ES8311 Codec 初始化完成 · 48kHz / 16bit / 左声道');
