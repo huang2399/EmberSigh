@@ -374,6 +374,15 @@ body{font-size:16px}
 .param-hint{display:flex;flex-direction:column;gap:2px;background:rgba(47,74,60,.05);border:1px solid var(--line)}
 .param-hint b{color:var(--ink);font-size:13px;margin-bottom:3px}
 .param-hint span{font-size:12.5px}
+/* 参数实时试算：调数值立刻看到判定差异 */
+.param-preview{margin:12px 0 0;padding:12px 14px;border-radius:11px;background:rgba(47,74,60,.075);
+  border:1px solid rgba(47,74,60,.18);font-family:var(--mono);font-size:13px;line-height:1.7;}
+.param-preview .pp-title{color:var(--ink);font-weight:600;margin-bottom:4px;font-size:14px}
+.param-preview .pp-title b{color:var(--forest)}
+.param-preview .pp-line{color:var(--ink-faint);font-size:12.5px}
+.param-preview .pp-line.changed{color:var(--amber);font-weight:600}
+.param-preview .pp-status{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--forest)}
+.param-preview .pp-status.applied{color:var(--forest);font-weight:600}
 .section-head h2,.panel-title{font-size:20px}
 .panel-title small{font-size:14px}
 .scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}

@@ -382,6 +382,15 @@ body{font-size:16px}
 .param-hint{display:flex;flex-direction:column;gap:2px;background:rgba(47,74,60,.05);border:1px solid var(--line)}
 .param-hint b{color:var(--ink);font-size:13px;margin-bottom:3px}
 .param-hint span{font-size:12.5px}
+/* 参数实时试算：调数值立刻看到判定差异 */
+.param-preview{margin:12px 0 0;padding:12px 14px;border-radius:11px;background:rgba(47,74,60,.075);
+  border:1px solid rgba(47,74,60,.18);font-family:var(--mono);font-size:13px;line-height:1.7;}
+.param-preview .pp-title{color:var(--ink);font-weight:600;margin-bottom:4px;font-size:14px}
+.param-preview .pp-title b{color:var(--forest)}
+.param-preview .pp-line{color:var(--ink-faint);font-size:12.5px}
+.param-preview .pp-line.changed{color:var(--amber);font-weight:600}
+.param-preview .pp-status{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--forest)}
+.param-preview .pp-status.applied{color:var(--forest);font-weight:600}
 .section-head h2,.panel-title{font-size:20px}
 .panel-title small{font-size:14px}
 .scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}
@@ -458,9 +467,9 @@ body{font-size:16px}
     <span class="virtual-badge">VIRTUAL DEVICE</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎（冻结全部状态，仅在调试时使用；演示请用 Demo Mode 的停止）">暂停引擎</button>
-    <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
-    <button class="btn btn-ghost" id="btnReset">重置</button>
+    <button class="btn btn-ghost" id="btnPause" title="冻结 / 恢复整台模拟器（调试用，不是演示开关）">暂停引擎</button>
+    <button class="btn btn-primary" id="btnDemo" title="30 秒自动路演：安静 → 说话 → 噪声退让 → 安静确认 → 平滑恢复，右侧香氛机同步演示">▶ 30秒场景演示</button>
+    <button class="btn btn-ghost" id="btnReset" title="恢复所有模块、参数与演示进度条到初始状态">重置</button>
   </div>
 </header>
 
@@ -590,6 +599,12 @@ body{font-size:16px}
       <div class="param-row"><label>触发保持 (s)</label><input type="number" id="holdInput" value="0.4" min="0" max="5" step="0.1"></div>
       <div class="param-row"><label>滑动窗口</label><input type="number" id="windowInput" value="12" min="2" max="120" step="1"></div>
       <button class="btn btn-primary full" id="btnApplyParams">应用参数</button>
+      <div class="param-preview" id="paramPreview">
+        <div class="pp-title">实时试算 · 当前 EMA <b id="ppEma">42</b></div>
+        <div class="pp-line" id="ppVerdict">按当前阈值：环境判定 CALM，保持安静</div>
+        <div class="pp-line" id="ppCompare">把噪声阈值改小，这里会立即显示同一 EMA 下的新判定</div>
+        <div class="pp-line pp-status" id="ppStatus">已生效参数：α 0.20 · 阈 50/150 · 确认 3s</div>
+      </div>
       <div class="param-hint"><b>这些数值决定「什么算吵」：</b>
         <span>· α 越小越平滑（0.2 = 抗抖，1 = 即时跟随）</span>
         <span>· 安静阈 / 噪声阈：低于安静阈开始 3s 确认，高于噪声阈触发退让</span>
@@ -662,8 +677,8 @@ body{font-size:16px}
     <p>一键运行 30 秒完整路演脚本，真正调用模拟引擎：安静 → 说话 → 噪声触发退让 → 安静确认 → 平滑恢复。左侧状态栏、右侧香氛机展示与下方时间线会同步变化。故障注入只影响对应模块，且会在香氛机展示上显示 FAULT 与视觉异常。</p>
   </div>
   <div class="diag-grid">
-    <div class="panel demo-panel">
-      <div class="panel-title"><span>Demo Mode · 30s</span><small id="demoCountdown">READY</small></div>
+    <div class="panel demo-panel" id="demoPanel">
+      <div class="panel-title"><span>30秒场景演示 · 看它如何退让与恢复</span><small id="demoCountdown">READY</small></div>
       <div class="demo-stage-name" id="demoStage">待机</div>
       <p class="demo-desc" id="demoDesc">演示意义：用 30 秒浓缩展示 EmberSigh 的完整决策链——听到噪声时主动退让（声景淡出、香氛切断、灯环转暗红），安静 3 秒后才温柔恢复。点击「开始路演演示」，右侧香氛机展示会同步演出每一步。</p>
       <div class="demo-progress"><i id="demoProgress"></i></div>
@@ -1483,6 +1498,15 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     if (this.elapsed >= 30) this.stop(true);
   };
 
+  /* 重置：顶部「重置」必须把演示进度条也归零 */
+  ES.Demo.prototype.reset = function () {
+    this.running = false;
+    this.elapsed = 0;
+    this.stage = -1;
+    ES.bus.emit('demo:running', { running: false });
+    ES.bus.emit('demo:stopped', { completed: false });
+  };
+
   ES.Demo.prototype.info = function () {
     var ctx = this.ctx;
     var s = STAGES[Math.max(0, this.stage)] || STAGES[0];
@@ -2098,7 +2122,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       for (var i = 0; i < steps.length; i++) steps[i].classList.toggle('active', i === d.index);
     });
     ES.bus.on('demo:running', function (d) {
-      $('btnDemo').textContent = d.running ? '■ 停止演示' : '▶ Demo Mode';
+      $('btnDemo').textContent = d.running ? '■ 停止30秒演示' : '▶ 30秒场景演示';
       $('btnDemo').classList.toggle('running', d.running);
       $('btnDemoStart').textContent = d.running ? '停止演示' : '开始路演演示';
       /* 演示启动时自动解除引擎暂停，避免 UI 显示"演示中"但状态冻结 */
@@ -2126,12 +2150,22 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
         else ctx.mic.setScenario(key);
       });
     }
-    $('rmsSlider').addEventListener('input', function () { $('rmsValue').textContent = this.value; });
-    $('durationSlider').addEventListener('input', function () { $('durationValue').textContent = (+this.value).toFixed(1) + ' s'; });
-    $('btnApplyCustom').addEventListener('click', function () {
+    /* 滑块拖动即生效：右侧香氛机展示必须实时看到 RMS 变化 */
+    var applyCustomLive = function () {
       stopDemo();
+      var io = global.EmberSighIO && global.EmberSighIO.mic;
+      if (io && typeof io.forceLocal === 'function') io.forceLocal();
       ctx.mic.setScenario('custom', { base: +$('rmsSlider').value, duration: +$('durationSlider').value });
+    };
+    $('rmsSlider').addEventListener('input', function () {
+      $('rmsValue').textContent = this.value;
+      applyCustomLive();
     });
+    $('durationSlider').addEventListener('input', function () {
+      $('durationValue').textContent = (+this.value).toFixed(1) + ' s';
+      applyCustomLive();
+    });
+    $('btnApplyCustom').addEventListener('click', applyCustomLive);
     $('btnStopEnv').addEventListener('click', function () {
       stopDemo();
       /* 恢复安静卧室：先退出真实麦克风/串口覆盖，否则模拟场景会被真值立刻盖掉 */
@@ -2141,14 +2175,42 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       ES.logger.ok('ENV', 'Restored quiet bedroom · real mic / serial override cleared');
     });
 
+    function readDraft() {
+      return {
+        alpha: U.clamp(+$('alphaInput').value || 0.2, 0.01, 1),
+        quietThreshold: U.clamp(+$('quietThInput').value || 50, 0, 300),
+        noiseThreshold: U.clamp(+$('noiseThInput').value || 150, 0, 300),
+        quietSeconds: U.clamp(+$('quietSecInput').value || 3, 0.5, 20),
+        disturbanceHold: U.clamp(+$('holdInput').value || 0, 0, 5),
+        windowSize: U.clamp(+$('windowInput').value || 12, 2, 120)
+      };
+    }
+    function verdictFor(v, ema) {
+      return ema >= v.noiseThreshold ? 'NOISE · 将触发退让' : (ema < v.quietThreshold ? 'CALM · 保持安静' : 'MID · 迟滞区，不动作');
+    }
+    function updateParamPreview() {
+      var v = readDraft(), ema = ctx.signal.snapshot.ema;
+      var ppEma = $('ppEma'), ppVerdict = $('ppVerdict'), ppCompare = $('ppCompare');
+      if (!ppEma || !ppVerdict || !ppCompare) return;
+      ppEma.textContent = ema.toFixed(1);
+      ppVerdict.textContent = '按草稿阈值：EMA ' + ema.toFixed(0) + ' → ' + verdictFor(v, ema);
+      var changed = (v.alpha !== ctx.config.alpha || v.quietThreshold !== ctx.config.quietThreshold ||
+        v.noiseThreshold !== ctx.config.noiseThreshold || v.quietSeconds !== ctx.config.quietSeconds ||
+        v.disturbanceHold !== ctx.config.disturbanceHold || v.windowSize !== ctx.config.windowSize);
+      /* 固定参照值 168（持续噪声）：无论当前环境多安静，都能直观看到阈值改动的影响 */
+      var ref = 168;
+      ppCompare.textContent = '例：RMS ' + ref + ' → 草稿 ' + verdictFor(v, ref) +
+        '（生效 ' + verdictFor(ctx.config, ref) + '）' + (changed ? ' · 点「应用参数」生效' : '');
+      ppCompare.classList.toggle('changed', changed);
+    }
+    ['alphaInput', 'quietThInput', 'noiseThInput', 'quietSecInput', 'holdInput', 'windowInput'].forEach(function (id) {
+      var el = $(id); if (el) { el.addEventListener('input', updateParamPreview); el.addEventListener('change', updateParamPreview); }
+    });
+    updateParamPreview();
     $('btnApplyParams').addEventListener('click', function () {
-      var cfg = ctx.config;
-      cfg.alpha = U.clamp(+$('alphaInput').value || 0.2, 0.01, 1);
-      cfg.quietThreshold = U.clamp(+$('quietThInput').value || 50, 0, 300);
-      cfg.noiseThreshold = U.clamp(+$('noiseThInput').value || 150, 0, 300);
-      cfg.quietSeconds = U.clamp(+$('quietSecInput').value || 3, 0.5, 20);
-      cfg.disturbanceHold = U.clamp(+$('holdInput').value || 0, 0, 5);
-      cfg.windowSize = U.clamp(+$('windowInput').value || 12, 2, 120);
+      var cfg = ctx.config, v = readDraft(), before = cfg.noiseThreshold;
+      cfg.alpha = v.alpha; cfg.quietThreshold = v.quietThreshold; cfg.noiseThreshold = v.noiseThreshold;
+      cfg.quietSeconds = v.quietSeconds; cfg.disturbanceHold = v.disturbanceHold; cfg.windowSize = v.windowSize;
       $('alphaInput').value = cfg.alpha; $('quietThInput').value = cfg.quietThreshold;
       $('noiseThInput').value = cfg.noiseThreshold; $('quietSecInput').value = cfg.quietSeconds;
       $('holdInput').value = cfg.disturbanceHold; $('windowInput').value = cfg.windowSize;
@@ -2156,6 +2218,9 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       if (ml) { ml[0].yAxis = cfg.quietThreshold; ml[1].yAxis = cfg.noiseThreshold; self.chart.setOption({ series: [{}, {}, { markLine: { data: ml } }] }); }
       document.querySelector('.formula-box small').textContent =
         'α = ' + cfg.alpha.toFixed(2) + ' · 阈值 ' + cfg.quietThreshold + ' / ' + cfg.noiseThreshold + ' · 安静确认 ' + cfg.quietSeconds + 's';
+      var st = $('ppStatus');
+      if (st) { st.textContent = '✓ 已生效：噪阈 ' + before + ' → ' + cfg.noiseThreshold + ' · 右侧展示卡噪阈标尺已同步'; st.classList.add('applied'); }
+      updateParamPreview();
       ES.logger.info('CFG', 'Parameters updated · α=' + cfg.alpha.toFixed(2) + ' quiet=' + cfg.quietThreshold + ' noise=' + cfg.noiseThreshold + ' hold=' + cfg.disturbanceHold + 's');
     });
 
@@ -2163,19 +2228,28 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       ctx.coordinator.setUserVolume(+this.value);
       $('audioVolValue').textContent = this.value + '%';
     });
+    function setAudioPlaying(on) {
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      if (io && typeof io.setPlaying === 'function') io.setPlaying(on);
+      /* 虚拟音量与真实声景保持同一播放意图，TFT 读数才不会自相矛盾 */
+      if (ctx.audio.playing !== on) ctx.audio.playing = on;
+      ES.logger.info('SOUND', on ? 'Forest soundscape playing' : 'Forest soundscape paused');
+    }
     $('btnAudioPlay').addEventListener('click', function () {
-      var playing = ctx.audio.togglePlay();
-      this.textContent = playing ? '暂停播放' : '继续播放';
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      var on = io && io.isPlaying ? !io.isPlaying() : !ctx.audio.playing;
+      setAudioPlaying(on);
     });
     $('btnAudioMute').addEventListener('click', function () {
       ctx.audio.toggleMute();
       this.textContent = ctx.audio.muted ? '取消静音' : '静音';
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      if (io && io.rampTo) io.rampTo(ctx.audio.muted ? 0 : (ctx.audio.effectiveVolume() / 100 * 0.5), 0.3);
     });
     $('btnSoundscape').addEventListener('click', function () {
       var io = global.EmberSighIO && global.EmberSighIO.soundscape;
-      var on = io ? !io.isPlaying() : false;
-      if (io) io.setPlaying(on);
-      this.textContent = on ? '■ 停止声景' : '▶ 播放声景';
+      var on = io && io.isPlaying ? !io.isPlaying() : !ctx.audio.playing;
+      setAudioPlaying(on);
     });
     $('ledBrightness').addEventListener('input', function () {
       ctx.coordinator.setUserBrightness(+this.value);
@@ -2199,8 +2273,17 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     });
 
     $('btnClearLog').addEventListener('click', function () { ES.logger.clear(); });
-    $('btnDemo').addEventListener('click', function () { ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start(); });
-    $('btnDemoStart').addEventListener('click', function () { ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start(); });
+    function toggleDemo(scroll) {
+      var starting = !ctx.demo.running;
+      ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start();
+      if (starting && scroll) {
+        var panel = document.getElementById('demoPanel');
+        if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ES.logger.info('DEMO', '30s script: 安静卧室 → 说话声 → 噪声退让 → 安静确认 → 平滑恢复');
+      }
+    }
+    $('btnDemo').addEventListener('click', function () { toggleDemo(true); });
+    $('btnDemoStart').addEventListener('click', function () { toggleDemo(false); });
     $('btnReset').addEventListener('click', function () { if (ctx.demo.running) ctx.demo.stop(false); ctx.reset(); });
     $('btnPause').addEventListener('click', function () {
       ctx.paused = !ctx.paused;
@@ -2343,6 +2426,17 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
           /* 故障注入：右侧展示据此显示 FAULT 与视觉异常 */
           faults: { mic: !!ES.faults.mic, audio: !!ES.faults.audio, aroma: !!ES.faults.aroma,
                     light: !!ES.faults.light, battery: !!ES.faults.battery, sensor: !!ES.faults.sensor },
+          /* 每种故障的具体后果（右侧据此展示真实变化，而不只是变灰） */
+          effects: {
+            micValid: !ES.faults.mic && !ctx.mic.invalid,
+            rmsFrozen: !!ES.faults.sensor,
+            rmsHold: Math.round(ctx.mic.lastValid),
+            audioOut: ES.faults.audio ? 0 : Math.round(ctx.audio.effectiveVolume()),
+            aromaOn: !!ctx.aroma.on && !ES.faults.aroma,
+            gpio: ctx.aroma.gpio,
+            ledOut: ES.faults.light ? 0 : Math.round(((ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0) * 100),
+            derated: !!ES.faults.battery
+          },
           /* 灯环亮度 / 呼吸：跟随左侧滑块实时变化 */
           led: { brightness: (ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0,
                  mode: ctx.light.mode },
@@ -2377,13 +2471,21 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
     /* 声景 */
     var av = ctx.audio.effectiveVolume();
-    $('audioVolValue').textContent = Math.round(ctx.audio.volume) + '%';
+    $('audioVolValue').textContent = Math.round(av) + '%';
     $('audioTarget').textContent = Math.round(ctx.audio.target) + '%';
+    var ioSound = global.EmberSighIO && global.EmberSighIO.soundscape;
+    var realPlaying = ioSound && ioSound.isPlaying ? ioSound.isPlaying() : null;
+    /* 按钮文字与真实声景状态严格同步，不再出现「PAUSED 却显示继续播放」 */
+    var playBtn = $('btnAudioPlay'), muteBtn = $('btnAudioMute'), soundBtn = $('btnSoundscape');
+    var showPlaying = realPlaying === null ? ctx.audio.playing : realPlaying;
+    if (playBtn) playBtn.textContent = showPlaying ? '暂停播放' : '继续播放';
+    if (soundBtn) soundBtn.textContent = (realPlaying === null ? ctx.audio.playing : realPlaying) ? '■ 停止声景' : '▶ 播放声景';
+    if (muteBtn) muteBtn.textContent = ctx.audio.muted ? '取消静音' : '静音';
     var audioBadge = $('audioStatus');
     audioBadge.className = 'act-badge';
     if (ES.faults.audio) { audioBadge.textContent = 'OFFLINE'; audioBadge.classList.add('off'); }
     else if (ctx.audio.muted) { audioBadge.textContent = 'MUTED'; audioBadge.classList.add('fade'); }
-    else if (!ctx.audio.playing) { audioBadge.textContent = 'PAUSED'; audioBadge.classList.add('fade'); }
+    else if (!showPlaying) { audioBadge.textContent = 'PAUSED'; audioBadge.classList.add('fade'); }
     else if (Math.abs(ctx.audio.volume - ctx.audio.target) > 1) { audioBadge.textContent = 'FADING'; audioBadge.classList.add('fade'); }
     else audioBadge.textContent = 'PLAYING';
     var bars = $('audioWave').children;
@@ -2476,6 +2578,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     ctx.aroma.reset();
     ctx.light.reset();
     ctx.coordinator.reset();
+    ctx.demo.reset();
+    ctx.paused = false;
     ctx.history.length = 0;
     ctx.segments.length = 0;
     historyAcc = 0;

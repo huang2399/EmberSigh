@@ -32,9 +32,9 @@
     <span class="virtual-badge">VIRTUAL DEVICE</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎（冻结全部状态，仅在调试时使用；演示请用 Demo Mode 的停止）">暂停引擎</button>
-    <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
-    <button class="btn btn-ghost" id="btnReset">重置</button>
+    <button class="btn btn-ghost" id="btnPause" title="冻结 / 恢复整台模拟器（调试用，不是演示开关）">暂停引擎</button>
+    <button class="btn btn-primary" id="btnDemo" title="30 秒自动路演：安静 → 说话 → 噪声退让 → 安静确认 → 平滑恢复，右侧香氛机同步演示">▶ 30秒场景演示</button>
+    <button class="btn btn-ghost" id="btnReset" title="恢复所有模块、参数与演示进度条到初始状态">重置</button>
   </div>
 </header>
 
@@ -164,6 +164,12 @@
       <div class="param-row"><label>触发保持 (s)</label><input type="number" id="holdInput" value="0.4" min="0" max="5" step="0.1"></div>
       <div class="param-row"><label>滑动窗口</label><input type="number" id="windowInput" value="12" min="2" max="120" step="1"></div>
       <button class="btn btn-primary full" id="btnApplyParams">应用参数</button>
+      <div class="param-preview" id="paramPreview">
+        <div class="pp-title">实时试算 · 当前 EMA <b id="ppEma">42</b></div>
+        <div class="pp-line" id="ppVerdict">按当前阈值：环境判定 CALM，保持安静</div>
+        <div class="pp-line" id="ppCompare">把噪声阈值改小，这里会立即显示同一 EMA 下的新判定</div>
+        <div class="pp-line pp-status" id="ppStatus">已生效参数：α 0.20 · 阈 50/150 · 确认 3s</div>
+      </div>
       <div class="param-hint"><b>这些数值决定「什么算吵」：</b>
         <span>· α 越小越平滑（0.2 = 抗抖，1 = 即时跟随）</span>
         <span>· 安静阈 / 噪声阈：低于安静阈开始 3s 确认，高于噪声阈触发退让</span>
@@ -236,8 +242,8 @@
     <p>一键运行 30 秒完整路演脚本，真正调用模拟引擎：安静 → 说话 → 噪声触发退让 → 安静确认 → 平滑恢复。左侧状态栏、右侧香氛机展示与下方时间线会同步变化。故障注入只影响对应模块，且会在香氛机展示上显示 FAULT 与视觉异常。</p>
   </div>
   <div class="diag-grid">
-    <div class="panel demo-panel">
-      <div class="panel-title"><span>Demo Mode · 30s</span><small id="demoCountdown">READY</small></div>
+    <div class="panel demo-panel" id="demoPanel">
+      <div class="panel-title"><span>30秒场景演示 · 看它如何退让与恢复</span><small id="demoCountdown">READY</small></div>
       <div class="demo-stage-name" id="demoStage">待机</div>
       <p class="demo-desc" id="demoDesc">演示意义：用 30 秒浓缩展示 EmberSigh 的完整决策链——听到噪声时主动退让（声景淡出、香氛切断、灯环转暗红），安静 3 秒后才温柔恢复。点击「开始路演演示」，右侧香氛机展示会同步演出每一步。</p>
       <div class="demo-progress"><i id="demoProgress"></i></div>

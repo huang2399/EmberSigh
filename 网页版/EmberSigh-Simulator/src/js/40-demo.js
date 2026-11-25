@@ -82,6 +82,15 @@
     if (this.elapsed >= 30) this.stop(true);
   };
 
+  /* 重置：顶部「重置」必须把演示进度条也归零 */
+  ES.Demo.prototype.reset = function () {
+    this.running = false;
+    this.elapsed = 0;
+    this.stage = -1;
+    ES.bus.emit('demo:running', { running: false });
+    ES.bus.emit('demo:stopped', { completed: false });
+  };
+
   ES.Demo.prototype.info = function () {
     var ctx = this.ctx;
     var s = STAGES[Math.max(0, this.stage)] || STAGES[0];
