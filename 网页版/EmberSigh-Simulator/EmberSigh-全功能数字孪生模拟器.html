@@ -376,6 +376,12 @@ body{font-size:16px}
 .hs-pill.on[data-hs="calm"]{color:var(--forest);border-color:rgba(47,74,60,.42);background:rgba(126,154,131,.2);box-shadow:0 0 0 3px rgba(126,154,131,.09)}
 .hs-pill.on[data-hs="noise"]{color:var(--red);border-color:rgba(142,59,50,.42);background:rgba(142,59,50,.14);box-shadow:0 0 0 3px rgba(142,59,50,.08)}
 .hs-pill.on[data-hs="calming"]{color:var(--amber);border-color:rgba(194,145,80,.5);background:rgba(194,145,80,.18);box-shadow:0 0 0 3px rgba(194,145,80,.1)}
+.env-hint,.param-hint{margin:12px 2px 0;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.7;color:var(--ink-faint)}
+.env-hint{background:rgba(194,145,80,.1);border:1px solid rgba(194,145,80,.22)}
+.env-hint strong{color:var(--forest);font-weight:600}
+.param-hint{display:flex;flex-direction:column;gap:2px;background:rgba(47,74,60,.05);border:1px solid var(--line)}
+.param-hint b{color:var(--ink);font-size:13px;margin-bottom:3px}
+.param-hint span{font-size:12.5px}
 .section-head h2,.panel-title{font-size:20px}
 .panel-title small{font-size:14px}
 .scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}
@@ -452,7 +458,7 @@ body{font-size:16px}
     <span class="virtual-badge">VIRTUAL DEVICE</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎">暂停</button>
+    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎（冻结全部状态，仅在调试时使用；演示请用 Demo Mode 的停止）">暂停引擎</button>
     <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
     <button class="btn btn-ghost" id="btnReset">重置</button>
   </div>
@@ -500,7 +506,7 @@ body{font-size:16px}
 <section class="section" id="environment">
   <div class="section-head">
     <div><div class="eyebrow"><span class="eyebrow-line"></span> 01 / ENVIRONMENT</div><h2>环境模拟控制台</h2></div>
-    <p>选择场景或自定义噪声强度。输入会真正进入模拟麦克风，驱动后续全部算法与执行器。</p>
+    <p>选择场景或自定义噪声强度。输入会真正进入模拟麦克风，驱动后续全部算法与执行器。强度需越过噪声阈值（默认 150）并持续 0.4s 才会触发退让；低于阈值只改变右侧数值，不改变状态。</p>
   </div>
   <div class="panel env-panel">
     <div class="scenario-grid" id="scenarioGrid">
@@ -531,6 +537,7 @@ body{font-size:16px}
       </div>
     </div>
     <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="mic-tag" id="micState">模拟输入</span><span class="env-remaining" id="envRemaining">持续输入</span></div>
+    <div class="env-hint">真实麦克风用的是<strong>电脑/手机自带麦克风</strong>，不需要开发板；浏览器会弹出授权，允许后说话即可看到 RMS 跳动。若已连接 ESP32 串口，串口数据会优先覆盖模拟值。</div>
   </div>
 </section>
 
@@ -583,6 +590,13 @@ body{font-size:16px}
       <div class="param-row"><label>触发保持 (s)</label><input type="number" id="holdInput" value="0.4" min="0" max="5" step="0.1"></div>
       <div class="param-row"><label>滑动窗口</label><input type="number" id="windowInput" value="12" min="2" max="120" step="1"></div>
       <button class="btn btn-primary full" id="btnApplyParams">应用参数</button>
+      <div class="param-hint"><b>这些数值决定「什么算吵」：</b>
+        <span>· α 越小越平滑（0.2 = 抗抖，1 = 即时跟随）</span>
+        <span>· 安静阈 / 噪声阈：低于安静阈开始 3s 确认，高于噪声阈触发退让</span>
+        <span>· 安静确认：噪声消失后要安静多久才恢复，防止频繁开关</span>
+        <span>· 触发保持：超标持续多久才算有效，滤掉瞬时脉冲</span>
+        <span>· 滑动窗口：参与平均的采样点数，越大越稳、越迟钝</span>
+      </div>
       <div class="formula-box">
         <div>FORMULA</div>
         <code>EMA = α · AVG + (1−α) · EMA<sub>prev</sub></code>
@@ -615,8 +629,8 @@ body{font-size:16px}
       <div class="act-row"><span>目标音量</span><b id="audioTarget">62%</b></div>
       <div class="act-row"><span>当前音量</span><b id="audioVolValue">62%</b></div>
       <input type="range" id="audioVolSlider" min="0" max="100" value="62" step="1" aria-label="目标音量">
-      <div class="act-buttons"><button class="btn btn-ghost" id="btnAudioPlay">暂停播放</button><button class="btn btn-ghost" id="btnAudioMute">静音</button></div>
-      <div class="act-note" id="audioNote">虚拟音频状态 · 波形由实时音量驱动，非真实录音</div>
+      <div class="act-buttons"><button class="btn btn-ghost" id="btnAudioPlay">暂停播放</button><button class="btn btn-ghost" id="btnAudioMute">静音</button><button class="btn btn-ghost" id="btnSoundscape">■ 停止声景</button></div>
+      <div class="act-note" id="audioNote">森林声景：风声 + 树叶 + 随机鸟鸣，本地合成（无外部音乐文件）。页面首次点击后自动开始；检测到噪声时自动淡出，恢复安静后淡入；点「停止声景」结束。</div>
     </div>
 
     <div class="panel actuator" id="aromaCard">
@@ -645,13 +659,13 @@ body{font-size:16px}
 <section class="section" id="diagnostics">
   <div class="section-head">
     <div><div class="eyebrow"><span class="eyebrow-line"></span> 04 / DEMO & DIAGNOSTICS</div><h2>路演演示与故障诊断</h2></div>
-    <p>一键运行完整路演脚本，真正调用模拟引擎；故障注入只影响对应模块，其余模块继续工作。</p>
+    <p>一键运行 30 秒完整路演脚本，真正调用模拟引擎：安静 → 说话 → 噪声触发退让 → 安静确认 → 平滑恢复。左侧状态栏、右侧香氛机展示与下方时间线会同步变化。故障注入只影响对应模块，且会在香氛机展示上显示 FAULT 与视觉异常。</p>
   </div>
   <div class="diag-grid">
     <div class="panel demo-panel">
       <div class="panel-title"><span>Demo Mode · 30s</span><small id="demoCountdown">READY</small></div>
       <div class="demo-stage-name" id="demoStage">待机</div>
-      <p class="demo-desc" id="demoDesc">点击「开始路演演示」运行完整 30 秒脚本。演示严格遵循真实算法与 3 秒安静确认逻辑。</p>
+      <p class="demo-desc" id="demoDesc">演示意义：用 30 秒浓缩展示 EmberSigh 的完整决策链——听到噪声时主动退让（声景淡出、香氛切断、灯环转暗红），安静 3 秒后才温柔恢复。点击「开始路演演示」，右侧香氛机展示会同步演出每一步。</p>
       <div class="demo-progress"><i id="demoProgress"></i></div>
       <div class="demo-timeline" id="demoTimeline">
         <div data-step="0"><b>00–06s</b><span>安静卧室</span></div>
@@ -692,7 +706,7 @@ body{font-size:16px}
 
 <!-- 环境声景启动提示（固定浮层，不参与文档流） -->
 <div class="snd-hint show" id="sndHint" role="status" aria-live="polite">
-  <i></i><span>点击任意位置启动环境声景</span>
+  <i></i><span>点击任意位置启动森林声景</span>
 </div>
 
 <script>
@@ -1431,6 +1445,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
   ES.Demo.prototype.start = function () {
     this.resetFn();
+    /* 演示必须真正跑起来：若引擎处于暂停态则自动恢复 */
+    if (this.ctx.paused) { this.ctx.paused = false; }
     this.running = true;
     this.elapsed = 0;
     this.stage = -1;
@@ -1712,8 +1728,16 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     }
     if (btn) btn.addEventListener('click', function () { active ? stop() : start(); });
     paint();
+    /* 强制回到本地模拟：停止麦克风并忽略串口数据，供「恢复安静卧室」使用 */
+    function forceLocal() {
+      stop();
+      serialMode = false;
+      serialRms = 0;
+      paint();
+    }
     return {
       start: start, stop: stop, rawRms: rawRms, scaledRms: scaledRms,
+      forceLocal: forceLocal,
       isActive: function () { return active; },
       isSerial: function () { return serialMode; },
       serialValue: function () { return serialRms; }
@@ -1721,7 +1745,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
   })();
 
   /* ═══════════════════════════════════════════════
-     B. Web Audio 粉红噪音声景
+     B. Web Audio 森林声景（风声 + 树叶 + 鸟鸣，本地合成，无外部音频文件）
      ═══════════════════════════════════════════════ */
   var Soundscape = (function () {
     /* 状态 → 目标增益 / 渐变时长（秒） */
@@ -1737,6 +1761,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     var source = null;
     var ready = false;
     var booting = false;
+    var userStopped = false;   /* 用户主动停止：覆盖状态机的播放意图 */
     var hint = document.getElementById('sndHint');
     var hideTimer = 0;
 
@@ -1782,6 +1807,71 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       return buffer;
     }
 
+    /* -----------------------------------------------------------
+       森林声景：粉红噪声作底层「风」，叠加树叶沙沙，
+       再用振荡器随机调度鸟鸣啁啾，全部本地合成，无 mp3 依赖
+       ----------------------------------------------------------- */
+    var birdTimer = null;
+
+    function makeWind() {
+      var wind = ctx.createBufferSource();
+      wind.buffer = createPinkNoise(ctx, 8);
+      wind.loop = true;
+      var lp = ctx.createBiquadFilter();       /* 低通 → 柔和风声 */
+      lp.type = 'lowpass'; lp.frequency.value = 620; lp.Q.value = 0.4;
+      var g = ctx.createGain(); g.gain.value = 0.55;
+      /* 缓慢起伏的风势 LFO */
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 180;
+      lfo.connect(lfoGain); lfoGain.connect(lp.frequency); lfo.start(0);
+      wind.connect(lp); lp.connect(g); g.connect(highpass);
+      wind.start(0);
+      return wind;
+    }
+
+    function makeLeaves() {
+      var leaves = ctx.createBufferSource();
+      leaves.buffer = createPinkNoise(ctx, 5);
+      leaves.loop = true;
+      var bp = ctx.createBiquadFilter();        /* 带通 → 树叶沙沙 */
+      bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.8;
+      var g = ctx.createGain(); g.gain.value = 0.12;
+      leaves.connect(bp); bp.connect(g); g.connect(highpass);
+      leaves.start(0);
+      return leaves;
+    }
+
+    /* 单声鸟鸣：频率快速上扬再回落的短促啁啾 */
+    function chirp() {
+      if (!ctx || ctx.state === 'closed') return;
+      var t = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      var base = 1600 + Math.random() * 1400;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(base, t);
+      osc.frequency.exponentialRampToValueAtTime(base * 1.5, t + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(base * 0.92, t + 0.16);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+      osc.connect(g); g.connect(highpass);
+      osc.start(t); osc.stop(t + 0.22);
+    }
+
+    function scheduleBirds() {
+      global.clearTimeout(birdTimer);
+      /* 检测噪声退让时不生成鸟鸣，安静/缓冲时随机间隔啼叫 */
+      var delay = 2200 + Math.random() * 5200;
+      birdTimer = global.setTimeout(function () {
+        if (ready && currentState !== 'DISTURBANCE' && !userStopped) {
+          chirp();
+          if (Math.random() > 0.5) global.setTimeout(chirp, 180 + Math.random() * 160);
+        }
+        scheduleBirds();
+      }, delay);
+    }
+
     /* 平滑渐变：从当前值线性推进到目标值 */
     function rampTo(target, seconds) {
       if (!ctx || !master) return;
@@ -1795,8 +1885,22 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     }
 
     function applyState(state) {
+      if (userStopped) { rampTo(0, 0.4); return; }
       var profile = PROFILE[state] || PROFILE.QUIET;
       rampTo(profile.gain, profile.fade);
+    }
+
+    /* 用户主动播放 / 停止：满足「什么时候播、怎么结束」的明确控制 */
+    function setPlaying(on) {
+      userStopped = !on;
+      if (!on) { rampTo(0, 0.5); setHintText('森林声景已停止 · 点击播放可重新开始'); }
+      else {
+        if (!ready) boot();
+        if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume();
+        setHintText('森林声景已启动 · 风声 / 树叶 / 鸟鸣');
+        applyState(currentState);
+      }
+      log('info', 'SOUND', on ? 'Forest soundscape resumed by user' : 'Forest soundscape stopped by user');
     }
 
     function setHintText(text) {
@@ -1808,12 +1912,11 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       if (!hint) return;
       if (!started) { hint.classList.add('show'); return; }
       hint.classList.add('show', 'live');
-      setHintText('环境声景已启动 · 粉红噪音');
+      setHintText('森林声景已启动 · 风声 / 树叶 / 鸟鸣');
       global.clearTimeout(hideTimer);
       hideTimer = global.setTimeout(function () {
         hint.classList.remove('show');
-        global.setTimeout(function () { hint.style.display = 'none'; }, 520);
-      }, 2600);
+      }, 3200);
     }
 
     /* 首次用户手势内初始化 AudioContext（浏览器自动播放策略要求） */
@@ -1837,22 +1940,19 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
         highpass.frequency.value = 22;
         highpass.Q.value = 0.7;
 
-        source = ctx.createBufferSource();
-        source.buffer = createPinkNoise(ctx, 6);
-        source.loop = true;                    /* 6 秒无缝循环，无需任何 mp3 */
-
-        source.connect(highpass);
+        makeWind();                            /* 底层风声 */
+        makeLeaves();                          /* 树叶沙沙 */
         highpass.connect(master);
         master.connect(ctx.destination);
-        source.start(0);
 
         if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
 
         ready = true;
         booting = false;
 
-        log('ok', 'SOUND', '环境声景已启动 · Web Audio 实时合成粉红噪音（6.0s 无缝循环）');
+        log('ok', 'SOUND', '森林声景已启动 · Web Audio 本地合成风声 + 树叶 + 随机鸟鸣（无外部音频）');
         applyState(currentState);
+        scheduleBirds();
         paintHint(true);
       } catch (err) {
         ready = false;
@@ -1880,6 +1980,8 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       start: boot,
       applyState: applyState,
       rampTo: rampTo,
+      setPlaying: setPlaying,
+      isPlaying: function () { return ready && !userStopped; },
       createPinkNoise: createPinkNoise,
       isReady: function () { return ready; },
       context: function () { return ctx; },
@@ -1999,6 +2101,12 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       $('btnDemo').textContent = d.running ? '■ 停止演示' : '▶ Demo Mode';
       $('btnDemo').classList.toggle('running', d.running);
       $('btnDemoStart').textContent = d.running ? '停止演示' : '开始路演演示';
+      /* 演示启动时自动解除引擎暂停，避免 UI 显示"演示中"但状态冻结 */
+      if (d.running && ctx.paused) {
+        ctx.paused = false;
+        var pb = $('btnPause');
+        if (pb) pb.textContent = '暂停';
+      }
     });
     ES.bus.on('demo:stopped', function () {
       var steps = document.querySelectorAll('#demoTimeline div');
@@ -2024,7 +2132,14 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       stopDemo();
       ctx.mic.setScenario('custom', { base: +$('rmsSlider').value, duration: +$('durationSlider').value });
     });
-    $('btnStopEnv').addEventListener('click', function () { stopDemo(); ctx.mic.setScenario('bedroom'); });
+    $('btnStopEnv').addEventListener('click', function () {
+      stopDemo();
+      /* 恢复安静卧室：先退出真实麦克风/串口覆盖，否则模拟场景会被真值立刻盖掉 */
+      var io = global.EmberSighIO && global.EmberSighIO.mic;
+      if (io && typeof io.forceLocal === 'function') io.forceLocal();
+      ctx.mic.setScenario('bedroom');
+      ES.logger.ok('ENV', 'Restored quiet bedroom · real mic / serial override cleared');
+    });
 
     $('btnApplyParams').addEventListener('click', function () {
       var cfg = ctx.config;
@@ -2056,6 +2171,12 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
       ctx.audio.toggleMute();
       this.textContent = ctx.audio.muted ? '取消静音' : '静音';
     });
+    $('btnSoundscape').addEventListener('click', function () {
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      var on = io ? !io.isPlaying() : false;
+      if (io) io.setPlaying(on);
+      this.textContent = on ? '■ 停止声景' : '▶ 播放声景';
+    });
     $('ledBrightness').addEventListener('input', function () {
       ctx.coordinator.setUserBrightness(+this.value);
       $('ledBrightnessValue').textContent = this.value + '%';
@@ -2083,7 +2204,7 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
     $('btnReset').addEventListener('click', function () { if (ctx.demo.running) ctx.demo.stop(false); ctx.reset(); });
     $('btnPause').addEventListener('click', function () {
       ctx.paused = !ctx.paused;
-      this.textContent = ctx.paused ? '继续' : '暂停';
+      this.textContent = ctx.paused ? '继续引擎' : '暂停引擎';
       ES.logger.info('SYS', ctx.paused ? 'Simulation engine paused' : 'Simulation engine resumed');
     });
 
@@ -2219,6 +2340,19 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
           type: 'embersigh:device-mirror',
           state: state.toLowerCase(),
           mist: ctx.aroma.on && !ES.faults.aroma,
+          /* 故障注入：右侧展示据此显示 FAULT 与视觉异常 */
+          faults: { mic: !!ES.faults.mic, audio: !!ES.faults.audio, aroma: !!ES.faults.aroma,
+                    light: !!ES.faults.light, battery: !!ES.faults.battery, sensor: !!ES.faults.sensor },
+          /* 灯环亮度 / 呼吸：跟随左侧滑块实时变化 */
+          led: { brightness: (ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0,
+                 mode: ctx.light.mode },
+          /* 信号强度：右侧声波强度条随任意 RMS 输入实时变化 */
+          signal: { raw: snap.raw, ema: snap.ema,
+                    quietTh: cfg.quietThreshold, noiseTh: cfg.noiseThreshold,
+                    scenario: ctx.mic.name(), remaining: ctx.mic.remaining() },
+          /* 演示阶段：右侧卡片同步显示 DEMO 进度 */
+          demo: ctx.demo.info(),
+          paused: !!ctx.paused,
           tft: {
             state: state,
             time: timeStr,

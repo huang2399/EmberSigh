@@ -368,6 +368,12 @@ body{font-size:16px}
 .hs-pill.on[data-hs="calm"]{color:var(--forest);border-color:rgba(47,74,60,.42);background:rgba(126,154,131,.2);box-shadow:0 0 0 3px rgba(126,154,131,.09)}
 .hs-pill.on[data-hs="noise"]{color:var(--red);border-color:rgba(142,59,50,.42);background:rgba(142,59,50,.14);box-shadow:0 0 0 3px rgba(142,59,50,.08)}
 .hs-pill.on[data-hs="calming"]{color:var(--amber);border-color:rgba(194,145,80,.5);background:rgba(194,145,80,.18);box-shadow:0 0 0 3px rgba(194,145,80,.1)}
+.env-hint,.param-hint{margin:12px 2px 0;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.7;color:var(--ink-faint)}
+.env-hint{background:rgba(194,145,80,.1);border:1px solid rgba(194,145,80,.22)}
+.env-hint strong{color:var(--forest);font-weight:600}
+.param-hint{display:flex;flex-direction:column;gap:2px;background:rgba(47,74,60,.05);border:1px solid var(--line)}
+.param-hint b{color:var(--ink);font-size:13px;margin-bottom:3px}
+.param-hint span{font-size:12.5px}
 .section-head h2,.panel-title{font-size:20px}
 .panel-title small{font-size:14px}
 .scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}

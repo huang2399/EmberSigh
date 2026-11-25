@@ -32,7 +32,7 @@
     <span class="virtual-badge">VIRTUAL DEVICE</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎">暂停</button>
+    <button class="btn btn-ghost" id="btnPause" title="暂停 / 继续模拟引擎（冻结全部状态，仅在调试时使用；演示请用 Demo Mode 的停止）">暂停引擎</button>
     <button class="btn btn-primary" id="btnDemo">▶ Demo Mode</button>
     <button class="btn btn-ghost" id="btnReset">重置</button>
   </div>
@@ -80,7 +80,7 @@
 <section class="section" id="environment">
   <div class="section-head">
     <div><div class="eyebrow"><span class="eyebrow-line"></span> 01 / ENVIRONMENT</div><h2>环境模拟控制台</h2></div>
-    <p>选择场景或自定义噪声强度。输入会真正进入模拟麦克风，驱动后续全部算法与执行器。</p>
+    <p>选择场景或自定义噪声强度。输入会真正进入模拟麦克风，驱动后续全部算法与执行器。强度需越过噪声阈值（默认 150）并持续 0.4s 才会触发退让；低于阈值只改变右侧数值，不改变状态。</p>
   </div>
   <div class="panel env-panel">
     <div class="scenario-grid" id="scenarioGrid">
@@ -111,6 +111,7 @@
       </div>
     </div>
     <div class="env-status"><span class="env-live"><i></i> ACTIVE INPUT</span><b id="envActive">安静卧室</b><span class="mic-tag" id="micState">模拟输入</span><span class="env-remaining" id="envRemaining">持续输入</span></div>
+    <div class="env-hint">真实麦克风用的是<strong>电脑/手机自带麦克风</strong>，不需要开发板；浏览器会弹出授权，允许后说话即可看到 RMS 跳动。若已连接 ESP32 串口，串口数据会优先覆盖模拟值。</div>
   </div>
 </section>
 
@@ -163,6 +164,13 @@
       <div class="param-row"><label>触发保持 (s)</label><input type="number" id="holdInput" value="0.4" min="0" max="5" step="0.1"></div>
       <div class="param-row"><label>滑动窗口</label><input type="number" id="windowInput" value="12" min="2" max="120" step="1"></div>
       <button class="btn btn-primary full" id="btnApplyParams">应用参数</button>
+      <div class="param-hint"><b>这些数值决定「什么算吵」：</b>
+        <span>· α 越小越平滑（0.2 = 抗抖，1 = 即时跟随）</span>
+        <span>· 安静阈 / 噪声阈：低于安静阈开始 3s 确认，高于噪声阈触发退让</span>
+        <span>· 安静确认：噪声消失后要安静多久才恢复，防止频繁开关</span>
+        <span>· 触发保持：超标持续多久才算有效，滤掉瞬时脉冲</span>
+        <span>· 滑动窗口：参与平均的采样点数，越大越稳、越迟钝</span>
+      </div>
       <div class="formula-box">
         <div>FORMULA</div>
         <code>EMA = α · AVG + (1−α) · EMA<sub>prev</sub></code>
@@ -195,8 +203,8 @@
       <div class="act-row"><span>目标音量</span><b id="audioTarget">62%</b></div>
       <div class="act-row"><span>当前音量</span><b id="audioVolValue">62%</b></div>
       <input type="range" id="audioVolSlider" min="0" max="100" value="62" step="1" aria-label="目标音量">
-      <div class="act-buttons"><button class="btn btn-ghost" id="btnAudioPlay">暂停播放</button><button class="btn btn-ghost" id="btnAudioMute">静音</button></div>
-      <div class="act-note" id="audioNote">虚拟音频状态 · 波形由实时音量驱动，非真实录音</div>
+      <div class="act-buttons"><button class="btn btn-ghost" id="btnAudioPlay">暂停播放</button><button class="btn btn-ghost" id="btnAudioMute">静音</button><button class="btn btn-ghost" id="btnSoundscape">■ 停止声景</button></div>
+      <div class="act-note" id="audioNote">森林声景：风声 + 树叶 + 随机鸟鸣，本地合成（无外部音乐文件）。页面首次点击后自动开始；检测到噪声时自动淡出，恢复安静后淡入；点「停止声景」结束。</div>
     </div>
 
     <div class="panel actuator" id="aromaCard">
@@ -225,13 +233,13 @@
 <section class="section" id="diagnostics">
   <div class="section-head">
     <div><div class="eyebrow"><span class="eyebrow-line"></span> 04 / DEMO & DIAGNOSTICS</div><h2>路演演示与故障诊断</h2></div>
-    <p>一键运行完整路演脚本，真正调用模拟引擎；故障注入只影响对应模块，其余模块继续工作。</p>
+    <p>一键运行 30 秒完整路演脚本，真正调用模拟引擎：安静 → 说话 → 噪声触发退让 → 安静确认 → 平滑恢复。左侧状态栏、右侧香氛机展示与下方时间线会同步变化。故障注入只影响对应模块，且会在香氛机展示上显示 FAULT 与视觉异常。</p>
   </div>
   <div class="diag-grid">
     <div class="panel demo-panel">
       <div class="panel-title"><span>Demo Mode · 30s</span><small id="demoCountdown">READY</small></div>
       <div class="demo-stage-name" id="demoStage">待机</div>
-      <p class="demo-desc" id="demoDesc">点击「开始路演演示」运行完整 30 秒脚本。演示严格遵循真实算法与 3 秒安静确认逻辑。</p>
+      <p class="demo-desc" id="demoDesc">演示意义：用 30 秒浓缩展示 EmberSigh 的完整决策链——听到噪声时主动退让（声景淡出、香氛切断、灯环转暗红），安静 3 秒后才温柔恢复。点击「开始路演演示」，右侧香氛机展示会同步演出每一步。</p>
       <div class="demo-progress"><i id="demoProgress"></i></div>
       <div class="demo-timeline" id="demoTimeline">
         <div data-step="0"><b>00–06s</b><span>安静卧室</span></div>
@@ -272,7 +280,7 @@
 
 <!-- 环境声景启动提示（固定浮层，不参与文档流） -->
 <div class="snd-hint show" id="sndHint" role="status" aria-live="polite">
-  <i></i><span>点击任意位置启动环境声景</span>
+  <i></i><span>点击任意位置启动森林声景</span>
 </div>
 
 <script>

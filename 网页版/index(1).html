@@ -1188,6 +1188,17 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 @keyframes ucShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 .uc-device-cap{font-family:var(--mono);font-size:11px;line-height:1.6;letter-spacing:.05em;
   color:var(--ink-faint);margin-top:11px;}
+.uc-device-sub{color:var(--gold);font-size:10px;}
+/* 右侧展示：故障徽标 / 信号强度条 */
+.mir-fault-badge{position:absolute;left:8px;right:8px;top:8px;z-index:5;text-align:center;
+  padding:6px 8px;border-radius:8px;background:rgba(142,59,50,.94);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;
+  box-shadow:0 6px 18px -8px rgba(100,30,24,.7);}
+#ucDevice[data-fault]:not([data-fault=""]) .uc-device-mirror .device-img{filter:grayscale(.55) drop-shadow(0 40px 46px rgba(50,55,45,.2)) saturate(.7);}
+.mir-signal{display:flex;align-items:center;gap:8px;margin-top:9px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.mir-signal-track{flex:1;height:5px;border-radius:5px;background:rgba(140,116,82,.16);overflow:hidden;}
+.mir-signal-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#7fb894,#e2c184,#c0705f);transition:width .18s linear;}
+.mir-signal-th{flex:none;color:var(--gold);}
 /* ── 右侧展示 = 左侧数字孪生 product-stage 的 1:1 镜像 ──
    状态由 iframe 逐帧 postMessage 推送，缩放系数由 JS 按容器宽度设置 */
 .uc-device-mirror{display:none;position:absolute;inset:0;width:100%;height:100%;overflow:hidden;
@@ -1833,7 +1844,9 @@ body{font-size:19px}
               </div>
             </div>
             <span class="uc-device-badge" id="ucDeviceBadge">QUIET</span>
+            <div class="mir-fault-badge" id="mirFaultBadge" style="display:none"></div>
           </div>
+          <div class="mir-signal"><span id="mirSignalVal">RMS 42</span><span class="mir-signal-track"><i id="mirSignalBar" style="width:14%"></i></span><span class="mir-signal-th" id="mirSignalTh">噪阈 150</span></div>
           <div class="uc-device-cap" id="ucDeviceCap">LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动</div>
         </div>
         <div class="hal-dock glass">
@@ -2627,12 +2640,61 @@ window.applyDeviceMirror = function(d){
   }
   var mist = $('mirMist');
   if(mist) mist.classList.toggle('on', !!d.mist);
+
+  /* 故障注入：任一模块失效 → 展示卡叠加 FAULT 徽标与视觉异常 */
+  var f = d.faults || {};
+  var faultList = [];
+  if(f.mic) faultList.push('MIC');
+  if(f.audio) faultList.push('AUDIO');
+  if(f.aroma) faultList.push('AROMA');
+  if(f.light) faultList.push('LED');
+  if(f.battery) faultList.push('BATT');
+  if(f.sensor) faultList.push('SENSOR');
+  dev.dataset.fault = faultList.length ? faultList.join('/') : '';
+  var fbadge = $('mirFaultBadge');
+  if(fbadge){
+    fbadge.textContent = faultList.length ? ('⚠ FAULT · ' + faultList.join(' + ')) : '';
+    fbadge.style.display = faultList.length ? 'block' : 'none';
+  }
+
+  /* 灯环亮度：跟随左侧滑块，呼吸效果由左侧逐帧亮度驱动 */
+  var ring = mirror.querySelector('.light-ring');
+  if(ring && d.led){
+    var b = Math.max(0, Math.min(1, +d.led.brightness || 0));
+    ring.style.opacity = String(0.12 + b * 0.88);
+    ring.style.filter = 'blur(' + (6 + b * 8).toFixed(1) + 'px)';
+    if(f.light){ ring.style.opacity = '0.06'; }
+  }
+  var haloEl = mirror.querySelector('.stage-halo');
+  if(haloEl && d.led){
+    haloEl.style.opacity = String(0.25 + Math.max(0,Math.min(1,+d.led.brightness||0)) * 0.75);
+  }
+
+  /* 信号强度条：任意 RMS 输入（含自定义噪声/麦克风）都会让它变化 */
+  var sig = d.signal || {};
+  if(typeof sig.raw === 'number'){
+    var sigBar = $('mirSignalBar'), sigVal = $('mirSignalVal');
+    var pct = Math.max(1, Math.min(100, sig.raw / 300 * 100));
+    if(sigBar) sigBar.style.width = pct.toFixed(1) + '%';
+    if(sigVal) sigVal.textContent = 'RMS ' + Math.round(sig.raw);
+    var sigTh = $('mirSignalTh');
+    if(sigTh && typeof sig.noiseTh === 'number') sigTh.textContent = '噪阈 ' + Math.round(sig.noiseTh);
+    dev.dataset.scenario = sig.scenario || '';
+  }
+
   var badge = $('ucDeviceBadge');
-  if(badge) badge.textContent = s === 'disturbance' ? 'NOISE' : (s === 'transition' ? 'CALMING' : 'QUIET');
+  if(badge) badge.textContent = faultList.length ? 'FAULT' : (s === 'disturbance' ? 'NOISE' : (s === 'transition' ? 'CALMING' : 'QUIET'));
   var cap = $('ucDeviceCap');
-  if(cap) cap.textContent = 'LIVE VIRTUAL RENDER · ' +
-    (s === 'disturbance' ? 'NOISE / YIELDING' : (s === 'transition' ? 'CALMING / CONFIRMING' : 'QUIET / SLEEP')) +
-    ' · 与左侧数字孪生实时同步';
+  var demo = d.demo || {};
+  if(cap){
+    var base = faultList.length ? ('FAULT · ' + faultList.join(' + ') + ' · 模块失效已同步')
+      : (s === 'disturbance' ? 'NOISE / YIELDING' : (s === 'transition' ? 'CALMING / CONFIRMING' : 'QUIET / SLEEP'));
+    var emaTxt = (typeof sig.ema === 'number') ?
+      ('EMA ' + Math.round(sig.ema) + ' / 阈 ' + Math.round(sig.quietTh||50) + '·' + Math.round(sig.noiseTh||150)) : '';
+    var line2 = demo.running ? ('DEMO ' + ((demo.stage>=0?demo.stage:0)+1) + '/5 · ' + (demo.title||'演示中')) :
+      ((sig.scenario ? sig.scenario + ' · ' : '') + emaTxt + ' · 与左侧数字孪生实时同步');
+    cap.innerHTML = 'LIVE VIRTUAL RENDER · ' + base + '<br><span class="uc-device-sub">' + line2 + '</span>';
+  }
   window.fitDeviceMirror();
 };
 window.addEventListener('resize', function(){ if(window.fitDeviceMirror) window.fitDeviceMirror(); });

@@ -98,6 +98,12 @@
       $('btnDemo').textContent = d.running ? '■ 停止演示' : '▶ Demo Mode';
       $('btnDemo').classList.toggle('running', d.running);
       $('btnDemoStart').textContent = d.running ? '停止演示' : '开始路演演示';
+      /* 演示启动时自动解除引擎暂停，避免 UI 显示"演示中"但状态冻结 */
+      if (d.running && ctx.paused) {
+        ctx.paused = false;
+        var pb = $('btnPause');
+        if (pb) pb.textContent = '暂停';
+      }
     });
     ES.bus.on('demo:stopped', function () {
       var steps = document.querySelectorAll('#demoTimeline div');
@@ -123,7 +129,14 @@
       stopDemo();
       ctx.mic.setScenario('custom', { base: +$('rmsSlider').value, duration: +$('durationSlider').value });
     });
-    $('btnStopEnv').addEventListener('click', function () { stopDemo(); ctx.mic.setScenario('bedroom'); });
+    $('btnStopEnv').addEventListener('click', function () {
+      stopDemo();
+      /* 恢复安静卧室：先退出真实麦克风/串口覆盖，否则模拟场景会被真值立刻盖掉 */
+      var io = global.EmberSighIO && global.EmberSighIO.mic;
+      if (io && typeof io.forceLocal === 'function') io.forceLocal();
+      ctx.mic.setScenario('bedroom');
+      ES.logger.ok('ENV', 'Restored quiet bedroom · real mic / serial override cleared');
+    });
 
     $('btnApplyParams').addEventListener('click', function () {
       var cfg = ctx.config;
@@ -155,6 +168,12 @@
       ctx.audio.toggleMute();
       this.textContent = ctx.audio.muted ? '取消静音' : '静音';
     });
+    $('btnSoundscape').addEventListener('click', function () {
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      var on = io ? !io.isPlaying() : false;
+      if (io) io.setPlaying(on);
+      this.textContent = on ? '■ 停止声景' : '▶ 播放声景';
+    });
     $('ledBrightness').addEventListener('input', function () {
       ctx.coordinator.setUserBrightness(+this.value);
       $('ledBrightnessValue').textContent = this.value + '%';
@@ -182,7 +201,7 @@
     $('btnReset').addEventListener('click', function () { if (ctx.demo.running) ctx.demo.stop(false); ctx.reset(); });
     $('btnPause').addEventListener('click', function () {
       ctx.paused = !ctx.paused;
-      this.textContent = ctx.paused ? '继续' : '暂停';
+      this.textContent = ctx.paused ? '继续引擎' : '暂停引擎';
       ES.logger.info('SYS', ctx.paused ? 'Simulation engine paused' : 'Simulation engine resumed');
     });
 
@@ -318,6 +337,19 @@
           type: 'embersigh:device-mirror',
           state: state.toLowerCase(),
           mist: ctx.aroma.on && !ES.faults.aroma,
+          /* 故障注入：右侧展示据此显示 FAULT 与视觉异常 */
+          faults: { mic: !!ES.faults.mic, audio: !!ES.faults.audio, aroma: !!ES.faults.aroma,
+                    light: !!ES.faults.light, battery: !!ES.faults.battery, sensor: !!ES.faults.sensor },
+          /* 灯环亮度 / 呼吸：跟随左侧滑块实时变化 */
+          led: { brightness: (ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0,
+                 mode: ctx.light.mode },
+          /* 信号强度：右侧声波强度条随任意 RMS 输入实时变化 */
+          signal: { raw: snap.raw, ema: snap.ema,
+                    quietTh: cfg.quietThreshold, noiseTh: cfg.noiseThreshold,
+                    scenario: ctx.mic.name(), remaining: ctx.mic.remaining() },
+          /* 演示阶段：右侧卡片同步显示 DEMO 进度 */
+          demo: ctx.demo.info(),
+          paused: !!ctx.paused,
           tft: {
             state: state,
             time: timeStr,

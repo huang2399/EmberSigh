@@ -217,8 +217,16 @@
     }
     if (btn) btn.addEventListener('click', function () { active ? stop() : start(); });
     paint();
+    /* 强制回到本地模拟：停止麦克风并忽略串口数据，供「恢复安静卧室」使用 */
+    function forceLocal() {
+      stop();
+      serialMode = false;
+      serialRms = 0;
+      paint();
+    }
     return {
       start: start, stop: stop, rawRms: rawRms, scaledRms: scaledRms,
+      forceLocal: forceLocal,
       isActive: function () { return active; },
       isSerial: function () { return serialMode; },
       serialValue: function () { return serialRms; }
@@ -226,7 +234,7 @@
   })();
 
   /* ═══════════════════════════════════════════════
-     B. Web Audio 粉红噪音声景
+     B. Web Audio 森林声景（风声 + 树叶 + 鸟鸣，本地合成，无外部音频文件）
      ═══════════════════════════════════════════════ */
   var Soundscape = (function () {
     /* 状态 → 目标增益 / 渐变时长（秒） */
@@ -242,6 +250,7 @@
     var source = null;
     var ready = false;
     var booting = false;
+    var userStopped = false;   /* 用户主动停止：覆盖状态机的播放意图 */
     var hint = document.getElementById('sndHint');
     var hideTimer = 0;
 
@@ -287,6 +296,71 @@
       return buffer;
     }
 
+    /* -----------------------------------------------------------
+       森林声景：粉红噪声作底层「风」，叠加树叶沙沙，
+       再用振荡器随机调度鸟鸣啁啾，全部本地合成，无 mp3 依赖
+       ----------------------------------------------------------- */
+    var birdTimer = null;
+
+    function makeWind() {
+      var wind = ctx.createBufferSource();
+      wind.buffer = createPinkNoise(ctx, 8);
+      wind.loop = true;
+      var lp = ctx.createBiquadFilter();       /* 低通 → 柔和风声 */
+      lp.type = 'lowpass'; lp.frequency.value = 620; lp.Q.value = 0.4;
+      var g = ctx.createGain(); g.gain.value = 0.55;
+      /* 缓慢起伏的风势 LFO */
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
+      var lfoGain = ctx.createGain(); lfoGain.gain.value = 180;
+      lfo.connect(lfoGain); lfoGain.connect(lp.frequency); lfo.start(0);
+      wind.connect(lp); lp.connect(g); g.connect(highpass);
+      wind.start(0);
+      return wind;
+    }
+
+    function makeLeaves() {
+      var leaves = ctx.createBufferSource();
+      leaves.buffer = createPinkNoise(ctx, 5);
+      leaves.loop = true;
+      var bp = ctx.createBiquadFilter();        /* 带通 → 树叶沙沙 */
+      bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.8;
+      var g = ctx.createGain(); g.gain.value = 0.12;
+      leaves.connect(bp); bp.connect(g); g.connect(highpass);
+      leaves.start(0);
+      return leaves;
+    }
+
+    /* 单声鸟鸣：频率快速上扬再回落的短促啁啾 */
+    function chirp() {
+      if (!ctx || ctx.state === 'closed') return;
+      var t = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      var base = 1600 + Math.random() * 1400;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(base, t);
+      osc.frequency.exponentialRampToValueAtTime(base * 1.5, t + 0.06);
+      osc.frequency.exponentialRampToValueAtTime(base * 0.92, t + 0.16);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+      osc.connect(g); g.connect(highpass);
+      osc.start(t); osc.stop(t + 0.22);
+    }
+
+    function scheduleBirds() {
+      global.clearTimeout(birdTimer);
+      /* 检测噪声退让时不生成鸟鸣，安静/缓冲时随机间隔啼叫 */
+      var delay = 2200 + Math.random() * 5200;
+      birdTimer = global.setTimeout(function () {
+        if (ready && currentState !== 'DISTURBANCE' && !userStopped) {
+          chirp();
+          if (Math.random() > 0.5) global.setTimeout(chirp, 180 + Math.random() * 160);
+        }
+        scheduleBirds();
+      }, delay);
+    }
+
     /* 平滑渐变：从当前值线性推进到目标值 */
     function rampTo(target, seconds) {
       if (!ctx || !master) return;
@@ -300,8 +374,22 @@
     }
 
     function applyState(state) {
+      if (userStopped) { rampTo(0, 0.4); return; }
       var profile = PROFILE[state] || PROFILE.QUIET;
       rampTo(profile.gain, profile.fade);
+    }
+
+    /* 用户主动播放 / 停止：满足「什么时候播、怎么结束」的明确控制 */
+    function setPlaying(on) {
+      userStopped = !on;
+      if (!on) { rampTo(0, 0.5); setHintText('森林声景已停止 · 点击播放可重新开始'); }
+      else {
+        if (!ready) boot();
+        if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume();
+        setHintText('森林声景已启动 · 风声 / 树叶 / 鸟鸣');
+        applyState(currentState);
+      }
+      log('info', 'SOUND', on ? 'Forest soundscape resumed by user' : 'Forest soundscape stopped by user');
     }
 
     function setHintText(text) {
@@ -313,12 +401,11 @@
       if (!hint) return;
       if (!started) { hint.classList.add('show'); return; }
       hint.classList.add('show', 'live');
-      setHintText('环境声景已启动 · 粉红噪音');
+      setHintText('森林声景已启动 · 风声 / 树叶 / 鸟鸣');
       global.clearTimeout(hideTimer);
       hideTimer = global.setTimeout(function () {
         hint.classList.remove('show');
-        global.setTimeout(function () { hint.style.display = 'none'; }, 520);
-      }, 2600);
+      }, 3200);
     }
 
     /* 首次用户手势内初始化 AudioContext（浏览器自动播放策略要求） */
@@ -342,22 +429,19 @@
         highpass.frequency.value = 22;
         highpass.Q.value = 0.7;
 
-        source = ctx.createBufferSource();
-        source.buffer = createPinkNoise(ctx, 6);
-        source.loop = true;                    /* 6 秒无缝循环，无需任何 mp3 */
-
-        source.connect(highpass);
+        makeWind();                            /* 底层风声 */
+        makeLeaves();                          /* 树叶沙沙 */
         highpass.connect(master);
         master.connect(ctx.destination);
-        source.start(0);
 
         if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume();
 
         ready = true;
         booting = false;
 
-        log('ok', 'SOUND', '环境声景已启动 · Web Audio 实时合成粉红噪音（6.0s 无缝循环）');
+        log('ok', 'SOUND', '森林声景已启动 · Web Audio 本地合成风声 + 树叶 + 随机鸟鸣（无外部音频）');
         applyState(currentState);
+        scheduleBirds();
         paintHint(true);
       } catch (err) {
         ready = false;
@@ -385,6 +469,8 @@
       start: boot,
       applyState: applyState,
       rampTo: rampTo,
+      setPlaying: setPlaying,
+      isPlaying: function () { return ready && !userStopped; },
       createPinkNoise: createPinkNoise,
       isReady: function () { return ready; },
       context: function () { return ctx; },
