@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<!-- build: simulator-v2 · 森林声景 / 故障同步 / 亮度同步 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EmberSigh 听眠 · AI 原生睡眠环境调节系统</title>
@@ -139,6 +140,9 @@ body{
   box-shadow:0 10px 24px -14px rgba(176,141,87,.7);transform:translateY(-1px);
 }
 .gh-link:hover svg{transform:translateY(-1px);}
+/* GitHub 入口优先可见：导航变窄时先收状态/时钟，不收仓库按钮 */
+@media(max-width:1280px){.nav-right .status{display:none;}}
+@media(max-width:1080px){.nav-right .clock{display:none;}}
 
 /* ═══════════ 页面容器（可滚动） ═══════════ */
 .page{position:relative;z-index:2;padding:calc(var(--nav-h) + 26px) 42px 0;}
@@ -605,12 +609,12 @@ footer{position:relative;z-index:2;margin-top:50px;
 .dash-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;
   border-bottom:1px solid var(--line);margin-bottom:14px;flex:none;}
 .dash-head .l{display:flex;align-items:baseline;gap:14px;}
-.dash-head h2{font-size:14px;font-weight:600;letter-spacing:.2em;color:var(--ink);}
-.dash-head small{font-family:var(--display);font-style:italic;font-size:11px;
+.dash-head h2{font-size:18px;font-weight:600;letter-spacing:.16em;color:var(--ink);}
+.dash-head small{font-family:var(--display);font-style:italic;font-size:13px;
   color:var(--ink-faint);letter-spacing:.1em;}
 .dash-grid{display:grid;grid-template-columns:228px 1fr 258px;gap:24px;min-height:640px;}
 .col{display:flex;flex-direction:column;min-height:0;gap:11px;}
-.col-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--ink-faint);text-transform:uppercase;}
+.col-label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;}
 
 .vial{
   display:flex;align-items:center;gap:13px;padding:7px 11px;border-radius:16px;cursor:pointer;
@@ -620,16 +624,16 @@ footer{position:relative;z-index:2;margin-top:50px;
   box-shadow:0 12px 24px -20px rgba(96,76,48,.5);}
 .vial:active{transform:translateX(2px) scale(.985);}
 .vial svg{height:62px;width:auto;flex:none;filter:drop-shadow(0 7px 9px rgba(96,76,48,.16));}
-.vial .vn{font-size:13px;font-weight:600;letter-spacing:.12em;display:flex;align-items:baseline;gap:7px;color:var(--ink);}
-.vial .vn i{font-style:italic;font-family:var(--display);font-size:11px;font-weight:500;color:var(--ink-faint);}
-.vial .vm{font-size:10px;color:var(--ink-faint);margin-top:4px;letter-spacing:.08em;}
-.vial .vm b{color:var(--ink-soft);font-family:var(--display);font-size:13px;font-weight:600;}
+.vial .vn{font-size:16px;font-weight:600;letter-spacing:.08em;display:flex;align-items:baseline;gap:7px;color:var(--ink);}
+.vial .vn i{font-style:italic;font-family:var(--display);font-size:13px;font-weight:500;color:var(--ink-faint);}
+.vial .vm{font-size:12.5px;color:var(--ink-faint);margin-top:4px;letter-spacing:.05em;}
+.vial .vm b{color:var(--ink-soft);font-family:var(--display);font-size:16px;font-weight:600;}
 
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .preset{
   cursor:pointer;padding:8px 10px;border-radius:99px;text-align:left;font-family:var(--serif);
   background:rgba(255,255,255,.45);border:1px solid var(--line);
-  color:var(--ink-soft);font-size:10.5px;letter-spacing:.08em;
+  color:var(--ink-soft);font-size:13px;letter-spacing:.05em;
   transition:all .18s ease;display:flex;align-items:center;gap:7px;
 }
 .preset:hover{background:#fffdf8;border-color:rgba(176,141,87,.5);color:var(--ink);transform:translateY(-2px);}
@@ -637,7 +641,7 @@ footer{position:relative;z-index:2;margin-top:50px;
 .preset.on{border-color:rgba(176,141,87,.65);background:rgba(255,253,246,.95);color:var(--ink);font-weight:600;}
 .btn-noise{
   margin-top:auto;padding:11px;border-radius:99px;cursor:pointer;font-family:var(--serif);
-  font-size:11px;font-weight:600;letter-spacing:.16em;
+  font-size:14px;font-weight:600;letter-spacing:.12em;
   border:1px solid rgba(176,68,47,.3);color:var(--danger);
   background:rgba(176,68,47,.04);transition:all .35s;
 }
@@ -645,9 +649,9 @@ footer{position:relative;z-index:2;margin-top:50px;
 .btn-noise:disabled{opacity:.45;pointer-events:none;}
 
 .bottle-col{align-items:center;justify-content:center;gap:4px;}
-.bottle-name{font-family:var(--display);font-style:italic;font-size:23px;font-weight:600;
-  letter-spacing:.06em;color:var(--ink);text-align:center;}
-.bottle-sub{font-size:9.5px;letter-spacing:.16em;color:var(--ink-faint);text-align:center;margin-bottom:2px;}
+.bottle-name{font-family:var(--display);font-style:italic;font-size:28px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);text-align:center;}
+.bottle-sub{font-size:12px;letter-spacing:.1em;color:var(--ink-faint);text-align:center;margin-bottom:2px;}
 .bwrap{position:relative;display:grid;place-items:center;min-height:0;}
 .bwrap svg{height:min(41vh,340px);width:auto;filter:drop-shadow(0 28px 30px rgba(96,76,48,.22));}
 .bwrap.shake{animation:bottleShake .4s ease-in-out infinite;}
@@ -665,7 +669,7 @@ footer{position:relative;z-index:2;margin-top:50px;
 .tl{width:100%;max-width:370px;padding:0 6px;}
 .tl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;}
 .tl-time{font-family:var(--display);font-size:26px;font-weight:600;color:var(--ink);letter-spacing:.03em;line-height:1;}
-.tl-phase{font-size:9.5px;letter-spacing:.14em;color:var(--gold);}
+.tl-phase{font-size:12px;letter-spacing:.1em;color:var(--gold);}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;outline:none;cursor:pointer;
   background:linear-gradient(90deg,#ddd3be,#c9bda2);
@@ -678,24 +682,24 @@ input[type=range]::-webkit-slider-thumb{
 input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#c9a86f;border:2px solid #fff;
   box-shadow:0 3px 10px rgba(120,95,60,.4);}
 .tl-ticks{display:flex;justify-content:space-between;margin-top:7px;
-  font-family:var(--mono);font-size:8px;color:var(--ink-faint);letter-spacing:.06em;}
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.04em;}
 
 .ratio-row{margin-bottom:9px;}
-.ratio-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.08em;}
-.ratio-top b{font-family:var(--display);font-weight:600;font-size:13px;}
-.rbar{height:4px;border-radius:9px;background:rgba(140,116,82,.14);overflow:hidden;}
+.ratio-top{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.05em;}
+.ratio-top b{font-family:var(--display);font-weight:600;font-size:16px;}
+.rbar{height:5px;border-radius:9px;background:rgba(140,116,82,.14);overflow:hidden;}
 .rbar i{display:block;height:100%;border-radius:9px;transition:width .8s cubic-bezier(.22,1,.36,1);}
 .pred-item{margin-bottom:8px;}
-.pred-top{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-bottom:4px;letter-spacing:.08em;}
-.pred-top b{font-family:var(--display);font-size:13px;color:var(--ink);font-weight:600;}
+.pred-top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;letter-spacing:.05em;}
+.pred-top b{font-family:var(--display);font-size:16px;color:var(--ink);font-weight:600;}
 .pbar{height:3px;border-radius:9px;background:rgba(140,116,82,.13);overflow:hidden;}
 .pbar i{display:block;height:100%;width:0;border-radius:9px;transition:width .9s cubic-bezier(.22,1,.36,1);}
 .swatch-box{display:flex;align-items:center;gap:12px;margin-top:auto;padding:11px 13px;border-radius:14px;
   border:1px solid var(--line);background:rgba(255,255,255,.5);}
 .swatch{width:34px;height:34px;border-radius:50%;flex:none;border:2px solid #fff;
   box-shadow:0 6px 14px -8px rgba(96,76,48,.6),inset 0 1px 3px rgba(255,255,255,.3);transition:background .8s;}
-.swatch-box .sc-l{font-size:9.5px;color:var(--ink-faint);letter-spacing:.12em;}
-.swatch-box .sc-v{font-family:var(--mono);font-size:10px;color:var(--ink-soft);margin-top:3px;letter-spacing:.04em;}
+.swatch-box .sc-l{font-size:12px;color:var(--ink-faint);letter-spacing:.08em;}
+.swatch-box .sc-v{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.03em;}
 
 /* ═══════════ 开发者档案视图 ═══════════ */
 .dev-arch{padding:16px 22px 12px;display:flex;flex-direction:column;overflow:hidden;}
@@ -942,7 +946,8 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .tabs{gap:0;padding:0;}
   .tab{padding:13px 7px;font-size:11px;letter-spacing:.05em;gap:4px;white-space:nowrap;}
   .nav-right{gap:8px;flex:none;}
-  .gh-link{padding:7px 9px;font-size:0;gap:0;}   /* 只留 GitHub 图标 */
+  .gh-link{padding:6px 9px;font-size:0;gap:4px;}   /* 手机端：图标 + Git 短标签，始终可见 */
+  .gh-link::after{content:'Git';font-size:11px;letter-spacing:.06em;}
   .gh-link svg{width:15px;height:15px;}
   .page{padding:calc(var(--nav-h) + 16px) 14px 0;}
   .sec{padding-top:34px;}
@@ -1081,6 +1086,70 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
   .asm-legend{order:2;margin-top:2px;gap:6px;}
   .asm-stage svg{max-width:330px;}
 }
+/* ═══════════════════════════════════════════════════════
+   呼吸轮播 · 独立命名空间 ebreath（不与 hero / 大字卡片冲突）
+   纯 CSS 交叉淡入淡出：每张停 4s，过渡 2s，周期 18s
+   ═══════════════════════════════════════════════════════ */
+.ebreath{margin:28px 0 6px;padding:0;background:transparent;}
+.ebreath__stage{position:relative;width:100%;max-width:1080px;margin:0 auto;
+  aspect-ratio:16/8.4;overflow:hidden;border-radius:22px;background:#F7F5F0;
+  box-shadow:0 26px 70px -56px rgba(80,64,46,.55),inset 0 0 0 1px rgba(80,64,46,.07);}
+.ebreath__slide{position:absolute;inset:0;margin:0;opacity:0;
+  animation:ebreathFade 18s ease-in-out infinite both;}
+.ebreath__slide--1{animation-delay:-2s;}
+.ebreath__slide--2{animation-delay:-14s;}
+.ebreath__slide--3{animation-delay:-8s;}
+.ebreath__media{position:absolute;inset:0;}
+/* 01：三张低分辨率场景图原比例完整显示，不拉伸、不放大（避免糊） */
+.ebreath__media--scene{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.4vw,16px);
+  align-items:center;padding:clamp(18px,4vw,52px);
+  background:linear-gradient(135deg,#eef0ec 0%,#e9e3d9 100%);}
+.ebreath__tri{width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;display:block;
+  border-radius:12px;background:#f7f5f0;filter:saturate(.95);
+  box-shadow:0 14px 32px -22px rgba(80,64,46,.5),inset 0 0 0 1px rgba(80,64,46,.08);}
+.ebreath__slide--1 .ebreath__scrim{inset:64% 0 0;}
+/* 02 / 03：同一台最终产品的两种状态（02 红色退让 / 03 安静入睡），画面明显不同 */
+.ebreath__media--state{background:
+  radial-gradient(52% 60% at 22% 40%,rgba(236,198,190,.5),transparent 72%),
+  linear-gradient(120deg,#f2ebe3 0%,#e9d8d2 58%,#e6ded4 100%);}
+.ebreath__media--product{background:
+  radial-gradient(48% 56% at 66% 34%,rgba(255,255,255,.72),transparent 72%),
+  linear-gradient(125deg,#eeeae1 0%,#e2dbce 52%,#d6d0c4 100%);}
+.ebreath__img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+/* 02：红色防守态产品图，横向铺满并裁掉底部水印，画面与 03 的安静态明显不同 */
+.ebreath__slide--2 .ebreath__img{object-fit:cover;object-position:center 42%;}
+.ebreath__media--state::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(46% 52% at 52% 68%,rgba(176,68,47,.16),transparent 72%),
+    linear-gradient(180deg,rgba(24,16,12,.03),rgba(24,16,12,.14));}
+.ebreath__slide--2 .ebreath__scrim,.ebreath__slide--3 .ebreath__scrim{inset:60% 0 0;}
+.ebreath__scrim{position:absolute;inset:38% 0 0;pointer-events:none;
+  background:linear-gradient(to top,rgba(247,245,240,.94),rgba(247,245,240,.5) 46%,transparent);}
+.ebreath__cap{position:absolute;left:clamp(20px,4.2vw,56px);bottom:clamp(20px,3.6vw,44px);z-index:2;}
+.ebreath__no{font-family:var(--mono);font-size:11px;letter-spacing:.34em;color:var(--ink-soft);}
+.ebreath__title{font-family:var(--serif);font-size:clamp(24px,3vw,42px);font-weight:500;
+  line-height:1.5;letter-spacing:.16em;color:var(--ink);margin-top:12px;}
+.ebreath__ph{position:absolute;right:18px;top:16px;z-index:2;font-family:var(--mono);
+  font-size:9px;letter-spacing:.12em;color:rgba(111,98,84,.46);}
+@keyframes ebreathFade{
+  0%{opacity:0;}
+  11.111%{opacity:1;}   /* 2s 淡入 */
+  33.333%{opacity:1;}   /* 停留 4s */
+  44.444%{opacity:0;}   /* 2s 淡出 */
+  100%{opacity:0;}
+}
+@media(max-width:768px){
+  .ebreath{margin:20px 0 4px;}
+  .ebreath__stage{aspect-ratio:4/3;border-radius:16px;}
+  .ebreath__cap{left:22px;bottom:22px;right:22px;}
+  .ebreath__no{font-size:10px;letter-spacing:.22em;}
+  .ebreath__title{font-size:clamp(21px,6vw,30px);letter-spacing:.08em;line-height:1.55;margin-top:8px;}
+  .ebreath__scrim{inset:28% 0 0;}
+  .ebreath__ph{font-size:8px;right:12px;top:12px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .ebreath__slide{animation:none!important;opacity:0;}
+  .ebreath__slide--1{opacity:1;}
+}
 /* hero-stage / viz-rig 的移动端尺寸统一在「响应式兜底」的 640px 段维护 */
 @media (prefers-reduced-motion:reduce){
   .asm-part{opacity:1;transform:none;animation:none!important;}
@@ -1096,9 +1165,121 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 .unified-console{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;align-items:start;margin-top:4px;transition:grid-template-columns .45s cubic-bezier(.22,1,.36,1)}
 .unified-console.log-collapsed{grid-template-columns:minmax(0,1fr) 0px}
 .uc-main{min-width:0;position:relative}
-.uc-main .sim-frame{height:calc(100vh - var(--nav-h) - 130px);min-height:860px;border-radius:18px}
+.uc-main .sim-frame{height:calc(100vh - var(--nav-h) - 80px);min-height:1120px;border-radius:18px}
 .uc-side{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:420px;overflow:hidden;transition:opacity .35s ease}
-.unified-console.log-collapsed .uc-side{opacity:0;pointer-events:none}
+/* 收起日志：侧栏彻底脱离文档流，避免日志内容把网格行撑高造成大段空白 */
+.unified-console.log-collapsed .uc-side{opacity:0;pointer-events:none;position:absolute;width:0;height:0;overflow:hidden}
+/* 日志终端固定高度、内部滚动，杜绝日志累积时侧栏无限增高 */
+.hal-dock .term-card{height:620px;min-height:0}
+/* 香氛机展示卡（置于实时日志上方，随控制台状态机实时变化） */
+.uc-device{padding:16px 18px;border-radius:16px;text-align:center}
+.uc-device-head{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-size:15px;
+  font-weight:600;letter-spacing:.14em;color:var(--ink-soft);margin-bottom:12px;}
+.uc-device-shot{position:relative;width:100%;max-width:320px;margin:0 auto;border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 40px -28px rgba(80,64,46,.55);}
+.uc-device-shot::after{content:'';position:absolute;inset:auto 0 0;height:11%;pointer-events:none;
+  background:linear-gradient(to top,rgba(247,245,240,.96),transparent);}
+.uc-device-shot>img{width:100%;height:auto;display:block;transition:filter .55s ease,transform .55s ease;}
+.uc-device-badge{position:absolute;right:10px;bottom:12px;z-index:3;padding:6px 13px;border-radius:999px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:#fff;
+  background:rgba(31,58,95,.9);box-shadow:0 6px 18px rgba(0,0,0,.2);transition:background .4s ease;}
+.uc-device[data-state="noise"] .uc-device-badge{background:rgba(198,54,40,.94);}
+.uc-device[data-state="calming"] .uc-device-badge{background:rgba(184,126,48,.94);}
+.uc-device[data-state="noise"] .uc-device-shot>img{animation:ucShake .42s ease-in-out 2;}
+@keyframes ucShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.uc-device-cap{font-family:var(--mono);font-size:11px;line-height:1.6;letter-spacing:.05em;
+  color:var(--ink-faint);margin-top:11px;}
+.uc-device-sub{color:var(--gold);font-size:10px;}
+/* 右侧展示：故障徽标 / 信号强度条 */
+.mir-fault-badge{position:absolute;left:8px;right:8px;top:8px;z-index:5;text-align:center;
+  padding:6px 8px;border-radius:8px;background:rgba(142,59,50,.94);color:#fff;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;
+  box-shadow:0 6px 18px -8px rgba(100,30,24,.7);}
+#ucDevice[data-fault]:not([data-fault=""]) .uc-device-mirror .device-img{filter:grayscale(.55) drop-shadow(0 40px 46px rgba(50,55,45,.2)) saturate(.7);}
+.mir-signal{display:flex;align-items:center;gap:8px;margin-top:9px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.mir-signal-track{flex:1;height:5px;border-radius:5px;background:rgba(140,116,82,.16);overflow:hidden;}
+.mir-signal-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#7fb894,#e2c184,#c0705f);transition:width .18s linear;}
+.mir-signal-th{flex:none;color:var(--gold);}
+.mir-signal-track i.frozen{background:repeating-linear-gradient(90deg,#b0442f 0 6px,rgba(176,68,47,.25) 6px 12px);}
+.mir-led-row{display:flex;align-items:center;gap:8px;margin-top:7px;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);}
+.mir-led-row b{color:var(--gold);font-size:12px;}
+.mir-led-note{margin-left:auto;color:var(--ink-faint);font-size:9.5px;}
+.mir-fault-detail{margin-top:9px;padding:9px 11px;border-radius:9px;background:rgba(142,59,50,.07);
+  border:1px solid rgba(142,59,50,.18);font-family:var(--mono);font-size:10px;line-height:1.75;color:#8e3b32;}
+.mir-fault-detail div+div{margin-top:2px;}
+/* ── 右侧展示 = 左侧数字孪生 product-stage 的 1:1 镜像 ──
+   状态由 iframe 逐帧 postMessage 推送，缩放系数由 JS 按容器宽度设置 */
+.uc-device-mirror{display:none;position:absolute;inset:0;width:100%;height:100%;overflow:hidden;
+  background:linear-gradient(135deg,#eef0ec 0%,#e9e3d9 100%);}
+#ucDevice[data-mirror="on"] .uc-device-shot{aspect-ratio:1/1;}
+#ucDevice[data-mirror="on"] .uc-device-shot::after{display:none;}
+#ucDevice[data-mirror="on"] .uc-device-shot>img{display:none;}
+#ucDevice[data-mirror="on"] .uc-device-mirror{display:block;}
+.uc-device-mirror .product-stage{position:absolute;left:0;top:0;width:560px;height:560px;max-width:none;aspect-ratio:auto;
+  display:flex;align-items:center;justify-content:center;transform:scale(var(--mir-scale,.57));
+  transform-origin:top left;transition:.6s ease;}
+.uc-device-mirror .stage-halo{position:absolute;inset:8%;border-radius:50%;
+  background:radial-gradient(circle,rgba(230,201,156,.42),transparent 62%);filter:blur(34px);transition:.8s ease}
+.uc-device-mirror .state-transition .stage-halo{background:radial-gradient(circle,rgba(194,145,80,.28),transparent 62%)}
+.uc-device-mirror .state-disturbance .stage-halo{background:radial-gradient(circle,rgba(142,59,50,.3),transparent 62%)}
+.uc-device-mirror .device-wrap{position:relative;width:100%;height:100%}
+.uc-device-mirror .device-img{width:100%;height:100%;object-fit:contain;display:block;
+  filter:drop-shadow(0 40px 46px rgba(50,55,45,.24));transition:filter .8s ease}
+.uc-device-mirror .state-disturbance .device-img{filter:drop-shadow(0 40px 46px rgba(90,40,35,.3)) saturate(.85)}
+.uc-device-mirror .screen-overlay{position:absolute;left:22.1%;top:43.6%;width:29%;height:35.6%;
+  border-radius:26%/18%;overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 8px 24px rgba(0,0,0,.4);
+  transform:perspective(900px) rotateY(3deg);background:#0c1418}
+.uc-device-mirror .screen-overlay .tft-screen{transform:scale(.92);transform-origin:top left;width:108.7%;height:108.7%}
+.uc-device-mirror .tft-screen{width:240px;height:240px;background:radial-gradient(150% 120% at 20% 0%,#1b2b30 0%,#0c1418 56%,#080e12 100%);
+  color:#dfeae5;font-family:var(--mono);padding:15px 16px 12px;display:flex;flex-direction:column;position:relative;
+  overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.uc-device-mirror .tft-screen:before{content:'';position:absolute;top:-40%;left:-30%;width:80%;height:120%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.035),transparent);transform:rotate(18deg);pointer-events:none}
+.uc-device-mirror .tft-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.06em;color:#9fb4ab}
+.uc-device-mirror .tft-state{display:flex;align-items:center;gap:5px}
+.uc-device-mirror .tft-state i{width:5px;height:5px;border-radius:50%;background:#8fd3aa;box-shadow:0 0 8px #8fd3aa;transition:.4s}
+.uc-device-mirror .tft-state b{font-weight:500;color:#bfe2cd}
+.uc-device-mirror .tft-rule{height:1px;background:rgba(255,255,255,.1);margin:8px 0 2px}
+.uc-device-mirror .tft-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.uc-device-mirror .tft-moon{font-size:38px;line-height:1;color:#e9d8b6;text-shadow:0 0 18px rgba(233,216,182,.35);transition:.4s}
+.uc-device-mirror .tft-mode{font-size:9px;letter-spacing:.28em;color:#9fb4ab;margin-top:2px}
+.uc-device-mirror .tft-row{display:flex;align-items:center;gap:5px;font-size:9px;color:#8fa69d;letter-spacing:.04em}
+.uc-device-mirror .tft-row b{color:#e6f0ea;font-size:12px;font-weight:500}
+.uc-device-mirror .tft-spacer{flex:1}
+.uc-device-mirror .tft-meter{height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin:6px 0 8px;overflow:hidden}
+.uc-device-mirror .tft-meter i{display:block;height:100%;width:24%;background:linear-gradient(90deg,#7fb894,#e2c184);border-radius:2px;transition:width .3s ease}
+.uc-device-mirror .tft-rows{display:flex;flex-direction:column;gap:3px}
+.uc-device-mirror .tft-rows div{display:flex;justify-content:space-between;font-size:9px;color:#8fa69d;letter-spacing:.03em}
+.uc-device-mirror .tft-rows b{color:#dbe8e1;font-weight:500}
+.uc-device-mirror .tft-foot{margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08);font-size:7.5px;letter-spacing:.08em;color:#5f766d;text-align:center}
+.uc-device-mirror .tft-screen.s-disturbance .tft-state i{background:#d97566;box-shadow:0 0 8px #d97566}
+.uc-device-mirror .tft-screen.s-disturbance .tft-state b{color:#e9a99d}
+.uc-device-mirror .tft-screen.s-disturbance .tft-moon{color:#c07a6c;text-shadow:0 0 18px rgba(192,122,108,.3)}
+.uc-device-mirror .tft-screen.s-transition .tft-state i{background:#e2c184;box-shadow:0 0 8px #e2c184}
+.uc-device-mirror .tft-screen.s-transition .tft-state b{color:#e8d3a8}
+.uc-device-mirror .mist-layer{position:absolute;left:38%;top:29%;width:26%;height:30%;pointer-events:none;opacity:0;transition:opacity 1.2s ease}
+.uc-device-mirror .mist-layer.on{opacity:1}
+.uc-device-mirror .mist-layer span{position:absolute;bottom:0;width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.65);
+  filter:blur(7px);animation:mirMistRise 5s ease-out infinite}
+.uc-device-mirror .mist-layer span:nth-child(1){left:12%;animation-delay:0s}
+.uc-device-mirror .mist-layer span:nth-child(2){left:28%;animation-delay:.7s}
+.uc-device-mirror .mist-layer span:nth-child(3){left:44%;animation-delay:1.5s}
+.uc-device-mirror .mist-layer span:nth-child(4){left:60%;animation-delay:2.2s}
+.uc-device-mirror .mist-layer span:nth-child(5){left:74%;animation-delay:.4s}
+.uc-device-mirror .mist-layer span:nth-child(6){left:35%;animation-delay:3s}
+.uc-device-mirror .mist-layer span:nth-child(7){left:55%;animation-delay:3.7s}
+.uc-device-mirror .mist-layer span:nth-child(8){left:20%;animation-delay:4.3s}
+@keyframes mirMistRise{0%{transform:translateY(0) scale(.5);opacity:0}18%{opacity:.75}100%{transform:translateY(-150px) translateX(18px) scale(2.6);opacity:0}}
+.uc-device-mirror .light-ring{position:absolute;left:25%;right:23%;bottom:5%;height:6%;border-radius:50%;
+  background:radial-gradient(ellipse at center,transparent 38%,rgba(232,186,118,.95) 62%,rgba(232,186,118,0) 78%);
+  filter:blur(9px);opacity:.95;transition:background .8s ease,opacity .8s ease}
+.uc-device-mirror .state-transition .light-ring{opacity:.5;background:radial-gradient(ellipse at center,transparent 38%,rgba(194,145,80,.7) 62%,transparent 78%)}
+.uc-device-mirror .state-disturbance .light-ring{opacity:.42;background:radial-gradient(ellipse at center,transparent 38%,rgba(142,59,50,.85) 62%,transparent 78%)}
+.uc-device-mirror .device-wrap:after{content:'';position:absolute;left:24%;right:22%;bottom:3%;height:10%;border-radius:50%;
+  pointer-events:none;opacity:0;transition:opacity .8s ease,mix-blend-mode .8s;mix-blend-mode:multiply;
+  background:radial-gradient(ellipse at center,rgba(126,46,40,.95),rgba(126,46,40,0) 74%)}
+.uc-device-mirror .state-transition .device-wrap:after{opacity:.42;background:radial-gradient(ellipse at center,rgba(160,112,48,.8),rgba(160,112,48,0) 74%)}
+.uc-device-mirror .state-disturbance .device-wrap:after{opacity:.92}
 .uc-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .uc-toggle,.uc-mini{
   flex:none;padding:10px 16px;border-radius:10px;cursor:pointer;
@@ -1108,7 +1289,10 @@ table.pins td.gpio{font-family:var(--mono);font-size:9.5px;}
 }
 .uc-toggle:hover,.uc-mini:hover{border-color:var(--gold);color:var(--gold-d);background:#fffdf8}
 .uc-note{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-faint)}
-.uc-preview{display:flex;flex-direction:column;gap:12px}
+.uc-preview{display:flex;flex-direction:column;gap:12px;margin-top:16px;border-radius:16px;
+  transition:box-shadow .4s ease,transform .4s ease;}
+.uc-preview.just-opened{box-shadow:0 0 0 2px var(--gold),0 0 40px -10px rgba(176,141,87,.5);transform:translateY(-2px);}
+#ucPreview .console-grid{min-width:0;}
 .uc-preview .screen-card{padding:16px 18px;gap:12px}
 .uc-preview .device-frame{width:236px;height:236px;border-radius:38px;padding:9px}
 .uc-preview .screen{border-radius:28px}
@@ -1179,27 +1363,81 @@ body{font-size:17px}
 .btn,.serial-btn,.uc-toggle,.uc-mini{letter-spacing:.1em}
 .sec-head h2{font-size:34px}
 .flow-card h3{font-size:26px}
+
+/* ══════════ 全站字体再放大（路演二轮） ══════════ */
+body{font-size:19px}
+.brand .nm{font-size:30px}
+.brand .nm span.zh{font-size:12px}
+.tab{font-size:20px;padding:16px 21px 17px}
+.tab em{font-size:17px}
+.status{font-size:15px}
+.clock{font-size:16px}
+.gh-link{font-size:15px}
+.hero-copy h1{font-size:clamp(36px,3.8vw,56px)}
+.kicker{font-size:18px}
+.hero-copy p{font-size:15px;line-height:2.2}
+.chip{font-size:13px}
+.chip .k{font-size:21px}
+.eyebrow{font-size:11px}
+.sec-head h2{font-size:38px}
+.sec-head .sub{font-size:16px}
+.sec-no{font-size:11px}
+.p-card h3{font-size:16px}
+.p-card p{font-size:14px;line-height:2}
+.p-card .tag{font-size:10px}
+.flow-card .f-step{font-size:11px}
+.flow-card h3{font-size:30px}
+.flow-card .f-en{font-size:12px}
+.flow-card p{font-size:14px;line-height:2}
+.spec-item .s-label{font-size:12px}
+.spec-item .s-value{font-size:15px}
+.spec-item .s-value small{font-size:12px}
+.faq-q{font-size:19px}
+.faq-a p{font-size:15px}
+.cta h2{font-size:clamp(34px,4vw,58px)}
+.card-title{font-size:15px}
+.card-note{font-size:11px}
+.device-cap .n{font-size:13px}
+.device-cap .s{font-size:10px}
+.ebreath__no{font-size:13px}
+.ebreath__title{font-size:clamp(27px,3.4vw,46px)}
+.uc-toggle,.uc-mini{font-size:15px}
+.uc-note{font-size:14px}
+.uc-device-head{font-size:17px}
+.uc-device-cap{font-size:12px}
 @media(max-width:1180px){
   .unified-console{grid-template-columns:1fr}
   .unified-console.log-collapsed{grid-template-columns:1fr}
   .uc-side{max-width:none;order:2}
-  .uc-main .sim-frame{height:900px}
+  .unified-console.log-collapsed .uc-side{position:static;width:auto;height:auto;overflow:hidden}
+  .uc-main .sim-frame{height:1160px}
 }
 @media(max-width:760px){
   /* 手机端同样保持路演大字，保证投影/小屏都清晰 */
-  body{font-size:17px}
-  .tab{font-size:16px;padding:12px 9px}
-  .tab em{font-size:13px}
-  .status,.clock,.gh-link{font-size:13px}
-  .serial-btn{font-size:16px;padding:11px 18px}
-  .serial-status{font-size:15px}
-  .serial-hint{font-size:12px}
-  .sm-pill{font-size:19px;padding:10px 3px}
-  .scr-main{font-size:46px}
-  .term-body{font-size:14px}
-  .term-foot{font-size:13px}
-  .line.lg-emg .msg{font-size:17px}
-  .uc-main .sim-frame{height:920px;min-height:0}
+  body{font-size:18px}
+  .tab{font-size:17px;padding:12px 9px}
+  .tab em{font-size:14px}
+  .status,.clock,.gh-link{font-size:14px}
+  .serial-btn{font-size:17px;padding:11px 18px}
+  .serial-status{font-size:16px}
+  .serial-hint{font-size:13px}
+  .sm-pill{font-size:21px;padding:10px 3px}
+  .scr-main{font-size:48px}
+  .term-body{font-size:15px}
+  .term-foot{font-size:14px}
+  .line.lg-emg .msg{font-size:18px}
+  .hero-copy h1{font-size:clamp(34px,9vw,46px)}
+  .hero-copy p{font-size:14px}
+  .sec-head h2{font-size:28px}
+  .p-card p,.flow-card p{font-size:13.5px}
+  .faq-q{font-size:17px}
+  .faq-a p{font-size:14px}
+  .uc-main .sim-frame{height:1180px;min-height:0}
+}
+/* 放在最后：确保窄屏下 GitHub 入口始终只占一个小按钮 */
+@media(max-width:640px){
+  .gh-link{font-size:0!important;gap:4px!important;padding:6px 9px!important;}
+  .gh-link::after{content:'Git';font-size:11px;letter-spacing:.06em;}
 }
 </style>
 <link rel="stylesheet" href="ai-native.css">
@@ -1233,12 +1471,12 @@ body{font-size:17px}
   </div>
 
   <div class="nav-right">
-    <div class="status"><span class="dot"></span>ESP32-S3-EYE · HARDWARE IN THE LOOP</div>
-    <div class="clock" id="clock">--:--:--</div>
-    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="GitHub 开源仓库">
+    <a class="gh-link" href="https://github.com/huang2399/EmberSigh" target="_blank" rel="noopener" title="打开 EmberSigh GitHub 仓库">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.72c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05.8-.23 1.65-.34 2.5-.34s1.7.11 2.5.34c1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49C19.14 20.61 22 16.78 22 12.25 22 6.58 17.52 2 12 2z"/></svg>
       GitHub 仓库
     </a>
+    <div class="status"><span class="dot"></span>ESP32-S3-EYE · HARDWARE IN THE LOOP</div>
+    <div class="clock" id="clock">--:--:--</div>
   </div>
 </nav>
 
@@ -1277,6 +1515,7 @@ body{font-size:17px}
 
       <div class="hero-visual" id="heroVisual">
         <div class="float-card fc1">MIC · RMS <b>42</b> dB</div>
+        <div class="float-card fc2">AROMA · <b>3</b> CH</div>
         <div class="hero-stage" id="heroStage">
           <img class="hero-img" src="images/hero-product.jpg"
                alt="EmberSigh One 产品渲染图" loading="eager"
@@ -1320,7 +1559,6 @@ body{font-size:17px}
         <span class="ai-badge concept"><i></i>概念演示 · 本地规则模拟</span>
         <span class="ai-badge sim" style="margin-left:8px;"><i></i>未接入大模型 · 接口已预留</span>
       </div>
-
       <div class="ai-exp-grid reveal">
         <div class="glass ai-prompt">
           <div class="ai-prompt-label">Describe your evening · 描述你的睡前意图</div>
@@ -1341,7 +1579,6 @@ body{font-size:17px}
             <span><b>说明：</b>此演示使用本地关键词规则模拟意图解析，<b>不是真实大模型推理</b>，也未连接硬件。架构已预留模型与记忆接口，未来可替换为真实服务。</span>
           </div>
         </div>
-
         <div class="glass ai-result">
           <div class="ai-result-empty" id="aiResultEmpty">
             <div class="re-ico">Curate your night.</div>
@@ -1384,42 +1621,59 @@ body{font-size:17px}
         </div>
         <div class="ai-mem-summary" id="aiMemSummary">你通常更喜欢低音量森林声景，且深夜不需要香氛。</div>
         <div class="ai-mem-grid" id="aiMemGrid">
-          <div class="ai-mem-item" data-key="scene">
-            <div class="mi-label">常用场景 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">雨夜安眠</div><div class="mi-note">近 7 天使用 5 次</div>
-            <select><option>雨夜安眠</option><option>海浪轻眠</option><option>深林静夜</option><option>暖室阅读</option></select>
-          </div>
-          <div class="ai-mem-item" data-key="sound">
-            <div class="mi-label">声音偏好 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">森林雨声 · 低音量</div><div class="mi-note">音量 25% · 渐入</div>
-            <select><option>森林雨声 · 低音量</option><option>海浪 · 中低音量</option><option>溪流 · 低音量</option><option>静音</option></select>
-          </div>
-          <div class="ai-mem-item" data-key="aroma">
-            <div class="mi-label">香氛偏好 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">深夜不开香氛</div><div class="mi-note">23:00 后自动关闭</div>
-            <select><option>深夜不开香氛</option><option>薰衣草 · 淡</option><option>松木 · 淡</option><option>柑橘 · 中</option></select>
-          </div>
-          <div class="ai-mem-item" data-key="light">
-            <div class="mi-label">灯光偏好 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">暖色 · 低亮度</div><div class="mi-note">亮度 18% · 呼吸</div>
-            <select><option>暖色 · 低亮度</option><option>暖色 · 微光</option><option>中性 · 中等亮度</option><option>关闭</option></select>
-          </div>
-          <div class="ai-mem-item" data-key="feedback">
-            <div class="mi-label">最近主动反馈 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">"雨声再小一点更好"</div><div class="mi-note">3 天前 · 已纳入偏好</div>
-            <input type="text" value="雨声再小一点更好">
-          </div>
-          <div class="ai-mem-item" data-key="recommend">
-            <div class="mi-label">推荐下一次场景 <button class="mi-edit" type="button">编辑</button></div>
-            <div class="mi-value">海浪轻眠</div><div class="mi-note">基于偏好推断 · 概念推荐</div>
-            <select><option>海浪轻眠</option><option>雨夜安眠</option><option>深林静夜</option><option>暖室阅读</option></select>
-          </div>
+          <div class="ai-mem-item" data-key="scene"><div class="mi-label">常用场景 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">雨夜安眠</div><div class="mi-note">近 7 天使用 5 次</div><select><option>雨夜安眠</option><option>海浪轻眠</option><option>深林静夜</option><option>暖室阅读</option></select></div>
+          <div class="ai-mem-item" data-key="sound"><div class="mi-label">声音偏好 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">森林雨声 · 低音量</div><div class="mi-note">音量 25% · 渐入</div><select><option>森林雨声 · 低音量</option><option>海浪 · 中低音量</option><option>溪流 · 低音量</option><option>静音</option></select></div>
+          <div class="ai-mem-item" data-key="aroma"><div class="mi-label">香氛偏好 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">深夜不开香氛</div><div class="mi-note">23:00 后自动关闭</div><select><option>深夜不开香氛</option><option>薰衣草 · 淡</option><option>松木 · 淡</option><option>柑橘 · 中</option></select></div>
+          <div class="ai-mem-item" data-key="light"><div class="mi-label">灯光偏好 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">暖色 · 低亮度</div><div class="mi-note">亮度 18% · 呼吸</div><select><option>暖色 · 低亮度</option><option>暖色 · 微光</option><option>中性 · 中等亮度</option><option>关闭</option></select></div>
+          <div class="ai-mem-item" data-key="feedback"><div class="mi-label">最近主动反馈 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">"雨声再小一点更好"</div><div class="mi-note">3 天前 · 已纳入偏好</div><input type="text" value="雨声再小一点更好"></div>
+          <div class="ai-mem-item" data-key="recommend"><div class="mi-label">推荐下一次场景 <button class="mi-edit" type="button">编辑</button></div><div class="mi-value">海浪轻眠</div><div class="mi-note">基于偏好推断 · 概念推荐</div><select><option>海浪轻眠</option><option>雨夜安眠</option><option>深林静夜</option><option>暖室阅读</option></select></div>
         </div>
         <div class="ai-mem-foot">
           <button class="ai-ghost-btn" id="aiMemReset" type="button">↻ 恢复演示默认值</button>
           <button class="ai-ghost-btn ai-clear-btn" id="aiMemClear" type="button">清除全部偏好</button>
           <span class="ai-badge concept" id="aiMemStatus"><i></i>演示数据 · 修改即时保存在本机</span>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ 呼吸轮播 · 交叉淡入淡出（纯 CSS，4s 停留 / 2s 过渡，无 JS） ═══ -->
+    <!-- 插入位置：Hero 之后、产品全景海报之前 -->
+    <section class="ebreath" aria-label="EmberSigh 场景轮播">
+      <div class="ebreath__stage">
+        <figure class="ebreath__slide ebreath__slide--1">
+          <div class="ebreath__media ebreath__media--scene">
+            <img class="ebreath__tri" src="images/scene-sea.jpg" alt="海边黄昏的沉浸场景" loading="lazy">
+            <img class="ebreath__tri" src="images/scene-forest.jpg" alt="晨光森林的沉浸场景" loading="lazy">
+            <img class="ebreath__tri" src="images/scene-rain.jpg" alt="雨夜卧室的沉浸场景" loading="lazy">
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">01 / 沉浸场景</div>
+            <div class="ebreath__title">沉浸场景，随心切换。</div>
+          </figcaption>
+        </figure>
+        <figure class="ebreath__slide ebreath__slide--2">
+          <div class="ebreath__media ebreath__media--state">
+            <img class="ebreath__img" src="images/device-noise.png" alt="环境变吵时最终产品主动退让：屏幕 NOISE 警告、灯环转防守红、停止喷雾" loading="lazy"
+                 onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">02 / 主动退让</div>
+            <div class="ebreath__title">当环境变吵，它懂得安静。</div>
+          </figcaption>
+        </figure>
+        <figure class="ebreath__slide ebreath__slide--3">
+          <div class="ebreath__media ebreath__media--product">
+            <img class="ebreath__img" src="images/product-final.png" alt="EmberSigh One 最终产品渲染：QUIET / SLEEP · 呼吸灯环" loading="lazy"
+                 onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+          </div>
+          <span class="ebreath__scrim" aria-hidden="true"></span>
+          <figcaption class="ebreath__cap">
+            <div class="ebreath__no">03 / 恰到好处</div>
+            <div class="ebreath__title">让睡前环境，恰到好处。</div>
+          </figcaption>
+        </figure>
       </div>
     </section>
 
@@ -1664,8 +1918,6 @@ body{font-size:17px}
           <button class="ai-cb-tab" data-panel="runtime" type="button">B · Environment Runtime</button>
           <button class="ai-cb-tab" data-panel="memory" type="button">C · Preference Memory</button>
         </div>
-
-        <!-- A. AI Scene Planner -->
         <div class="ai-cb-panel on" data-panel="planner">
           <div class="ai-lab-input" style="margin-bottom:6px;">
             <input type="text" id="consoleAiInput" placeholder="用一句话描述场景，例如：森林雨声，灯光暗一点，不要香氛">
@@ -1673,8 +1925,6 @@ body{font-size:17px}
           </div>
           <div class="ai-apply-note" id="consoleAiOut">待输入 · 生成后显示场景意图与执行任务预览（概念演示，不向硬件下发）。</div>
         </div>
-
-        <!-- B. Environment Runtime -->
         <div class="ai-cb-panel" data-panel="runtime">
           <div class="ai-cb-grid">
             <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">环境状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtState">CALM</div><div class="rt-desc">RMS/EMA 三态判定 · 数字孪生引擎</div></div>
@@ -1685,14 +1935,9 @@ body{font-size:17px}
             <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">实时日志</span><span class="ai-badge real"><i></i>真实</span></div><div class="rt-val" style="font-size:14px;" id="rtLogState">待机</div><div class="rt-desc">详见右侧 HAL / SENSOR 终端</div></div>
           </div>
         </div>
-
-        <!-- C. Preference Memory -->
         <div class="ai-cb-panel" data-panel="memory">
           <div class="ai-mem-summary" id="consoleMemSummary" style="margin-bottom:14px;">你通常偏好低音量森林声景，深夜不开香氛。</div>
-          <div class="ai-disclaimer">
-            <span class="di-ico">ⓘ</span>
-            <span>此处为<b>概念演示偏好</b>（与「理念」页共享本机演示数据）。真实个性化记忆系统属路线图能力，尚未接入持久化服务。</span>
-          </div>
+          <div class="ai-disclaimer"><span class="di-ico">ⓘ</span><span>此处为<b>概念演示偏好</b>（与「理念」页共享本机演示数据）。真实个性化记忆系统属路线图能力，尚未接入持久化服务。</span></div>
           <div class="ai-mem-foot"><button class="ai-ghost-btn" type="button" id="consoleMemEdit">编辑偏好 → 前往「理念 · Preference Memory」</button></div>
         </div>
       </div>
@@ -1723,8 +1968,47 @@ body{font-size:17px}
                 title="EmberSigh 数字孪生控制台"
                 allow="microphone; autoplay"></iframe>
       </div>
-      <!-- 模块 A：HAL / SENSOR 黑底日志（可折叠侧栏） -->
+      <!-- 模块 A：香氛机展示（置于实时日志上方）+ HAL / SENSOR 黑底日志（可折叠侧栏） -->
       <aside class="uc-side">
+        <div class="uc-device glass reveal" id="ucDevice" data-state="calm">
+          <div class="uc-device-head"><span class="tick"></span>香氛机展示 · EmberSigh One</div>
+          <div class="uc-device-shot" id="ucDeviceShot">
+            <img id="ucDeviceImg" src="images/product-final.png" alt="EmberSigh 香氛机实时渲染：QUIET / SLEEP / 呼吸灯环"
+                 loading="lazy" onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+            <!-- 与左侧数字孪生完全同源的产品画面镜像（由 iframe 逐帧推送状态） -->
+            <div class="uc-device-mirror" id="ucDeviceMirror" aria-hidden="true">
+              <div class="product-stage state-quiet" id="mirStage">
+                <div class="stage-halo"></div>
+                <div class="device-wrap">
+                  <img class="device-img" src="images/hero-product.jpg" alt="">
+                  <div class="mist-layer" id="mirMist"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                  <div class="light-ring"></div>
+                  <div class="screen-overlay">
+                    <div class="tft-screen s-quiet" id="mirTft">
+                      <div class="tft-head"><span class="tft-state"><i></i><b data-tft-state>QUIET</b></span><span data-tft-time>22:30</span></div>
+                      <div class="tft-rule"></div>
+                      <div class="tft-center"><div class="tft-moon" data-tft-icon>☾</div><div class="tft-mode" data-tft-mode>SLEEP</div></div>
+                      <div class="tft-row"><span>RMS</span><b data-tft-rms>042</b><span>dB</span><span class="tft-spacer"></span><span data-tft-env>CALM</span></div>
+                      <div class="tft-meter"><i data-tft-meter style="width:24%"></i></div>
+                      <div class="tft-rows">
+                        <div><span>♪ FOREST</span><b data-tft-audio>62%</b></div>
+                        <div><span>≋ AROMA</span><b data-tft-aroma>ON</b></div>
+                        <div><span>◉ LIGHT</span><b data-tft-light>WARM</b></div>
+                      </div>
+                      <div class="tft-foot">ESP32-S3-EYE · VIRTUAL</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span class="uc-device-badge" id="ucDeviceBadge">QUIET</span>
+            <div class="mir-fault-badge" id="mirFaultBadge" style="display:none"></div>
+          </div>
+          <div class="mir-signal"><span id="mirSignalVal">RMS 42</span><span class="mir-signal-track"><i id="mirSignalBar" style="width:14%"></i></span><span class="mir-signal-th" id="mirSignalTh">噪阈 150</span></div>
+          <div class="mir-led-row"><span>◉ 灯环亮度</span><b id="mirLedVal">70%</b><span class="mir-led-note">← 调左侧滑块，这里实时变化</span></div>
+          <div class="mir-fault-detail" id="mirFaultDetail" style="display:none"></div>
+          <div class="uc-device-cap" id="ucDeviceCap">LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动</div>
+        </div>
         <div class="hal-dock glass">
           <div class="term-card">
             <div class="term-head">
@@ -1744,8 +2028,12 @@ body{font-size:17px}
             </div>
           </div>
         </div>
-        <div class="uc-preview" id="ucPreview" style="display:none">
-    <section class="console-grid">
+      </aside>
+    </div><!-- /unified-console -->
+
+    <!-- 设备预览：独立全宽区块，展开后真正可见（此前嵌在 420px 侧栏里被 overflow 裁掉） -->
+    <div class="uc-preview glass" id="ucPreview" style="display:none">
+    <section class="console-grid" style="padding:20px">
       <!-- 左：手机呼吸实况 -->
       <div class="phone-col">
         <div class="phone-shell" id="phoneShell">
@@ -1824,9 +2112,7 @@ body{font-size:17px}
 
       </div>
     </section>
-        </div><!-- /uc-preview -->
-      </aside>
-    </div><!-- /unified-console -->
+    </div><!-- /uc-preview -->
 
     <!-- 说明区 -->
     <section class="sec">
@@ -2111,10 +2397,7 @@ body{font-size:17px}
               <input type="text" id="labAiInput" placeholder="例如：像雨后的森林，安静助眠，不要柑橘">
               <button type="button" id="labAiBtn">生成配方</button>
             </div>
-            <div class="ai-disclaimer" style="margin-top:12px;">
-              <span class="di-ico">ⓘ</span>
-              <span><b>当前：</b>单通道雾化硬件验证中。<b>多通道按偏好组合</b>为未来设想，下方为概念预览。</span>
-            </div>
+            <div class="ai-disclaimer" style="margin-top:12px;"><span class="di-ico">ⓘ</span><span><b>当前：</b>单通道雾化硬件验证中。<b>多通道按偏好组合</b>为未来设想，下方为概念预览。</span></div>
             <div class="ai-feedback">
               <span class="fb-label">这次推荐如何？</span>
               <button class="ai-fb-btn" data-fb="great" type="button" aria-label="喜欢">☺</button>
@@ -2528,11 +2811,149 @@ window.addEventListener('message', function(e){
   var d = e && e.data;
   if(!d || typeof d !== 'object') return;
   if(d.type === 'embersigh:command'){ sendToHardware(d.command); return; }
+  /* 左侧数字孪生状态变化 → 右侧香氛机展示同步（QUIET/TRANSITION/DISTURBANCE） */
+  if(d.type === 'embersigh:state'){
+    var m = { QUIET:'calm', TRANSITION:'calming', DISTURBANCE:'noise', CALM:'calm', CALMING:'calming', NOISE:'noise' }[String(d.state || '').toUpperCase()];
+    if(m && window.paintDevice) window.paintDevice(m);
+    return;
+  }
+  /* 左侧 product-stage 逐帧镜像：右侧画面与左侧完全同源同变 */
+  if(d.type === 'embersigh:device-mirror'){
+    if(window.applyDeviceMirror) window.applyDeviceMirror(d);
+    return;
+  }
   if(d.type === 'embersigh:mic'){
     if(d.action === 'start') realMicStart();
     if(d.action === 'stop')  realMicStop();
   }
 });
+
+/* ── 右侧香氛机展示：1:1 镜像左侧数字孪生的 product-stage ──
+   模拟器每次 render 把状态与 TFT 数值推过来，这里逐字段套用，保证左边怎么变右边怎么变 */
+window.fitDeviceMirror = function(){
+  var mirror = $('ucDeviceMirror'), shot = $('ucDeviceShot');
+  if(!mirror || !shot) return;
+  var w = shot.clientWidth;
+  if(w) mirror.style.setProperty('--mir-scale', String(w / 560));
+};
+window.applyDeviceMirror = function(d){
+  var dev = $('ucDevice'), mirror = $('ucDeviceMirror');
+  if(!dev || !mirror || !d) return;
+  var s = String(d.state || 'quiet');
+  dev.dataset.mirror = 'on';
+  dev.dataset.state = s === 'disturbance' ? 'noise' : (s === 'transition' ? 'calming' : 'calm');
+  var stage = $('mirStage');
+  if(stage) stage.className = 'product-stage state-' + s;
+  var tft = $('mirTft');
+  if(tft && d.tft){
+    tft.className = 'tft-screen s-' + s;
+    var set = function(sel, val){
+      var el = tft.querySelector(sel);
+      if(el && val !== undefined && val !== null) el.textContent = val;
+    };
+    set('[data-tft-state]', d.tft.state);
+    set('[data-tft-time]', d.tft.time);
+    set('[data-tft-icon]', d.tft.icon);
+    set('[data-tft-mode]', d.tft.mode);
+    set('[data-tft-rms]', d.tft.rms);
+    set('[data-tft-env]', d.tft.env);
+    set('[data-tft-audio]', d.tft.audio);
+    set('[data-tft-aroma]', d.tft.aroma);
+    set('[data-tft-light]', d.tft.light);
+    var meter = tft.querySelector('[data-tft-meter]');
+    if(meter && d.tft.meter) meter.style.width = d.tft.meter;
+  }
+  var mist = $('mirMist');
+  if(mist) mist.classList.toggle('on', !!d.mist);
+
+  /* 故障注入：每种故障在展示卡上呈现「具体后果」，不只是变灰 */
+  var f = d.faults || {}, fx = d.effects || {};
+  var faultList = [];
+  var faultEffects = [];
+  if(f.mic){ faultList.push('MIC'); faultEffects.push('MIC 失效 → 无有效采样，RMS 输入中断'); }
+  if(f.audio){ faultList.push('AUDIO'); faultEffects.push('功放失效 → 声景音量强制 0%，TFT 显示 ERR'); }
+  if(f.aroma){ faultList.push('AROMA'); faultEffects.push('MOS 失效 → GPIO 强制 HIGH，雾化与雾气停止'); }
+  if(f.light){ faultList.push('LED'); faultEffects.push('WS2812 失效 → 16 颗灯珠全部熄灭'); }
+  if(f.battery){ faultList.push('BATT'); faultEffects.push('低电量 → 声景与灯环降额至 70%'); }
+  if(f.sensor){ faultList.push('SENSOR'); faultEffects.push('传感器异常 → RMS 冻结在 ' + (fx.rmsHold||0)); }
+  dev.dataset.fault = faultList.length ? faultList.join('/') : '';
+  var fbadge = $('mirFaultBadge');
+  if(fbadge){
+    fbadge.textContent = faultList.length ? ('⚠ FAULT · ' + faultList.join(' + ')) : '';
+    fbadge.style.display = faultList.length ? 'block' : 'none';
+  }
+  var fdetail = $('mirFaultDetail');
+  if(fdetail){
+    if(faultEffects.length){
+      fdetail.innerHTML = faultEffects.map(function(t){ return '<div>▸ ' + t + '</div>'; }).join('');
+      fdetail.style.display = 'block';
+    } else { fdetail.innerHTML = ''; fdetail.style.display = 'none'; }
+  }
+
+  /* 灯环亮度：滑块 → 右侧光环/光晕/机器亮度同步变化，幅度足够肉眼可见 */
+  var rawB = Math.max(0, Math.min(1, +((d.led && d.led.brightness) || 0)));
+  var b = f.light ? 0 : rawB;
+  var ring = mirror.querySelector('.light-ring');
+  if(ring){
+    ring.style.opacity = String(b <= 0.01 ? 0.04 : (0.14 + b * 0.86));
+    ring.style.filter = 'blur(' + (3 + (1 - b) * 13).toFixed(1) + 'px)';
+    ring.style.transform = 'scale(' + (0.82 + b * 0.3).toFixed(2) + ')';
+  }
+  var haloEl = mirror.querySelector('.stage-halo');
+  if(haloEl){
+    haloEl.style.opacity = String(b <= 0.01 ? 0.05 : (0.16 + b * 0.84));
+    haloEl.style.filter = 'blur(' + (18 + (1 - b) * 30).toFixed(1) + 'px)';
+  }
+  var devImg = mirror.querySelector('.device-img');
+  if(devImg){
+    devImg.style.filter = 'brightness(' + (0.68 + b * 0.42).toFixed(2) + ') saturate(' + (0.78 + b * 0.3).toFixed(2) + ')';
+  }
+  var ledVal = $('mirLedVal');
+  if(ledVal) ledVal.textContent = (f.light ? 'OFF' : Math.round(rawB * 100) + '%');
+
+  /* 香氛雾气：MOS 失效后立即停止 */
+  var mist = $('mirMist');
+  if(mist) mist.classList.toggle('on', !!(fx.aromaOn !== undefined ? fx.aromaOn : d.mist));
+
+  /* 信号强度条：任意 RMS 输入（含自定义噪声/麦克风）都会让它变化 */
+  var sig = d.signal || {};
+  if(typeof sig.raw === 'number'){
+    var sigBar = $('mirSignalBar'), sigVal = $('mirSignalVal');
+    var pct = Math.max(1, Math.min(100, sig.raw / 300 * 100));
+    if(sigBar) sigBar.style.width = pct.toFixed(1) + '%';
+    if(sigVal) sigVal.textContent = (f.sensor ? 'RMS 冻结 ' : 'RMS ') + Math.round(sig.raw);
+    if(sigBar) sigBar.classList.toggle('frozen', !!f.sensor);
+    var sigTh = $('mirSignalTh');
+    if(sigTh && typeof sig.noiseTh === 'number') sigTh.textContent = '噪阈 ' + Math.round(sig.noiseTh);
+    dev.dataset.scenario = sig.scenario || '';
+  }
+
+  /* TFT 对应行按故障具体显示：音频 ERR / 香氛 GPIO / 灯环熄灭 */
+  var tftRoot = $('mirTft');
+  if(tftRoot){
+    var setT = function(sel, val){ var el = tftRoot.querySelector(sel); if(el && val!==undefined && val!==null) el.textContent = val; };
+    if(f.audio) setT('[data-tft-audio]', 'ERR');
+    if(f.aroma) setT('[data-tft-aroma]', 'ERR');
+    if(f.light) setT('[data-tft-light]', 'OFF');
+    if(f.battery) setT('[data-tft-mode]', 'LOW PWR');
+  }
+
+  var badge = $('ucDeviceBadge');
+  if(badge) badge.textContent = faultList.length ? 'FAULT' : (s === 'disturbance' ? 'NOISE' : (s === 'transition' ? 'CALMING' : 'QUIET'));
+  var cap = $('ucDeviceCap');
+  var demo = d.demo || {};
+  if(cap){
+    var base = faultList.length ? ('FAULT · ' + faultList.join(' + ') + ' · 上列后果已同步')
+      : (s === 'disturbance' ? 'NOISE / YIELDING' : (s === 'transition' ? 'CALMING / CONFIRMING' : 'QUIET / SLEEP'));
+    var emaTxt = (typeof sig.ema === 'number') ?
+      ('EMA ' + Math.round(sig.ema) + ' / 阈 ' + Math.round(sig.quietTh||50) + '·' + Math.round(sig.noiseTh||150)) : '';
+    var line2 = demo.running ? ('DEMO ' + ((demo.stage>=0?demo.stage:0)+1) + '/5 · ' + (demo.title||'演示中')) :
+      ((sig.scenario ? sig.scenario + ' · ' : '') + emaTxt + ' · 与左侧数字孪生实时同步');
+    cap.innerHTML = 'LIVE VIRTUAL RENDER · ' + base + '<br><span class="uc-device-sub">' + line2 + '</span>';
+  }
+  window.fitDeviceMirror();
+};
+window.addEventListener('resize', function(){ if(window.fitDeviceMirror) window.fitDeviceMirror(); });
 
 /* ── 真实麦克风（顶层页面申请权限）
    file:// 下 iframe 直接 getUserMedia 会被 Permissions Policy 拒绝，
@@ -2862,7 +3283,27 @@ function emitState(){
       link.classList.remove('warn');
     }
   }
+  paintDevice(state);
 }
+
+/* 右侧香氛机展示：与主站状态机 / 左侧数字孪生 iframe 共用同一套状态渲染 */
+function paintDevice(s){
+  var dev = $('ucDevice'), devImg = $('ucDeviceImg');
+  if(!dev || !devImg) return;
+  var cfg = {
+    calm:   { src:'images/product-final.png',  badge:'QUIET',   cap:'LIVE VIRTUAL RENDER · QUIET / SLEEP · 状态与数据均由模拟引擎驱动', alt:'EmberSigh 香氛机：QUIET / SLEEP · 暖光呼吸灯环' },
+    noise:  { src:'images/device-noise.png',   badge:'NOISE',   cap:'LIVE VIRTUAL RENDER · NOISE / DEFEND · 香氛已切断，灯环转防守红', alt:'EmberSigh 香氛机：NOISE / DEFEND · 红色防守灯环' },
+    calming:{ src:'images/device-calming.png', badge:'CALMING', cap:'LIVE VIRTUAL RENDER · CALMING / COOLING · 冷却缓冲中，灯环转琥珀', alt:'EmberSigh 香氛机：CALMING / COOLING · 琥珀冷却灯环' }
+  }[s];
+  if(!cfg) return;
+  if(devImg.getAttribute('src') !== cfg.src) devImg.src = cfg.src;
+  devImg.alt = cfg.alt;
+  dev.dataset.state = s;
+  var dBadge = $('ucDeviceBadge'), dCap = $('ucDeviceCap');
+  if(dBadge) dBadge.textContent = cfg.badge;
+  if(dCap) dCap.textContent = cfg.cap;
+}
+window.paintDevice = paintDevice;   /* 供顶层 iframe 消息通道调用 */
 
 function updateBpm(){
   if(serialMode) return;   /* 串口模式下 bpm 位显示真实 RMS，由 paintRealNumbers 负责 */
@@ -3273,6 +3714,11 @@ if(serialBtn) serialBtn.addEventListener('click', function(){
     preview.style.display = show ? 'flex' : 'none';
     previewBtn.textContent = show ? '▣ 收起设备预览' : '▣ 展开设备预览';
     previewBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+    if(show){
+      preview.classList.add('just-opened');
+      setTimeout(function(){ preview.scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
+      setTimeout(function(){ preview.classList.remove('just-opened'); }, 1800);
+    }
   });
 })();
 
@@ -3326,6 +3772,7 @@ window.addEventListener('aromaUpdate', function(e){
 
 /* 初始化 */
 paintScreen();
+emitState();   /* 右侧香氛机展示与左侧状态机首帧对齐 */
 $('ftAroma').textContent = aromaFootText();
 log('ok','SYS','EmberSigh 控制台已就绪 · LVGL v9.6');
 log('dim','MIC','ES8311 Codec 初始化完成 · 48kHz / 16bit / 左声道');

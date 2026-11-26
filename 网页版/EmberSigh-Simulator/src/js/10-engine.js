@@ -72,6 +72,12 @@
     var detail = { from: prev, to: next, reason: reason, ema: this.ema, at: Date.now() };
     ES.bus.emit('state:change', detail);
     ES.logger.info('STATE', 'State changed: ' + prev + ' → ' + next + ' · ' + reason);
+    /* 状态广播给顶层主站：右侧香氛机展示与左侧数字孪生同步切换渲染图 */
+    try {
+      if (global.parent && global.parent !== global && global.parent.postMessage) {
+        global.parent.postMessage({ type: 'embersigh:state', state: next }, '*');
+      }
+    } catch (e) { /* 跨域限制时静默降级 */ }
   };
 
   ES.StateMachine.prototype.update = function (ema, dt) {

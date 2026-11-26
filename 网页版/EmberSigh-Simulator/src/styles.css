@@ -368,6 +368,21 @@ body{font-size:16px}
 .hs-pill.on[data-hs="calm"]{color:var(--forest);border-color:rgba(47,74,60,.42);background:rgba(126,154,131,.2);box-shadow:0 0 0 3px rgba(126,154,131,.09)}
 .hs-pill.on[data-hs="noise"]{color:var(--red);border-color:rgba(142,59,50,.42);background:rgba(142,59,50,.14);box-shadow:0 0 0 3px rgba(142,59,50,.08)}
 .hs-pill.on[data-hs="calming"]{color:var(--amber);border-color:rgba(194,145,80,.5);background:rgba(194,145,80,.18);box-shadow:0 0 0 3px rgba(194,145,80,.1)}
+.env-hint,.param-hint{margin:12px 2px 0;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.7;color:var(--ink-faint)}
+.env-hint{background:rgba(194,145,80,.1);border:1px solid rgba(194,145,80,.22)}
+.env-hint strong{color:var(--forest);font-weight:600}
+.param-hint{display:flex;flex-direction:column;gap:2px;background:rgba(47,74,60,.05);border:1px solid var(--line)}
+.param-hint b{color:var(--ink);font-size:13px;margin-bottom:3px}
+.param-hint span{font-size:12.5px}
+/* 参数实时试算：调数值立刻看到判定差异 */
+.param-preview{margin:12px 0 0;padding:12px 14px;border-radius:11px;background:rgba(47,74,60,.075);
+  border:1px solid rgba(47,74,60,.18);font-family:var(--mono);font-size:13px;line-height:1.7;}
+.param-preview .pp-title{color:var(--ink);font-weight:600;margin-bottom:4px;font-size:14px}
+.param-preview .pp-title b{color:var(--forest)}
+.param-preview .pp-line{color:var(--ink-faint);font-size:12.5px}
+.param-preview .pp-line.changed{color:var(--amber);font-weight:600}
+.param-preview .pp-status{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--forest)}
+.param-preview .pp-status.applied{color:var(--forest);font-weight:600}
 .section-head h2,.panel-title{font-size:20px}
 .panel-title small{font-size:14px}
 .scenario .sc-name{font-size:17px}.scenario .sc-val{font-size:13px}
@@ -397,4 +412,24 @@ body{font-size:16px}
   .panel-title,.section-head h2{font-size:19px}
   .scenario .sc-name{font-size:16px}.log-list{font-size:14px}
   .act-head h3{font-size:19px}.demo-stage-name{font-size:30px}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   控制台并列布局：香氛机屏幕常驻右侧，下方情景模拟滚动时仍可见
+   ═══════════════════════════════════════════════════════════════ */
+.console-stage-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,1.05fr);gap:36px;align-items:start;padding-bottom:96px}
+.cs-main{min-width:0}
+.console-stage-wrap .hero{display:block;min-height:0;gap:0}
+.console-stage-wrap .hero-copy{margin-bottom:6px}
+.console-stage-wrap .hero-state-card{max-width:none}
+.console-stage-wrap .hero-visual{position:sticky;top:calc(var(--nav-h) + 16px);z-index:6;align-self:start;padding-top:10px}
+.console-stage-wrap .product-stage{max-width:400px}
+.console-stage-wrap .stage-caption{bottom:-14px}
+@media(max-width:980px){
+  .console-stage-wrap{display:flex;flex-direction:column;gap:12px}
+  .console-stage-wrap .hero-visual{position:static;order:-1;align-self:center;width:100%;padding:0}
+  .console-stage-wrap .product-stage{max-width:360px;margin:0 auto}
+}
+@media(max-width:560px){
+  .console-stage-wrap .product-stage{max-width:300px}
 }

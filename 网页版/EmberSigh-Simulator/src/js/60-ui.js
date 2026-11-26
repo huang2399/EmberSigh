@@ -95,9 +95,15 @@
       for (var i = 0; i < steps.length; i++) steps[i].classList.toggle('active', i === d.index);
     });
     ES.bus.on('demo:running', function (d) {
-      $('btnDemo').textContent = d.running ? '■ 停止演示' : '▶ Demo Mode';
+      $('btnDemo').textContent = d.running ? '■ 停止30秒演示' : '▶ 30秒场景演示';
       $('btnDemo').classList.toggle('running', d.running);
       $('btnDemoStart').textContent = d.running ? '停止演示' : '开始路演演示';
+      /* 演示启动时自动解除引擎暂停，避免 UI 显示"演示中"但状态冻结 */
+      if (d.running && ctx.paused) {
+        ctx.paused = false;
+        var pb = $('btnPause');
+        if (pb) pb.textContent = '暂停';
+      }
     });
     ES.bus.on('demo:stopped', function () {
       var steps = document.querySelectorAll('#demoTimeline div');
@@ -117,22 +123,67 @@
         else ctx.mic.setScenario(key);
       });
     }
-    $('rmsSlider').addEventListener('input', function () { $('rmsValue').textContent = this.value; });
-    $('durationSlider').addEventListener('input', function () { $('durationValue').textContent = (+this.value).toFixed(1) + ' s'; });
-    $('btnApplyCustom').addEventListener('click', function () {
+    /* 滑块拖动即生效：右侧香氛机展示必须实时看到 RMS 变化 */
+    var applyCustomLive = function () {
       stopDemo();
+      var io = global.EmberSighIO && global.EmberSighIO.mic;
+      if (io && typeof io.forceLocal === 'function') io.forceLocal();
       ctx.mic.setScenario('custom', { base: +$('rmsSlider').value, duration: +$('durationSlider').value });
+    };
+    $('rmsSlider').addEventListener('input', function () {
+      $('rmsValue').textContent = this.value;
+      applyCustomLive();
     });
-    $('btnStopEnv').addEventListener('click', function () { stopDemo(); ctx.mic.setScenario('bedroom'); });
+    $('durationSlider').addEventListener('input', function () {
+      $('durationValue').textContent = (+this.value).toFixed(1) + ' s';
+      applyCustomLive();
+    });
+    $('btnApplyCustom').addEventListener('click', applyCustomLive);
+    $('btnStopEnv').addEventListener('click', function () {
+      stopDemo();
+      /* 恢复安静卧室：先退出真实麦克风/串口覆盖，否则模拟场景会被真值立刻盖掉 */
+      var io = global.EmberSighIO && global.EmberSighIO.mic;
+      if (io && typeof io.forceLocal === 'function') io.forceLocal();
+      ctx.mic.setScenario('bedroom');
+      ES.logger.ok('ENV', 'Restored quiet bedroom · real mic / serial override cleared');
+    });
 
+    function readDraft() {
+      return {
+        alpha: U.clamp(+$('alphaInput').value || 0.2, 0.01, 1),
+        quietThreshold: U.clamp(+$('quietThInput').value || 50, 0, 300),
+        noiseThreshold: U.clamp(+$('noiseThInput').value || 150, 0, 300),
+        quietSeconds: U.clamp(+$('quietSecInput').value || 3, 0.5, 20),
+        disturbanceHold: U.clamp(+$('holdInput').value || 0, 0, 5),
+        windowSize: U.clamp(+$('windowInput').value || 12, 2, 120)
+      };
+    }
+    function verdictFor(v, ema) {
+      return ema >= v.noiseThreshold ? 'NOISE · 将触发退让' : (ema < v.quietThreshold ? 'CALM · 保持安静' : 'MID · 迟滞区，不动作');
+    }
+    function updateParamPreview() {
+      var v = readDraft(), ema = ctx.signal.snapshot.ema;
+      var ppEma = $('ppEma'), ppVerdict = $('ppVerdict'), ppCompare = $('ppCompare');
+      if (!ppEma || !ppVerdict || !ppCompare) return;
+      ppEma.textContent = ema.toFixed(1);
+      ppVerdict.textContent = '按草稿阈值：EMA ' + ema.toFixed(0) + ' → ' + verdictFor(v, ema);
+      var changed = (v.alpha !== ctx.config.alpha || v.quietThreshold !== ctx.config.quietThreshold ||
+        v.noiseThreshold !== ctx.config.noiseThreshold || v.quietSeconds !== ctx.config.quietSeconds ||
+        v.disturbanceHold !== ctx.config.disturbanceHold || v.windowSize !== ctx.config.windowSize);
+      /* 固定参照值 168（持续噪声）：无论当前环境多安静，都能直观看到阈值改动的影响 */
+      var ref = 168;
+      ppCompare.textContent = '例：RMS ' + ref + ' → 草稿 ' + verdictFor(v, ref) +
+        '（生效 ' + verdictFor(ctx.config, ref) + '）' + (changed ? ' · 点「应用参数」生效' : '');
+      ppCompare.classList.toggle('changed', changed);
+    }
+    ['alphaInput', 'quietThInput', 'noiseThInput', 'quietSecInput', 'holdInput', 'windowInput'].forEach(function (id) {
+      var el = $(id); if (el) { el.addEventListener('input', updateParamPreview); el.addEventListener('change', updateParamPreview); }
+    });
+    updateParamPreview();
     $('btnApplyParams').addEventListener('click', function () {
-      var cfg = ctx.config;
-      cfg.alpha = U.clamp(+$('alphaInput').value || 0.2, 0.01, 1);
-      cfg.quietThreshold = U.clamp(+$('quietThInput').value || 50, 0, 300);
-      cfg.noiseThreshold = U.clamp(+$('noiseThInput').value || 150, 0, 300);
-      cfg.quietSeconds = U.clamp(+$('quietSecInput').value || 3, 0.5, 20);
-      cfg.disturbanceHold = U.clamp(+$('holdInput').value || 0, 0, 5);
-      cfg.windowSize = U.clamp(+$('windowInput').value || 12, 2, 120);
+      var cfg = ctx.config, v = readDraft(), before = cfg.noiseThreshold;
+      cfg.alpha = v.alpha; cfg.quietThreshold = v.quietThreshold; cfg.noiseThreshold = v.noiseThreshold;
+      cfg.quietSeconds = v.quietSeconds; cfg.disturbanceHold = v.disturbanceHold; cfg.windowSize = v.windowSize;
       $('alphaInput').value = cfg.alpha; $('quietThInput').value = cfg.quietThreshold;
       $('noiseThInput').value = cfg.noiseThreshold; $('quietSecInput').value = cfg.quietSeconds;
       $('holdInput').value = cfg.disturbanceHold; $('windowInput').value = cfg.windowSize;
@@ -140,6 +191,9 @@
       if (ml) { ml[0].yAxis = cfg.quietThreshold; ml[1].yAxis = cfg.noiseThreshold; self.chart.setOption({ series: [{}, {}, { markLine: { data: ml } }] }); }
       document.querySelector('.formula-box small').textContent =
         'α = ' + cfg.alpha.toFixed(2) + ' · 阈值 ' + cfg.quietThreshold + ' / ' + cfg.noiseThreshold + ' · 安静确认 ' + cfg.quietSeconds + 's';
+      var st = $('ppStatus');
+      if (st) { st.textContent = '✓ 已生效：噪阈 ' + before + ' → ' + cfg.noiseThreshold + ' · 右侧展示卡噪阈标尺已同步'; st.classList.add('applied'); }
+      updateParamPreview();
       ES.logger.info('CFG', 'Parameters updated · α=' + cfg.alpha.toFixed(2) + ' quiet=' + cfg.quietThreshold + ' noise=' + cfg.noiseThreshold + ' hold=' + cfg.disturbanceHold + 's');
     });
 
@@ -147,13 +201,28 @@
       ctx.coordinator.setUserVolume(+this.value);
       $('audioVolValue').textContent = this.value + '%';
     });
+    function setAudioPlaying(on) {
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      if (io && typeof io.setPlaying === 'function') io.setPlaying(on);
+      /* 虚拟音量与真实声景保持同一播放意图，TFT 读数才不会自相矛盾 */
+      if (ctx.audio.playing !== on) ctx.audio.playing = on;
+      ES.logger.info('SOUND', on ? 'Forest soundscape playing' : 'Forest soundscape paused');
+    }
     $('btnAudioPlay').addEventListener('click', function () {
-      var playing = ctx.audio.togglePlay();
-      this.textContent = playing ? '暂停播放' : '继续播放';
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      var on = io && io.isPlaying ? !io.isPlaying() : !ctx.audio.playing;
+      setAudioPlaying(on);
     });
     $('btnAudioMute').addEventListener('click', function () {
       ctx.audio.toggleMute();
       this.textContent = ctx.audio.muted ? '取消静音' : '静音';
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      if (io && io.rampTo) io.rampTo(ctx.audio.muted ? 0 : (ctx.audio.effectiveVolume() / 100 * 0.5), 0.3);
+    });
+    $('btnSoundscape').addEventListener('click', function () {
+      var io = global.EmberSighIO && global.EmberSighIO.soundscape;
+      var on = io && io.isPlaying ? !io.isPlaying() : !ctx.audio.playing;
+      setAudioPlaying(on);
     });
     $('ledBrightness').addEventListener('input', function () {
       ctx.coordinator.setUserBrightness(+this.value);
@@ -177,12 +246,21 @@
     });
 
     $('btnClearLog').addEventListener('click', function () { ES.logger.clear(); });
-    $('btnDemo').addEventListener('click', function () { ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start(); });
-    $('btnDemoStart').addEventListener('click', function () { ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start(); });
+    function toggleDemo(scroll) {
+      var starting = !ctx.demo.running;
+      ctx.demo.running ? ctx.demo.stop(false) : ctx.demo.start();
+      if (starting && scroll) {
+        var panel = document.getElementById('demoPanel');
+        if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ES.logger.info('DEMO', '30s script: 安静卧室 → 说话声 → 噪声退让 → 安静确认 → 平滑恢复');
+      }
+    }
+    $('btnDemo').addEventListener('click', function () { toggleDemo(true); });
+    $('btnDemoStart').addEventListener('click', function () { toggleDemo(false); });
     $('btnReset').addEventListener('click', function () { if (ctx.demo.running) ctx.demo.stop(false); ctx.reset(); });
     $('btnPause').addEventListener('click', function () {
       ctx.paused = !ctx.paused;
-      this.textContent = ctx.paused ? '继续' : '暂停';
+      this.textContent = ctx.paused ? '继续引擎' : '暂停引擎';
       ES.logger.info('SYS', ctx.paused ? 'Simulation engine paused' : 'Simulation engine resumed');
     });
 
@@ -310,6 +388,54 @@
       root.querySelector('[data-tft-light]').textContent = ES.faults.light ? 'ERR' : (ctx.light.mode === 'WARM' ? 'WARM' : 'DIM');
     }
 
+    /* 产品画面镜像：把左侧 product-stage 的实时状态推给顶层，右侧展示卡逐帧同步 */
+    var tftRoot = tfts[0];
+    if (tftRoot && global.parent && global.parent !== global && global.parent.postMessage) {
+      try {
+        global.parent.postMessage({
+          type: 'embersigh:device-mirror',
+          state: state.toLowerCase(),
+          mist: ctx.aroma.on && !ES.faults.aroma,
+          /* 故障注入：右侧展示据此显示 FAULT 与视觉异常 */
+          faults: { mic: !!ES.faults.mic, audio: !!ES.faults.audio, aroma: !!ES.faults.aroma,
+                    light: !!ES.faults.light, battery: !!ES.faults.battery, sensor: !!ES.faults.sensor },
+          /* 每种故障的具体后果（右侧据此展示真实变化，而不只是变灰） */
+          effects: {
+            micValid: !ES.faults.mic && !ctx.mic.invalid,
+            rmsFrozen: !!ES.faults.sensor,
+            rmsHold: Math.round(ctx.mic.lastValid),
+            audioOut: ES.faults.audio ? 0 : Math.round(ctx.audio.effectiveVolume()),
+            aromaOn: !!ctx.aroma.on && !ES.faults.aroma,
+            gpio: ctx.aroma.gpio,
+            ledOut: ES.faults.light ? 0 : Math.round(((ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0) * 100),
+            derated: !!ES.faults.battery
+          },
+          /* 灯环亮度 / 呼吸：跟随左侧滑块实时变化 */
+          led: { brightness: (ctx.light.leds[0] && ctx.light.leds[0].brightness) || 0,
+                 mode: ctx.light.mode },
+          /* 信号强度：右侧声波强度条随任意 RMS 输入实时变化 */
+          signal: { raw: snap.raw, ema: snap.ema,
+                    quietTh: cfg.quietThreshold, noiseTh: cfg.noiseThreshold,
+                    scenario: ctx.mic.name(), remaining: ctx.mic.remaining() },
+          /* 演示阶段：右侧卡片同步显示 DEMO 进度 */
+          demo: ctx.demo.info(),
+          paused: !!ctx.paused,
+          tft: {
+            state: state,
+            time: timeStr,
+            icon: tftRoot.querySelector('[data-tft-icon]').textContent,
+            mode: tftRoot.querySelector('[data-tft-mode]').textContent,
+            rms: tftRoot.querySelector('[data-tft-rms]').textContent,
+            env: tftRoot.querySelector('[data-tft-env]').textContent,
+            meter: tftRoot.querySelector('[data-tft-meter]').style.width,
+            audio: tftRoot.querySelector('[data-tft-audio]').textContent,
+            aroma: tftRoot.querySelector('[data-tft-aroma]').textContent,
+            light: tftRoot.querySelector('[data-tft-light]').textContent
+          }
+        }, '*');
+      } catch (e) { /* 顶层不可达时静默降级 */ }
+    }
+
     /* 环境输入 */
     $('envActive').textContent = ctx.mic.name();
     var rem = ctx.mic.remaining();
@@ -318,13 +444,21 @@
 
     /* 声景 */
     var av = ctx.audio.effectiveVolume();
-    $('audioVolValue').textContent = Math.round(ctx.audio.volume) + '%';
+    $('audioVolValue').textContent = Math.round(av) + '%';
     $('audioTarget').textContent = Math.round(ctx.audio.target) + '%';
+    var ioSound = global.EmberSighIO && global.EmberSighIO.soundscape;
+    var realPlaying = ioSound && ioSound.isPlaying ? ioSound.isPlaying() : null;
+    /* 按钮文字与真实声景状态严格同步，不再出现「PAUSED 却显示继续播放」 */
+    var playBtn = $('btnAudioPlay'), muteBtn = $('btnAudioMute'), soundBtn = $('btnSoundscape');
+    var showPlaying = realPlaying === null ? ctx.audio.playing : realPlaying;
+    if (playBtn) playBtn.textContent = showPlaying ? '暂停播放' : '继续播放';
+    if (soundBtn) soundBtn.textContent = (realPlaying === null ? ctx.audio.playing : realPlaying) ? '■ 停止声景' : '▶ 播放声景';
+    if (muteBtn) muteBtn.textContent = ctx.audio.muted ? '取消静音' : '静音';
     var audioBadge = $('audioStatus');
     audioBadge.className = 'act-badge';
     if (ES.faults.audio) { audioBadge.textContent = 'OFFLINE'; audioBadge.classList.add('off'); }
     else if (ctx.audio.muted) { audioBadge.textContent = 'MUTED'; audioBadge.classList.add('fade'); }
-    else if (!ctx.audio.playing) { audioBadge.textContent = 'PAUSED'; audioBadge.classList.add('fade'); }
+    else if (!showPlaying) { audioBadge.textContent = 'PAUSED'; audioBadge.classList.add('fade'); }
     else if (Math.abs(ctx.audio.volume - ctx.audio.target) > 1) { audioBadge.textContent = 'FADING'; audioBadge.classList.add('fade'); }
     else audioBadge.textContent = 'PLAYING';
     var bars = $('audioWave').children;

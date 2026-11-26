@@ -46,6 +46,8 @@
     ctx.aroma.reset();
     ctx.light.reset();
     ctx.coordinator.reset();
+    ctx.demo.reset();
+    ctx.paused = false;
     ctx.history.length = 0;
     ctx.segments.length = 0;
     historyAcc = 0;

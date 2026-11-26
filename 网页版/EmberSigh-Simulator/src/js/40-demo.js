@@ -44,6 +44,8 @@
 
   ES.Demo.prototype.start = function () {
     this.resetFn();
+    /* 演示必须真正跑起来：若引擎处于暂停态则自动恢复 */
+    if (this.ctx.paused) { this.ctx.paused = false; }
     this.running = true;
     this.elapsed = 0;
     this.stage = -1;
@@ -78,6 +80,15 @@
       ES.bus.emit('demo:stage', { index: idx, stage: STAGES[idx] });
     }
     if (this.elapsed >= 30) this.stop(true);
+  };
+
+  /* 重置：顶部「重置」必须把演示进度条也归零 */
+  ES.Demo.prototype.reset = function () {
+    this.running = false;
+    this.elapsed = 0;
+    this.stage = -1;
+    ES.bus.emit('demo:running', { running: false });
+    ES.bus.emit('demo:stopped', { completed: false });
   };
 
   ES.Demo.prototype.info = function () {
