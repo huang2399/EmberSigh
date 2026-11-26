@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EmberSigh 听眠 · 端侧睡眠环境管家</title>
-<meta name="description" content="EmberSigh 听眠 —— 只用一支麦克风「听」你的房间，声景与香氛随环境退让与回归。">
+<title>EmberSigh 听眠 · AI 原生睡眠环境调节系统</title>
+<meta name="description" content="EmberSigh 听眠 —— AI 原生睡眠环境调节系统。理解睡前意图，记忆环境偏好，端侧感知并智能编排声音、香氛与氛围灯光。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1202,6 +1202,7 @@ body{font-size:17px}
   .uc-main .sim-frame{height:920px;min-height:0}
 }
 </style>
+<link rel="stylesheet" href="ai-native.css">
 </head>
 <body>
 <div class="ambient">
@@ -1251,40 +1252,173 @@ body{font-size:17px}
     <!-- Hero -->
     <section class="hero" id="top">
       <div class="hero-copy">
-        <div class="eyebrow">Vision · 端侧睡眠环境管家</div>
-        <h1>最高级的智能，<br>是<b>懂得退让</b>。</h1>
-        <div class="kicker">The highest intelligence is knowing when to recede.</div>
+        <div class="eyebrow">Vision · AI 原生睡眠环境调节系统</div>
+        <h1>让睡前环境，<br><b>真正理解你</b>的需要。</h1>
+        <div class="kicker">Make the room understand you — before you ask.</div>
         <p>
-          EmberSigh 不佩戴、不拍摄，只用一支麦克风<b>「听」</b>你的房间。<br>
-          当它听见你翻身、听见环境忽然变吵，它不会加大音量提醒你，<br>
-          而是安静地降低声景、暂停香氛 —— 然后在你重新安静下来时，<br>
-          让森林与气味，慢慢回来。
+          EmberSigh 是一套 <b>AI 原生</b>睡眠环境调节系统。它理解你的睡前意图，<br>
+          记住你的环境偏好，并结合端侧实时感知，<br>
+          智能编排声音、香氛与氛围灯光 —— 让睡前环境，恰到好处。
         </p>
         <div class="chips">
-          <div class="chip"><span class="k m">0</span>摄像头</div>
-          <div class="chip"><span class="k s">0</span>可穿戴</div>
-          <div class="chip"><span class="k">100%</span>端侧推理</div>
-          <div class="chip"><span class="k">3s</span>冷却退让</div>
+          <div class="chip"><span class="k">Intent</span>意图理解</div>
+          <div class="chip"><span class="k">Memory</span>偏好记忆</div>
+          <div class="chip"><span class="k">Agent</span>智能体编排</div>
+          <div class="chip"><span class="k">0</span>摄像头</div>
         </div>
         <div class="hero-cta">
-          <a class="btn-primary" href="#console">进入控制台 →</a>
-          <a class="btn-ghost" href="#lab">调一支香</a>
+          <a class="btn-primary" href="#ai-experience">探索 AI 睡前体验 →</a>
+          <a class="btn-ghost" href="#dev">查看技术架构</a>
+        </div>
+        <div style="margin-top:16px;">
+          <span class="ai-badge concept"><i></i>意图/记忆/编排为路线图能力 · 当前展示为概念原型</span>
         </div>
       </div>
 
       <div class="hero-visual" id="heroVisual">
         <div class="float-card fc1">MIC · RMS <b>42</b> dB</div>
-        <div class="float-card fc2">AROMA · <b>3</b> CH</div>
         <div class="hero-stage" id="heroStage">
           <img class="hero-img" src="images/hero-product.jpg"
                alt="EmberSigh One 产品渲染图" loading="eager"
                onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           <span class="hero-sheen" aria-hidden="true"></span>
         </div>
+        <!-- 手机 App 概念界面（真实商业产品质感，非 AI 仪表盘） -->
+        <div class="phone-mock" aria-label="EmberSigh App 概念界面">
+          <div class="pm-notch"></div>
+          <div class="pm-status"><span>21:34</span><span>●●● ▮▮▮</span></div>
+          <div class="pm-greeting">晚上好，<br><b>让今晚慢一点。</b></div>
+          <div class="pm-scene-card">
+            <div class="pm-scene-top"><span class="pm-scene-tag">● 正在播放</span><span>23:00 自动结束</span></div>
+            <div class="pm-scene-name">森林雨声</div>
+            <div class="pm-scene-desc">Forest Rain · 低音量 · 由你的偏好生成</div>
+            <div class="pm-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="pm-controls"><button aria-label="上一个">⏮</button><button class="pm-play" aria-label="暂停">❚❚</button><button aria-label="下一个">⏭</button></div>
+          </div>
+          <div class="pm-modules">
+            <div class="pm-mod"><span class="pm-ico">♪</span><div><b>声音</b><small>森林雨声 · 25%</small></div><span class="pm-state on">ON</span></div>
+            <div class="pm-mod"><span class="pm-ico">☼</span><div><b>灯光</b><small>暖色 · 低亮度 18%</small></div><span class="pm-state on">ON</span></div>
+            <div class="pm-mod"><span class="pm-ico">❋</span><div><b>香氛</b><small>按你的意图关闭</small></div><span class="pm-state off">OFF</span></div>
+          </div>
+          <div class="pm-tabbar"><span class="on">今晚</span><span>场景</span><span>偏好</span><span>我的</span></div>
+        </div>
         <div class="device-cap">
           <div class="n">EmberSigh One · 概念样机</div>
           <div class="s">ESP32-S3-EYE · 240×240 · SOUNDSCAPE + AROMA</div>
-          <div class="s" style="margin-top:5px;color:var(--ink-faint);">*概念工业设计渲染，当前工程验证采用模块化方案</div>
+          <div class="s" style="margin-top:5px;color:var(--ink-faint);">*产品与 App 界面为概念设计渲染</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ AI Native Experience · 概念交互原型 ══════════ -->
+    <section class="sec" id="ai-experience">
+      <div class="sec-head reveal">
+        <h2>今晚，你想要<b>怎样的环境</b>？</h2>
+        <div class="sub">AI Native Experience · 概念交互原型</div>
+      </div>
+      <div style="margin-bottom:20px;" class="reveal">
+        <span class="ai-badge concept"><i></i>概念演示 · 本地规则模拟</span>
+        <span class="ai-badge sim" style="margin-left:8px;"><i></i>未接入大模型 · 接口已预留</span>
+      </div>
+
+      <div class="ai-exp-grid reveal">
+        <div class="glass ai-prompt">
+          <div class="ai-prompt-label">Describe your evening · 描述你的睡前意图</div>
+          <textarea class="ai-textarea" id="aiPrompt">今晚有点累，想要森林雨声，灯光暗一点，不要香氛。</textarea>
+          <div class="ai-examples">
+            <button type="button" data-example="今晚有点累，想要森林雨声，灯光暗一点，不要香氛。">疲惫 · 森林雨声</button>
+            <button type="button" data-example="帮我安静下来，来点轻柔的海浪，香氛要薰衣草。">放松 · 海浪薰衣草</button>
+            <button type="button" data-example="我要专注看会儿书，声音小一点，灯光亮一些。">专注 · 微光亮灯</button>
+          </div>
+          <button class="ai-gen-btn" id="aiGenBtn" type="button"><span class="spark">✦</span>生成环境方案</button>
+          <div class="ai-steps" id="aiSteps">
+            <div class="ai-step" data-step="1"><span class="num">1</span><span class="txt">正在理解你的需求…</span></div>
+            <div class="ai-step" data-step="2"><span class="num">2</span><span class="txt">提取场景意图…</span></div>
+            <div class="ai-step" data-step="3"><span class="num">3</span><span class="txt">生成声音 / 香氛 / 灯光参数…</span></div>
+          </div>
+          <div class="ai-disclaimer" style="margin-top:18px;">
+            <span class="di-ico">ⓘ</span>
+            <span><b>说明：</b>此演示使用本地关键词规则模拟意图解析，<b>不是真实大模型推理</b>，也未连接硬件。架构已预留模型与记忆接口，未来可替换为真实服务。</span>
+          </div>
+        </div>
+
+        <div class="glass ai-result">
+          <div class="ai-result-empty" id="aiResultEmpty">
+            <div class="re-ico">Curate your night.</div>
+            <p>在左侧描述你想要的睡前环境，点击生成，看看 EmberSigh 会如何为你编排。</p>
+          </div>
+          <div class="ai-scene-card" id="aiSceneCard">
+            <div class="ai-scene-head">
+              <div><div class="ai-scene-title" id="aiSceneTitle">雨夜安眠</div><div class="ai-scene-sub" id="aiSceneSub">SCENARIO · 概念生成</div></div>
+              <span class="ai-badge concept"><i></i>概念结果</span>
+            </div>
+            <div class="ai-params">
+              <div class="ai-param"><span class="ap-ico">♪</span><div><div class="ap-name">声音 Soundscape</div><div class="ap-val" id="apSound">森林雨声 · 低音量</div></div><span class="ap-tag" id="apSoundTag">25%</span></div>
+              <div class="ai-param"><span class="ap-ico">☼</span><div><div class="ap-name">灯光 Lighting</div><div class="ap-val" id="apLight">暖色 · 低亮度</div></div><span class="ap-tag" id="apLightTag">18%</span></div>
+              <div class="ai-param"><span class="ap-ico">❋</span><div><div class="ap-name">香氛 Aroma</div><div class="ap-val" id="apAroma">关闭</div></div><span class="ap-tag" id="apAromaTag">OFF</span></div>
+            </div>
+            <div class="ai-adjust">
+              <input type="text" id="aiAdjustInput" placeholder="继续调整，例如：声音再小一点">
+              <button type="button" id="aiAdjustBtn">调整方案</button>
+            </div>
+            <div class="ai-apply-note" id="aiApplyNote">执行任务预览：SOUND=forest_rain · VOL=25 · LIGHT=warm_dim · AROMA=off　（仅预览，不向硬件下发）</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ Preference Memory · 概念原型 ══════════ -->
+    <section class="sec" id="preference">
+      <div class="sec-head reveal">
+        <h2>它记得，你<b>更喜欢怎样</b>入睡。</h2>
+        <div class="sub">Preference Memory · 概念原型 / 演示数据</div>
+      </div>
+      <div style="margin-bottom:20px;" class="reveal">
+        <span class="ai-badge concept"><i></i>概念演示 · 数据存于本机浏览器</span>
+        <span class="ai-badge sim" style="margin-left:8px;"><i></i>持久化记忆接口已预留</span>
+      </div>
+      <div class="glass ai-mem reveal">
+        <div class="ai-mem-head">
+          <div class="card-title"><span class="tick"></span>你的睡前偏好画像</div>
+          <span class="ai-badge concept"><i></i>演示数据 · 可编辑</span>
+        </div>
+        <div class="ai-mem-summary" id="aiMemSummary">你通常更喜欢低音量森林声景，且深夜不需要香氛。</div>
+        <div class="ai-mem-grid" id="aiMemGrid">
+          <div class="ai-mem-item" data-key="scene">
+            <div class="mi-label">常用场景 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">雨夜安眠</div><div class="mi-note">近 7 天使用 5 次</div>
+            <select><option>雨夜安眠</option><option>海浪轻眠</option><option>深林静夜</option><option>暖室阅读</option></select>
+          </div>
+          <div class="ai-mem-item" data-key="sound">
+            <div class="mi-label">声音偏好 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">森林雨声 · 低音量</div><div class="mi-note">音量 25% · 渐入</div>
+            <select><option>森林雨声 · 低音量</option><option>海浪 · 中低音量</option><option>溪流 · 低音量</option><option>静音</option></select>
+          </div>
+          <div class="ai-mem-item" data-key="aroma">
+            <div class="mi-label">香氛偏好 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">深夜不开香氛</div><div class="mi-note">23:00 后自动关闭</div>
+            <select><option>深夜不开香氛</option><option>薰衣草 · 淡</option><option>松木 · 淡</option><option>柑橘 · 中</option></select>
+          </div>
+          <div class="ai-mem-item" data-key="light">
+            <div class="mi-label">灯光偏好 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">暖色 · 低亮度</div><div class="mi-note">亮度 18% · 呼吸</div>
+            <select><option>暖色 · 低亮度</option><option>暖色 · 微光</option><option>中性 · 中等亮度</option><option>关闭</option></select>
+          </div>
+          <div class="ai-mem-item" data-key="feedback">
+            <div class="mi-label">最近主动反馈 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">"雨声再小一点更好"</div><div class="mi-note">3 天前 · 已纳入偏好</div>
+            <input type="text" value="雨声再小一点更好">
+          </div>
+          <div class="ai-mem-item" data-key="recommend">
+            <div class="mi-label">推荐下一次场景 <button class="mi-edit" type="button">编辑</button></div>
+            <div class="mi-value">海浪轻眠</div><div class="mi-note">基于偏好推断 · 概念推荐</div>
+            <select><option>海浪轻眠</option><option>雨夜安眠</option><option>深林静夜</option><option>暖室阅读</option></select>
+          </div>
+        </div>
+        <div class="ai-mem-foot">
+          <button class="ai-ghost-btn" id="aiMemReset" type="button">↻ 恢复演示默认值</button>
+          <button class="ai-ghost-btn ai-clear-btn" id="aiMemClear" type="button">清除全部偏好</button>
+          <span class="ai-badge concept" id="aiMemStatus"><i></i>演示数据 · 修改即时保存在本机</span>
         </div>
       </div>
     </section>
@@ -1511,9 +1645,56 @@ body{font-size:17px}
       <div class="sec-head" style="margin-bottom:26px;">
         <div>
           <div class="sec-no">02 · CONSOLE</div>
-          <h2 style="margin-top:12px;">三级状态机，<b>实时运转</b>。</h2>
+          <h2 style="margin-top:12px;">AI 场景编排，<b>环境实时控制</b>。</h2>
         </div>
-        <div class="sub">Calm → Noise → Calming → Calm</div>
+        <div class="sub">Scene Planning · Runtime · Memory</div>
+      </div>
+    </section>
+
+    <!-- ══════════ Console 增强：三大区块 + 数据源严格分区 ══════════ -->
+    <section class="sec" style="padding-top:0;">
+      <div class="glass ai-console-block reveal">
+        <div class="ai-source-legend">
+          <span class="ai-badge real"><i></i>真实硬件数据 · Web Serial 回传</span>
+          <span class="ai-badge sim"><i></i>模拟数据 · 数字孪生引擎</span>
+          <span class="ai-badge concept"><i></i>概念 AI 数据 · 本地规则模拟</span>
+        </div>
+        <div class="ai-cb-tabs">
+          <button class="ai-cb-tab on" data-panel="planner" type="button">A · AI Scene Planner</button>
+          <button class="ai-cb-tab" data-panel="runtime" type="button">B · Environment Runtime</button>
+          <button class="ai-cb-tab" data-panel="memory" type="button">C · Preference Memory</button>
+        </div>
+
+        <!-- A. AI Scene Planner -->
+        <div class="ai-cb-panel on" data-panel="planner">
+          <div class="ai-lab-input" style="margin-bottom:6px;">
+            <input type="text" id="consoleAiInput" placeholder="用一句话描述场景，例如：森林雨声，灯光暗一点，不要香氛">
+            <button type="button" id="consoleAiBtn">解析并预览</button>
+          </div>
+          <div class="ai-apply-note" id="consoleAiOut">待输入 · 生成后显示场景意图与执行任务预览（概念演示，不向硬件下发）。</div>
+        </div>
+
+        <!-- B. Environment Runtime -->
+        <div class="ai-cb-panel" data-panel="runtime">
+          <div class="ai-cb-grid">
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">环境状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtState">CALM</div><div class="rt-desc">RMS/EMA 三态判定 · 数字孪生引擎</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">声景输出</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtAudio">42%</div><div class="rt-desc">森林 PCM · MAX98357A（联调中）</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">香氛输出</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtAroma">ON</div><div class="rt-desc">MOS 单路验证 · 多通道规划中</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">灯环状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtLight">暖光</div><div class="rt-desc">WS2812 ×16 · 联调中</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">执行器连接</span><span class="ai-badge real"><i></i>真实</span></div><div class="rt-val" id="rtConn" style="font-size:15px;">未连接</div><div class="rt-desc" id="rtConnDesc">Web Serial · 点击上方按钮连接</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">实时日志</span><span class="ai-badge real"><i></i>真实</span></div><div class="rt-val" style="font-size:14px;" id="rtLogState">待机</div><div class="rt-desc">详见右侧 HAL / SENSOR 终端</div></div>
+          </div>
+        </div>
+
+        <!-- C. Preference Memory -->
+        <div class="ai-cb-panel" data-panel="memory">
+          <div class="ai-mem-summary" id="consoleMemSummary" style="margin-bottom:14px;">你通常偏好低音量森林声景，深夜不开香氛。</div>
+          <div class="ai-disclaimer">
+            <span class="di-ico">ⓘ</span>
+            <span>此处为<b>概念演示偏好</b>（与「理念」页共享本机演示数据）。真实个性化记忆系统属路线图能力，尚未接入持久化服务。</span>
+          </div>
+          <div class="ai-mem-foot"><button class="ai-ghost-btn" type="button" id="consoleMemEdit">编辑偏好 → 前往「理念 · Preference Memory」</button></div>
+        </div>
       </div>
     </section>
 
@@ -1916,6 +2097,49 @@ body{font-size:17px}
       </div>
     </section>
 
+    <!-- ══════════ Lab 增强：自然语言生成 / 偏好推荐 / 联合预览 / 反馈 ══════════ -->
+    <section class="sec" style="padding-top:0;">
+      <div class="glass ai-lab-extra reveal">
+        <div class="ai-mem-head">
+          <div class="card-title"><span class="tick"></span>AI 香氛构思 · 概念原型</div>
+          <span class="ai-badge concept"><i></i>本地规则模拟 · 非真实 AI 推理</span>
+        </div>
+        <div class="ai-lab-row">
+          <div>
+            <div class="ai-prompt-label">描述你想要的香气</div>
+            <div class="ai-lab-input">
+              <input type="text" id="labAiInput" placeholder="例如：像雨后的森林，安静助眠，不要柑橘">
+              <button type="button" id="labAiBtn">生成配方</button>
+            </div>
+            <div class="ai-disclaimer" style="margin-top:12px;">
+              <span class="di-ico">ⓘ</span>
+              <span><b>当前：</b>单通道雾化硬件验证中。<b>多通道按偏好组合</b>为未来设想，下方为概念预览。</span>
+            </div>
+            <div class="ai-feedback">
+              <span class="fb-label">这次推荐如何？</span>
+              <button class="ai-fb-btn" data-fb="great" type="button" aria-label="喜欢">☺</button>
+              <button class="ai-fb-btn" data-fb="ok" type="button" aria-label="一般">😐</button>
+              <button class="ai-fb-btn" data-fb="bad" type="button" aria-label="不喜欢">☹</button>
+              <span class="fb-saved" id="labFbSaved">✓ 反馈已记录（演示数据）</span>
+            </div>
+          </div>
+          <div>
+            <div class="ai-lab-output" id="labAiOutput">
+              <div class="ai-scene-title" id="labAiName">雨后松林</div>
+              <div class="ai-combo-bar" id="labComboBar"></div>
+              <div class="ai-combo-txt" id="labComboTxt">松木 60% · 薰衣草 40% · 柑橘 0%</div>
+              <div class="ai-preview-grid">
+                <div class="ai-preview-cell"><div class="pc-ico">♪</div><div class="pc-name">声音</div><div class="pc-val" id="labPvSound">森林雨声</div></div>
+                <div class="ai-preview-cell"><div class="pc-ico">❋</div><div class="pc-name">香氛</div><div class="pc-val" id="labPvAroma">松木为主</div></div>
+                <div class="ai-preview-cell"><div class="pc-ico">☼</div><div class="pc-name">灯光</div><div class="pc-val" id="labPvLight">暖色低亮</div></div>
+              </div>
+            </div>
+            <div class="ai-result-empty" id="labAiEmpty" style="min-height:200px;"><div class="re-ico">Blend by intent.</div><p>输入一句描述，生成概念香氛配方与声音/灯光联合预览。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 说明区 -->
     <section class="sec" style="padding-bottom:60px;">
       <div class="sec-head reveal">
@@ -1958,9 +2182,31 @@ body{font-size:17px}
       <div class="sec-head" style="margin-bottom:26px;">
         <div>
           <div class="sec-no">04 · DEVELOPER</div>
-          <h2 style="margin-top:12px;">固件与调度算法，<b>完全开源</b>。</h2>
+          <h2 style="margin-top:12px;">AI Native <b>技术架构</b>，完全开源。</h2>
         </div>
-        <div class="sub">Architecture · Pinout · Field Notes</div>
+        <div class="sub">Architecture · Pinout · Development Status</div>
+      </div>
+    </section>
+
+    <!-- ══════════ Developer 增强：五层技术架构 + 开发状态 ══════════ -->
+    <section class="sec" style="padding-top:0;">
+      <div class="glass ai-stack reveal">
+        <div class="ai-mem-head">
+          <div class="card-title"><span class="tick"></span>AI Native 五层技术架构</div>
+          <div class="ai-source-legend" style="margin:0;">
+            <span class="dev-status done">已验证</span><span class="dev-status ing">联调中</span><span class="dev-status plan">规划中</span>
+          </div>
+        </div>
+        <div class="ai-stack-layers">
+          <div class="ai-layer"><span class="al-no">L1</span><div><div class="al-name">用户意图与交互层</div><div class="al-detail">自然语言输入 · App 概念界面 · 场景卡片与反馈入口</div></div><div class="al-tags"><span class="dev-status plan">规划中</span></div></div>
+          <div class="ai-layer"><span class="al-no">L2</span><div><div class="al-name">AI 理解 · 记忆 · 编排层</div><div class="al-detail">意图解析 · 偏好记忆 · Agent 任务编排 · 场景生成（接口预留）</div></div><div class="al-tags"><span class="dev-status plan">规划中</span></div></div>
+          <div class="ai-layer"><span class="al-no">L3</span><div><div class="al-name">端侧环境感知与实时决策层</div><div class="al-detail">ES8311 · RMS / 滑动平均 / EMA(α=0.2) · Calm/Noise/Calming 迟滞三态 · 阈值 50/150 · 3s 确认</div></div><div class="al-tags"><span class="dev-status done">已验证</span></div></div>
+          <div class="ai-layer"><span class="al-no">L4</span><div><div class="al-name">多模态硬件执行层</div><div class="al-detail">MAX98357A + 3070 喇叭（联调中）· MOS 香氛单路（已验证）· WS2812 灯环（联调中）· ST7789 屏</div></div><div class="al-tags"><span class="dev-status ing">联调中</span></div></div>
+          <div class="ai-layer"><span class="al-no">L5</span><div><div class="al-name">反馈与偏好更新层</div><div class="al-detail">用户反馈采集 · 偏好增量更新 · 下一次场景推荐（概念原型）</div></div><div class="al-tags"><span class="dev-status plan">规划中</span></div></div>
+        </div>
+        <div class="ai-stack-note">
+          <b>关于「端侧智能」的边界：</b>L3 的 RMS / EMA / 迟滞阈值属于<b>确定性信号处理与控制</b>，运行于 ESP32-S3-EYE 本地，<b>不是大模型推理</b>。L1/L2/L5 的意图理解、记忆与编排目前以<b>概念原型</b>形式在网站演示，架构已预留模型与记忆接口，尚未在真实硬件上运行。底层软件栈：ESP-IDF · FreeRTOS · LVGL · HAL 硬件抽象层。
+        </div>
       </div>
     </section>
 
@@ -2238,9 +2484,10 @@ body{font-size:17px}
     </div>
     <div class="foot-col">
       <div class="f-h">体验</div>
+      <a href="#ai-experience">AI 场景体验</a>
+      <a href="#preference">偏好记忆</a>
       <a href="#lab">嗅觉实验室</a>
-      <a href="#console">三级状态机</a>
-      <a href="#dev">开发者档案</a>
+      <a href="#console">控制台</a>
     </div>
     <div class="foot-col">
       <div class="f-h">开源</div>
@@ -2251,8 +2498,8 @@ body{font-size:17px}
   </div>
   <div class="foot-base">
     <div class="inner">
-      <span>© 2026 EMBERSIGH 听眠 · 端侧睡眠环境管家</span>
-      <span>ESP32-S3-EYE · FREERTOS · 100% ON-DEVICE</span>
+      <span>© 2026 EMBERSIGH 听眠 · AI 原生睡眠环境调节系统</span>
+      <span>ESP32-S3-EYE · FREERTOS · 100% ON-DEVICE · 让睡前环境，恰到好处</span>
     </div>
   </div>
 </footer>
@@ -3916,5 +4163,6 @@ rows.forEach(function(row){
 
 })();
 </script>
+<script src="ai-native.js"></script>
 </body>
 </html>
