@@ -1569,6 +1569,7 @@ body{font-size:19px}
             <button type="button" data-example="我要专注看会儿书，声音小一点，灯光亮一些。">专注 · 微光亮灯</button>
           </div>
           <button class="ai-gen-btn" id="aiGenBtn" type="button"><span class="spark">✦</span>生成环境方案</button>
+          <a class="ai-view-link" id="aiViewLink" href="#aiResult" hidden>查看生成的方案 ↓</a>
           <div class="ai-steps" id="aiSteps">
             <div class="ai-step" data-step="1"><span class="num">1</span><span class="txt">正在理解你的需求…</span></div>
             <div class="ai-step" data-step="2"><span class="num">2</span><span class="txt">提取场景意图…</span></div>
@@ -1579,7 +1580,7 @@ body{font-size:19px}
             <span><b>说明：</b>此演示使用本地关键词规则模拟意图解析，<b>不是真实大模型推理</b>，也未连接硬件。架构已预留模型与记忆接口，未来可替换为真实服务。</span>
           </div>
         </div>
-        <div class="glass ai-result">
+        <div class="glass ai-result" id="aiResult">
           <div class="ai-result-empty" id="aiResultEmpty">
             <div class="re-ico">Curate your night.</div>
             <p>在左侧描述你想要的睡前环境，点击生成，看看 EmberSigh 会如何为你编排。</p>
@@ -1599,7 +1600,49 @@ body{font-size:19px}
               <button type="button" id="aiAdjustBtn">调整方案</button>
             </div>
             <div class="ai-apply-note" id="aiApplyNote">执行任务预览：SOUND=forest_rain · VOL=25 · LIGHT=warm_dim · AROMA=off　（仅预览，不向硬件下发）</div>
+            <div class="ai-source" id="aiSource">
+              <div class="ai-source-head">
+                <span>方案来源</span>
+                <span class="ai-source-mode" id="aiSourceMode">本地规则模拟 · 非固定文案</span>
+              </div>
+              <div class="ai-source-text" id="aiSourceText">等待生成后，这里会显示本次依据的关键词与参数映射。</div>
+              <details class="ai-source-details">
+                <summary>它是怎么来的？固定吗？以后能接 AI 吗？</summary>
+                <p><b>不是固定文案。</b>当前由本地关键词规则解析你的输入，把「雨 / 海浪 / 灯光暗 / 不要香氛」等词映射成声音、灯光、香氛参数。同一句话会得到同一结果；换关键词，结果就会变化。</p>
+                <p>这不是真实大模型推理。页面已预留 <code>setModelAdapter()</code> 与 <code>setMemoryAdapter()</code> 接口，后续可接入真实大模型做多轮对话、记忆与任务编排。</p>
+              </details>
+            </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ AI Capability Status · 能力现状 ══════════ -->
+    <section class="sec" id="ai-capability">
+      <div class="sec-head reveal">
+        <h2>项目里，AI <b>现在做到哪一步</b>？</h2>
+        <div class="sub">AI Capability Status · 已实现 / 概念演示 / 接口预留</div>
+      </div>
+      <div class="glass ai-status-card reveal">
+        <div class="ai-status-row">
+          <span class="dev-status done">已实现</span>
+          <div><b>端侧听觉感知与三级状态机</b><small>RMS / EMA 实时判断 Calm → Noise → Calming，真实跑在 ESP32-S3 上。这是确定性信号处理，不是大模型。</small></div>
+        </div>
+        <div class="ai-status-row">
+          <span class="dev-status ing">概念演示</span>
+          <div><b>意图理解 · 场景生成 · 香氛构思</b><small>网站用本地关键词规则模拟，输入不同结果不同；目前不调用大模型，也不下发硬件。</small></div>
+        </div>
+        <div class="ai-status-row">
+          <span class="dev-status plan">接口预留</span>
+          <div><b>模型适配器 · 记忆适配器</b><small>可替换为真实大模型与持久化记忆，实现多轮对话、偏好学习与 Agent 编排。</small></div>
+        </div>
+        <div class="ai-status-actions">
+          <button class="ai-gen-btn" id="aiTryChatBtn" type="button"><span class="spark">✦</span>体验 AI 多轮调整（演示）</button>
+          <a class="btn-ghost" href="#dev" style="border:1px solid rgba(120,110,92,.32)">查看技术架构</a>
+        </div>
+        <div class="ai-disclaimer" style="margin-top:18px;">
+          <span class="di-ico">ⓘ</span>
+          <span>简单说：<b>硬件端已有“感知 + 退让”，AI 相关能力目前是网站概念演示与接口预留</b>。真实 AI 交互需要接入模型服务后才会启用。</span>
         </div>
       </div>
     </section>
@@ -1642,9 +1685,9 @@ body{font-size:19px}
       <div class="ebreath__stage">
         <figure class="ebreath__slide ebreath__slide--1">
           <div class="ebreath__media ebreath__media--scene">
-            <img class="ebreath__tri" src="images/scene-sea.jpg" alt="海边黄昏的沉浸场景" loading="lazy">
-            <img class="ebreath__tri" src="images/scene-forest.jpg" alt="晨光森林的沉浸场景" loading="lazy">
-            <img class="ebreath__tri" src="images/scene-rain.jpg" alt="雨夜卧室的沉浸场景" loading="lazy">
+            <img class="ebreath__tri" src="images/scene-sea.jpg" alt="海边黄昏的沉浸场景" loading="eager">
+            <img class="ebreath__tri" src="images/scene-forest.jpg" alt="晨光森林的沉浸场景" loading="eager">
+            <img class="ebreath__tri" src="images/scene-rain.jpg" alt="雨夜卧室的沉浸场景" loading="eager">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
           <figcaption class="ebreath__cap">
@@ -1654,7 +1697,7 @@ body{font-size:19px}
         </figure>
         <figure class="ebreath__slide ebreath__slide--2">
           <div class="ebreath__media ebreath__media--state">
-            <img class="ebreath__img" src="images/device-noise.png" alt="环境变吵时最终产品主动退让：屏幕 NOISE 警告、灯环转防守红、停止喷雾" loading="lazy"
+            <img class="ebreath__img" src="images/device-noise.png" alt="环境变吵时最终产品主动退让：屏幕 NOISE 警告、灯环转防守红、停止喷雾" loading="eager"
                  onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
@@ -1665,7 +1708,7 @@ body{font-size:19px}
         </figure>
         <figure class="ebreath__slide ebreath__slide--3">
           <div class="ebreath__media ebreath__media--product">
-            <img class="ebreath__img" src="images/product-final.png" alt="EmberSigh One 最终产品渲染：QUIET / SLEEP · 呼吸灯环" loading="lazy"
+            <img class="ebreath__img" src="images/product-final.png" alt="EmberSigh One 最终产品渲染：QUIET / SLEEP · 呼吸灯环" loading="eager"
                  onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           </div>
           <span class="ebreath__scrim" aria-hidden="true"></span>
@@ -1684,7 +1727,7 @@ body{font-size:19px}
         <div class="sub">Product Poster · 亮点 / 场景 / 尺寸一览</div>
       </div>
       <figure class="infofig reveal">
-        <img src="images/poster.jpg" alt="EmberSigh 产品海报：功能亮点、使用场景与整机尺寸" loading="lazy"
+        <img src="images/poster.jpg" alt="EmberSigh 产品海报：功能亮点、使用场景与整机尺寸" loading="eager"
              onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
         <figcaption><b>EmberSigh 产品海报</b> · 智能环境控制 / 习惯记忆 / 定时仪式 / 声景 / 健康自检 —— 睡前放松 · 专注工作 · 瑜伽冥想三大场景，整机约 70mm</figcaption>
       </figure>
@@ -1974,7 +2017,7 @@ body{font-size:19px}
           <div class="uc-device-head"><span class="tick"></span>香氛机展示 · EmberSigh One</div>
           <div class="uc-device-shot" id="ucDeviceShot">
             <img id="ucDeviceImg" src="images/product-final.png" alt="EmberSigh 香氛机实时渲染：QUIET / SLEEP / 呼吸灯环"
-                 loading="lazy" onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
+                 loading="eager" onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
             <!-- 与左侧数字孪生完全同源的产品画面镜像（由 iframe 逐帧推送状态） -->
             <div class="uc-device-mirror" id="ucDeviceMirror" aria-hidden="true">
               <div class="product-stage state-quiet" id="mirStage">
@@ -2162,17 +2205,17 @@ body{font-size:19px}
       </div>
       <div class="shot-row">
         <figure class="shot reveal">
-          <img src="images/screen-calm.jpg" alt="实机 Calm 状态" loading="lazy"
+          <img src="images/screen-calm.jpg" alt="实机 Calm 状态" loading="eager"
                onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           <figcaption>实机运行状态：CALM · 蓝色呼吸待机</figcaption>
         </figure>
         <figure class="shot reveal">
-          <img src="images/screen-noise.jpg" alt="实机 Noise 状态" loading="lazy"
+          <img src="images/screen-noise.jpg" alt="实机 Noise 状态" loading="eager"
                onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           <figcaption>实机运行状态：NOISE · 红色防守退让</figcaption>
         </figure>
         <figure class="shot reveal">
-          <img src="images/screen-calming.jpg" alt="实机 Calming 状态" loading="lazy"
+          <img src="images/screen-calming.jpg" alt="实机 Calming 状态" loading="eager"
                onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
           <figcaption>实机运行状态：CALMING · 橙色冷却缓冲</figcaption>
         </figure>
@@ -2332,7 +2375,7 @@ body{font-size:19px}
           </div>
 
           <figure class="shot humid" style="margin-top:14px;">
-            <img src="images/humidifier.jpg" alt="微孔雾化器出雾特写" loading="lazy"
+            <img src="images/humidifier.jpg" alt="微孔雾化器出雾特写" loading="eager"
                  onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
             <figcaption>单通道微孔雾化器（MVP 验证版）· 出雾实测</figcaption>
           </figure>
@@ -2513,7 +2556,7 @@ body{font-size:19px}
 
     <!-- 工程验证板实拍 -->
     <section class="dcard reveal" style="margin-bottom:20px;padding:20px 24px;display:flex;gap:26px;align-items:center;flex-wrap:wrap;">
-      <img class="board-img" src="images/board-prototype.jpg" alt="ESP32-S3 概念机内部结构渲染" loading="lazy"
+      <img class="board-img" src="images/board-prototype.jpg" alt="ESP32-S3 概念机内部结构渲染" loading="eager"
            onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
       <div style="min-width:240px;flex:1;">
         <div class="card-title" style="margin-bottom:8px;"><span class="tick"></span>概念机内部结构 · 渲染</div>
@@ -2528,7 +2571,7 @@ body{font-size:19px}
     <section class="dcard reveal" style="margin-bottom:20px;padding:20px 24px;">
       <div class="card-title" style="margin-bottom:14px;"><span class="tick"></span>内部结构 · 爆炸视图</div>
       <figure class="infofig" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);box-shadow:none;">
-        <img src="images/structure.jpg" alt="EmberSigh 内部结构爆炸图：屏幕面板、灯环、主板、喇叭、雾化舱与后盖分解" loading="lazy"
+        <img src="images/structure.jpg" alt="EmberSigh 内部结构爆炸图：屏幕面板、灯环、主板、喇叭、雾化舱与后盖分解" loading="eager"
              onerror="window.imgFallback?imgFallback(this):this.style.display='none'">
         <figcaption style="background:rgba(255,255,255,.05);border-top-color:rgba(255,255,255,.14);color:rgba(238,245,242,.72);">
           <b style="color:#eef5f2;">内部结构分解</b> · 屏幕面板+灯环 / 屏幕支架 / 主控主板（ESP32-S3-EYE）/ 喇叭（3070）/ 雾化舱（加速器）/ 后盖 —— 外观三视图 145×105×165mm

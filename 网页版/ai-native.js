@@ -92,6 +92,27 @@
     if (/专注|看书|阅读|工作/.test(t)) { scene.name = '专注阅读'; scene.light = '中性 · 中等亮度'; scene.lightKey = 'neutral_mid'; scene.bright = 55; }
 
     scene.volText = scene.vol === 0 ? '静音' : scene.vol + '%';
+
+    // 记录本次命中的关键词，用于向用户解释“方案从哪里来”
+    var hits = [];
+    if (/海浪|海边|海洋|wave/.test(t)) hits.push('海浪');
+    if (/溪流|小溪|流水|stream/.test(t)) hits.push('溪流');
+    if (/雨|rain/.test(t)) hits.push('雨声');
+    if (/静音|无声|安静点/.test(t)) hits.push('静音');
+    if (/再小|更小|小一点|小声|低音量|轻一点/.test(t)) hits.push('低音量');
+    if (/大一点|大声|高音量|响一点/.test(t)) hits.push('高音量');
+    if (/不要香|关.*香|不开香|无香|不要.*味/.test(t)) hits.push('不要香氛');
+    if (/薰衣草|lavender|助眠香/.test(t)) hits.push('薰衣草');
+    if (/松木|pine|森林味/.test(t)) hits.push('松木');
+    if (/柑橘|citrus|橙/.test(t)) hits.push('柑橘');
+    if (/灯光暗|灯暗|暗一点|低亮|微光/.test(t)) hits.push('灯光暗');
+    if (/灯光亮|亮一点|亮些|中等亮/.test(t)) hits.push('灯光亮');
+    if (/关灯|灯光关|不要灯/.test(t)) hits.push('关灯');
+    if (/累|疲惫|放松|助眠|安静下来/.test(t)) hits.push('疲惫/放松');
+    if (/专注|看书|阅读|工作/.test(t)) hits.push('专注阅读');
+    scene.hits = hits.length ? hits : ['默认场景'];
+    scene.sourceText = '本次依据：' + scene.hits.join(' · ') + ' → ' + scene.name + ' / ' + scene.sound + ' / ' + scene.light + ' / ' + scene.aroma;
+
     scene.preview = 'SOUND=' + scene.soundKey + ' · VOL=' + scene.vol + ' · LIGHT=' + scene.lightKey + ' · AROMA=' + scene.aromaKey;
     return scene;
   }
@@ -139,6 +160,7 @@
           renderScene(scene);
           genBtn.disabled = false;
           window.toast && window.toast('概念场景已生成（本地模拟）', '✦');
+          setTimeout(revealResult, 120);
         });
       }, 1500);
     });
@@ -159,6 +181,20 @@
         });
       });
     }
+
+    var view = $('aiViewLink');
+    if (view) view.addEventListener('click', function (e) { e.preventDefault(); revealResult(); });
+
+    var tryChat = $('aiTryChatBtn');
+    if (tryChat) tryChat.addEventListener('click', function () {
+      var exp = $('ai-experience');
+      if (exp) exp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(function () {
+        var input = $('aiAdjustInput');
+        if (input) input.focus();
+        window.toast && window.toast('已定位到 AI 多轮调整入口（当前为本地规则演示）', '✦');
+      }, 500);
+    });
   }
 
   function renderScene(scene) {
@@ -173,6 +209,28 @@
     $('apAroma').textContent = scene.aroma;
     $('apAromaTag').textContent = scene.aromaKey === 'off' ? 'OFF' : 'ON';
     $('aiApplyNote').textContent = '执行任务预览：' + (scene.preview || '') + '　（仅预览，不向硬件下发 · 概念演示）';
+
+    var source = $('aiSourceText');
+    if (source) source.textContent = scene.sourceText || '本次由本地关键词规则生成（非固定文案）。';
+    var mode = $('aiSourceMode');
+    if (mode) mode.textContent = adapters.model ? '模型适配器已接入' : '本地规则模拟 · 非固定文案';
+
+    var view = $('aiViewLink');
+    if (view) {
+      view.hidden = false;
+      view.textContent = window.innerWidth <= 1080 ? '查看生成的方案 ↓' : '查看生成的方案 →';
+    }
+    var gen = $('aiGenBtn');
+    if (gen) gen.innerHTML = '<span class="spark">✦</span>重新生成环境方案';
+  }
+
+  function revealResult() {
+    var card = $('aiResult');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.remove('flash');
+    void card.offsetWidth;
+    card.classList.add('flash');
   }
 
   /* ─────────────────────────────────────────────────────────
@@ -338,9 +396,30 @@
   function set(id, v) { var e = $(id); if (e) e.textContent = v; }
 
   /* ─────────────────────────────────────────────────────────
-     9. 启动
+     9. 图片加载兜底：立即加载 + 失败自动重试一次
+     ───────────────────────────────────────────────────────── */
+  function initImageFallback() {
+    document.querySelectorAll('img').forEach(function (img) {
+      img.decoding = 'async';
+      if (!img.hasAttribute('loading')) img.setAttribute('loading', 'eager');
+      if (img.classList.contains('hero-img') || img.classList.contains('product-img')) {
+        img.setAttribute('fetchpriority', 'high');
+      }
+      img.addEventListener('error', function () {
+        if (img.dataset.retried) return;
+        img.dataset.retried = '1';
+        var src = img.getAttribute('src');
+        if (!src || /[?&]__retry=1/.test(src)) return;
+        img.src = src + (src.indexOf('?') > -1 ? '&' : '?') + '__retry=1';
+      });
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     10. 启动
      ───────────────────────────────────────────────────────── */
   function boot() {
+    initImageFallback();
     initExperience();
     initMemory();
     initConsole();
