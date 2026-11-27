@@ -1439,6 +1439,61 @@ body{font-size:19px}
   .gh-link{font-size:0!important;gap:4px!important;padding:6px 9px!important;}
   .gh-link::after{content:'Git';font-size:11px;letter-spacing:.06em;}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   术语白话注释（桌面悬浮 / 手机点按展开）
+   ═══════════════════════════════════════════════════════════════ */
+.term-hint{border-bottom:1px dotted rgba(176,141,87,.75);cursor:help;text-decoration:none;}
+.term-glossary{margin:11px 0 0;font-family:var(--serif);font-size:12px;color:var(--ink-soft);}
+.term-glossary summary{cursor:pointer;color:var(--gold-d);list-style:none;padding:3px 0;}
+.term-glossary summary::-webkit-details-marker{display:none;}
+.term-glossary summary::before{content:'ⓘ 看不懂术语？点开看白话解释';}
+.term-glossary[open] summary::before{content:'ⓘ 收起术语解释';}
+.term-glossary dl{margin:8px 0 0;padding:10px 14px;border-radius:10px;
+  background:rgba(176,141,87,.07);border:1px solid rgba(176,141,87,.18);}
+.term-glossary dt{font-family:var(--mono);font-size:11px;color:var(--gold-d);margin-top:7px;}
+.term-glossary dt:first-child{margin-top:0;}
+.term-glossary dd{margin:2px 0 0;font-size:12px;line-height:1.7;color:var(--ink-soft);}
+
+/* ═══════════════════════════════════════════════════════════════
+   手机端最终修复 · 置于全部路演大字规则之后，确保覆盖生效
+   ═══════════════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  /* 轮播：改为「上图下文」分栏，彻底消除图片与文字重叠 */
+  .ebreath__stage{aspect-ratio:auto;height:clamp(400px,112vw,500px);}
+  .ebreath__slide{display:flex;flex-direction:column;}
+  .ebreath__media{position:relative;inset:auto;flex:0 0 60%;min-height:0;}
+  .ebreath__slide--1 .ebreath__media--scene{padding:12px;gap:8px;}
+  .ebreath__tri{height:100%;aspect-ratio:auto;object-fit:cover;border-radius:8px;}
+  .ebreath__img{object-fit:contain!important;}
+  .ebreath__scrim{display:none;}
+  .ebreath__cap{position:relative;left:auto;right:auto;bottom:auto;flex:1;
+    padding:12px 20px;background:#F7F5F0;justify-content:flex-start;}
+  .ebreath__no{font-size:10px;letter-spacing:.2em;}
+  .ebreath__title{font-size:clamp(19px,5vw,26px);line-height:1.5;margin-top:6px;}
+  .ebreath__ph{display:none;}
+}
+@media(max-width:640px){
+  /* 设备预览：胶囊 / 参数行 / 统计卡全部缩小并换行，禁止横向出界 */
+  #ucPreview,.console-grid{min-width:0;max-width:100%;}
+  #ucPreview .console-grid>*{min-width:0;}
+  #ucPreview .sm{flex-wrap:wrap;gap:6px;}
+  #ucPreview .sm-pill{font-size:14px!important;padding:8px 10px!important;}
+  #ucPreview .sm-arrow{font-size:12px!important;}
+  #ucPreview .screen-meta{font-size:10px!important;flex-wrap:wrap;gap:4px 12px;}
+  #ucPreview .stat-row{grid-template-columns:1fr 1fr;gap:10px;}
+  #ucPreview .stat-card{padding:12px 10px;}
+  #ucPreview .stat-card .k{font-size:10px!important;}
+  #ucPreview .stat-card .v{font-size:24px!important;}
+  #ucPreview .stat-card .v small{font-size:12px!important;}
+  #ucPreview .stat-card .trend{font-size:10px!important;}
+  #ucPreview .link-status{font-size:10px!important;overflow-wrap:anywhere;}
+}
+@media(max-width:430px){
+  #ucPreview .sm-pill{font-size:12px!important;padding:7px 8px!important;}
+  #ucPreview .stat-row{grid-template-columns:1fr 1fr;gap:8px;}
+  #ucPreview .stat-card .v{font-size:22px!important;}
+}
 </style>
 <link rel="stylesheet" href="ai-native.css">
 </head>
@@ -1526,7 +1581,7 @@ body{font-size:19px}
         <div class="phone-mock" aria-label="EmberSigh App 概念界面">
           <div class="pm-notch"></div>
           <div class="pm-status"><span>21:34</span><span>●●● ▮▮▮</span></div>
-          <div class="pm-greeting">晚上好，<br><b>让今晚慢一点。</b></div>
+          <div class="pm-greeting">晚上好，<br><b>该休息了。</b></div>
           <div class="pm-scene-card">
             <div class="pm-scene-top"><span class="pm-scene-tag">● 正在播放</span><span>23:00 自动结束</span></div>
             <div class="pm-scene-name">森林雨声</div>
@@ -1537,7 +1592,7 @@ body{font-size:19px}
           <div class="pm-modules">
             <div class="pm-mod"><span class="pm-ico">♪</span><div><b>声音</b><small>森林雨声 · 25%</small></div><span class="pm-state on">ON</span></div>
             <div class="pm-mod"><span class="pm-ico">☼</span><div><b>灯光</b><small>暖色 · 低亮度 18%</small></div><span class="pm-state on">ON</span></div>
-            <div class="pm-mod"><span class="pm-ico">❋</span><div><b>香氛</b><small>按你的意图关闭</small></div><span class="pm-state off">OFF</span></div>
+            <div class="pm-mod"><span class="pm-ico">❋</span><div><b>香氛</b><small>已为你保持安静</small></div><span class="pm-state off">OFF</span></div>
           </div>
           <div class="pm-tabbar"><span class="on">今晚</span><span>场景</span><span>偏好</span><span>我的</span></div>
         </div>
@@ -1970,7 +2025,7 @@ body{font-size:19px}
         </div>
         <div class="ai-cb-panel" data-panel="runtime">
           <div class="ai-cb-grid">
-            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">环境状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtState">CALM</div><div class="rt-desc">RMS/EMA 三态判定 · 数字孪生引擎</div></div>
+            <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">环境状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtState">CALM</div><div class="rt-desc"><abbr class="term-hint" title="RMS = 当前噪音能量；EMA = 平滑后的稳定值。双阈值判定安静 / 吵闹 / 恢复三种状态。">RMS/EMA</abbr> 三态判定 · 数字孪生引擎</div></div>
             <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">声景输出</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtAudio">42%</div><div class="rt-desc">森林 PCM · MAX98357A（联调中）</div></div>
             <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">香氛输出</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtAroma">ON</div><div class="rt-desc">MOS 单路验证 · 多通道规划中</div></div>
             <div class="ai-runtime-item"><div class="rt-top"><span class="rt-name">灯环状态</span><span class="ai-badge sim"><i></i>模拟</span></div><div class="rt-val" id="rtLight">暖光</div><div class="rt-desc">WS2812 ×16 · 联调中</div></div>
@@ -2005,7 +2060,7 @@ body{font-size:19px}
     <div class="unified-console" id="unifiedConsole">
       <!-- 模块 B：数字孪生主界面（核心） -->
       <div class="uc-main">
-        <div class="sim-caption"><i></i>DIGITAL TWIN · ESP32-S3-EYE · 真实 RMS / EMA 驱动</div>
+        <div class="sim-caption"><i></i>DIGITAL TWIN · ESP32-S3-EYE · <abbr class="term-hint" title="RMS = 当前声音能量（越大越吵）；EMA = 平滑后的稳定值。两者共同驱动 Calm / Noise / Calming 三态切换。">真实 RMS / EMA 驱动</abbr></div>
         <iframe class="sim-frame" id="simFrame"
                 data-src="EmberSigh-Simulator/EmberSigh-全功能数字孪生模拟器.html"
                 title="EmberSigh 数字孪生控制台"
@@ -2126,10 +2181,23 @@ body{font-size:19px}
 
         <button class="btn" id="clapBtn">模拟拍手 · 触发噪音</button>
         <div class="screen-meta">
-          <span>THRESHOLD 50 / 150</span>
-          <span>EMA α = 0.20</span>
-          <span>COOLDOWN 3.0s</span>
+          <span title="双阈值：安静上限 50、噪声触发线 150。平滑能量低于 50 判为安静，越过 150 才触发退让，中间为迟滞区不误动作。"><abbr class="term-hint">THRESHOLD 50 / 150</abbr></span>
+          <span title="EMA = 指数移动平均，把忽高忽低的瞬时噪音抹平；α=0.20 表示更看重历史、反应更稳，不会因一声咳嗽就误触发。"><abbr class="term-hint">EMA α = 0.20</abbr></span>
+          <span title="冷却时间：确认恢复安静后，还要连续安静 3 秒才重新开香氛，避免噪声来来回回时设备反复切换。"><abbr class="term-hint">COOLDOWN 3.0s</abbr></span>
         </div>
+        <details class="term-glossary">
+          <summary></summary>
+          <dl>
+            <dt>RAW RMS（原始 RMS）</dt>
+            <dd>声音的瞬时能量，数字越大代表环境越吵。相当于麦克风"此刻听到的音量"。</dd>
+            <dt>EMA（平滑值）</dt>
+            <dd>把 RMS 做加权平均后的稳定值。系统真正看的是它，用来过滤短促杂音，避免误判。</dd>
+            <dt>THRESHOLD（双阈值）</dt>
+            <dd>50 与 150 两条线：低于 50 视为安静，高于 150 才判定吵闹；两条线之间是缓冲带，防止状态来回跳。</dd>
+            <dt>COOLDOWN（冷却）</dt>
+            <dd>环境恢复安静后的观察期（3 秒）。确认真的安静了，香氛与声景才重新开启。</dd>
+          </dl>
+        </details>
         <div class="link-status" id="consoleLink">🔗 联动状态：已与嗅觉实验室同步 (当前配方：薰衣草 82%)</div>
       </div>
 
